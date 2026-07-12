@@ -33,6 +33,17 @@ namespace pjh::cli
             int argc,
             char **argv);
 
+        /// @brief Parse with fuzzy subcommand matching.
+        ///
+        /// When an exact subcommand match fails, falls back to Levenshtein
+        /// distance matching (max_distance = 3). If exactly one close match
+        /// is found, it is used transparently.
+        /// @return ParseContext on success, or a ParseError with details.
+        ParseResult<ParseContext>
+        parse_fuzzy(
+            int argc,
+            char **argv);
+
     private:
         std::string m_version;
     };

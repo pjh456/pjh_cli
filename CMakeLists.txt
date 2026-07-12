@@ -9,6 +9,7 @@ target_sources(pjh_cli
     src/command.cpp
     src/app.cpp
     src/help.cpp
+    src/matcher.cpp
 )
 target_include_directories(pjh_cli
     PUBLIC

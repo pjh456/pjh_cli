@@ -1,4 +1,5 @@
 #include <pjh_cli/app.hpp>
+#include <pjh_cli/matcher.hpp>
 
 #include <cctype>
 #include <vector>
@@ -18,7 +19,6 @@ namespace pjh::cli
 
     namespace
     {
-
         ParseResult<void>
         consume_long(
             const Command &cmd,
@@ -104,6 +104,92 @@ namespace pjh::cli
             return ParseResult<void>::Ok();
         }
 
+        ParseResult<void>
+        process_remaining(
+            const Command *cmd,
+            ParseContext &ctx,
+            size_t start,
+            const std::vector<std::string_view> &args)
+        {
+            size_t arg_pos = 0;
+            bool double_dash = false;
+
+            for (size_t i = start; i < args.size(); i++)
+            {
+                auto a = args[i];
+
+                if (!double_dash && a == "--")
+                {
+                    double_dash = true;
+                    continue;
+                }
+
+                if (!double_dash && a.size() > 1 && a[0] == '-')
+                {
+                    ParseResult<void> r =
+                        (a[1] == '-')
+                            ? consume_long(*cmd, ctx, a, i, args)
+                            : consume_short(*cmd, ctx, a, i, args);
+                    if (r.is_err())
+                        return r;
+                }
+                else
+                {
+                    if (arg_pos < cmd->args().size())
+                    {
+                        auto r = cmd->args()[arg_pos].m_apply(ctx, a);
+                        if (r.is_err())
+                            return r;
+                    }
+                    arg_pos++;
+                }
+            }
+
+            return ParseResult<void>::Ok();
+        }
+
+        ParseResult<ParseContext>
+        finish_parse(
+            const Command *cmd,
+            ParseContext ctx,
+            std::string matched_path)
+        {
+            ctx.set_matched_path(std::move(matched_path));
+
+            // Apply defaults
+            auto dr = cmd->apply_defaults(ctx);
+            if (dr.is_err())
+                return ParseResult<ParseContext>::Err(
+                    std::move(dr).unwrap_err());
+
+            // Validate required options
+            for (const auto &opt : cmd->options())
+            {
+                if (opt.m_required &&
+                    !ctx.has_value(opt.m_key_hash))
+                {
+                    return ParseResult<ParseContext>::Err(
+                        missing_required_option(
+                            opt.m_long_name));
+                }
+            }
+
+            // Validate required positional args
+            for (const auto &arg : cmd->args())
+            {
+                if (arg.m_required &&
+                    !ctx.has_value(arg.m_key_hash))
+                {
+                    return ParseResult<ParseContext>::Err(
+                        missing_required_arg(
+                            arg.m_name));
+                }
+            }
+
+            return ParseResult<ParseContext>::Ok(
+                std::move(ctx));
+        }
+
     } // namespace
 
     ParseResult<ParseContext>
@@ -115,7 +201,6 @@ namespace pjh::cli
         for (int a = 1; a < argc; a++)
             args.emplace_back(argv[a]);
 
-        // Walk subcommand tree
         const Command *cmd = this;
         size_t i = 0;
         while (i < args.size())
@@ -133,80 +218,55 @@ namespace pjh::cli
         }
 
         ParseContext ctx;
-        ctx.set_matched_path(cmd->name());
+        auto r = process_remaining(cmd, ctx, i, args);
+        if (r.is_err())
+            return ParseResult<ParseContext>::Err(
+                std::move(r).unwrap_err());
 
-        // Process remaining args as options / positional
-        size_t arg_pos = 0;
-        bool double_dash = false;
+        return finish_parse(cmd, std::move(ctx), cmd->name());
+    }
 
+    ParseResult<ParseContext>
+    App::parse_fuzzy(
+        int argc,
+        char **argv)
+    {
+        std::vector<std::string_view> args;
+        for (int a = 1; a < argc; a++)
+            args.emplace_back(argv[a]);
+
+        const Command *cmd = this;
+        size_t i = 0;
         while (i < args.size())
         {
-            auto a = args[i];
-
-            if (!double_dash && a == "--")
+            auto *sub = cmd->find_subcommand(args[i]);
+            if (sub && sub->is_enabled())
             {
-                double_dash = true;
+                cmd = sub;
                 i++;
                 continue;
             }
 
-            if (!double_dash && a.size() > 1 && a[0] == '-')
+            auto fuzzy = fuzzy_find_subcommands(
+                *cmd, args[i], 3, Visibility::Both);
+
+            if (fuzzy.size() == 1)
             {
-                ParseResult<void> r =
-                    (a[1] == '-')
-                        ? consume_long(*cmd, ctx, a, i, args)
-                        : consume_short(*cmd, ctx, a, i, args);
-                if (r.is_err())
-                    return ParseResult<ParseContext>::Err(
-                        std::move(r).unwrap_err());
-            }
-            else
-            {
-                if (arg_pos < cmd->args().size())
-                {
-                    auto r = cmd->args()[arg_pos].m_apply(ctx, a);
-                    if (r.is_err())
-                        return ParseResult<ParseContext>::Err(
-                            std::move(r).unwrap_err());
-                }
-                arg_pos++;
+                cmd = fuzzy[0].command;
+                i++;
+                continue;
             }
 
-            i++;
+            break;
         }
 
-        // Apply defaults
-        auto dr = cmd->apply_defaults(ctx);
-        if (dr.is_err())
+        ParseContext ctx;
+        auto r = process_remaining(cmd, ctx, i, args);
+        if (r.is_err())
             return ParseResult<ParseContext>::Err(
-                std::move(dr).unwrap_err());
+                std::move(r).unwrap_err());
 
-        // Validate required options
-        for (const auto &opt : cmd->options())
-        {
-            if (opt.m_required &&
-                !ctx.has_value(opt.m_key_hash))
-            {
-                return ParseResult<ParseContext>::Err(
-                    missing_required_option(
-                        opt.m_long_name));
-            }
-        }
-
-        // Validate required positional args
-        for (const auto &arg : cmd->args())
-        {
-            if (arg.m_required &&
-                !ctx.has_value(arg.m_key_hash))
-            {
-                return ParseResult<ParseContext>::Err(
-                    missing_required_arg(
-                        arg.m_name));
-            }
-        }
-
-        return ParseResult<ParseContext>::Ok(
-            std::move(ctx));
+        return finish_parse(cmd, std::move(ctx), cmd->name());
     }
 
 } // namespace pjh::cli
