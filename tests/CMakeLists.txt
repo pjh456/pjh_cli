@@ -18,6 +18,7 @@ set(PJH_CLI_TEST_SOURCES
     console/test_process_line_parse.cpp
     console/test_free_functions.cpp
     test_error.cpp
+    test_string_utils.cpp
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
