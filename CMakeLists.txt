@@ -19,7 +19,13 @@ target_compile_features(pjh_cli PUBLIC cxx_std_20)
 
 option(PJH_CLI_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
+option(PJH_CLI_BUILD_EXAMPLES "Build example programs" OFF)
+
 if(PJH_CLI_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(PJH_CLI_BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
