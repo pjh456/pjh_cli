@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 #define INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 
+#include "error.hpp"
 #include "fixed_string.hpp"
 
 #include <any>
@@ -21,7 +22,8 @@ namespace pjh::cli
         /// @brief Retrieve a value by its compile-time key.
         /// @tparam T Expected value type.
         /// @tparam Key Compile-time key (fixed_string for options, size_t for args).
-        /// @throws std::bad_any_cast if type mismatch, std::out_of_range if missing.
+        /// @throws ParseLogicError if the key has no stored value.
+        /// @throws std::bad_any_cast if stored type does not match T.
         template <typename T, auto Key>
         T &
         get()
@@ -29,7 +31,7 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto it = m_values.find(h);
             if (it == m_values.end())
-                throw std::out_of_range(
+                throw ParseLogicError(
                     "value not found for key");
             return std::any_cast<T &>(it->second);
         }

@@ -13,11 +13,35 @@ namespace pjh::cli
     ///
     /// Subclass of std::runtime_error. Used as the error (E) type in
     /// ParseResult<T> = Result<T, ParseError>.
+    /// Every message is automatically prefixed with "Parse Error: ".
     class ParseError
         : public std::runtime_error
     {
     public:
-        using std::runtime_error::runtime_error;
+        explicit ParseError(
+            const std::string &msg)
+            : std::runtime_error(
+                  std::string("Parse Error: ") + msg)
+        {
+        }
+
+        explicit ParseError(
+            const char *msg)
+            : std::runtime_error(
+                  std::string("Parse Error: ") + msg)
+        {
+        }
+    };
+
+    /// @brief Error type for programming mistakes (not parse failures).
+    ///
+    /// Thrown when the library API is used incorrectly, e.g. calling
+    /// ParseContext::get() without checking has() first.
+    class ParseLogicError
+        : public std::logic_error
+    {
+    public:
+        using std::logic_error::logic_error;
     };
 
     /// @brief Generic parse error at a given argument position.
