@@ -13,6 +13,8 @@
 
 namespace pjh::cli
 {
+    class Command;
+
     /// @brief Container for parsed option and argument values.
     ///
     /// Values are stored by compile-time key hash and retrieved via get<T, Key>().
@@ -92,9 +94,20 @@ namespace pjh::cli
         const std::vector<std::string> &
         extra_args() const { return m_extra_args; }
 
+        /// @brief The leaf command matched during parsing.
+        const Command *
+        matched_command() const { return m_matched_cmd; }
+
         /// @brief Path of matched commands, e.g. "serve start".
         const std::string &
         matched_path() const { return m_matched_path; }
+
+        /// @brief Set the matched command (used internally by parser).
+        void
+        set_matched_command(const Command *cmd)
+        {
+            m_matched_cmd = cmd;
+        }
 
         /// @brief Set the matched command path (used internally by parser).
         void
@@ -112,6 +125,7 @@ namespace pjh::cli
 
     private:
         std::unordered_map<size_t, std::any> m_values;
+        const Command *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
         std::string m_matched_path;
     };

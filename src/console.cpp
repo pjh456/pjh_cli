@@ -48,7 +48,6 @@ namespace pjh::cli
 
     namespace
     {
-
         std::vector<std::string>
         tokenize_line(
             const std::string &line)
@@ -175,27 +174,7 @@ namespace pjh::cli
 
         auto &ctx = r.unwrap();
 
-        // Find the leaf command to execute its action
-        const Command *cmd = &m_root;
-        for (const auto &t : tokens)
-        {
-            auto *sub = cmd->find_subcommand(t);
-            if (sub && sub->is_enabled())
-            {
-                cmd = sub;
-                continue;
-            }
-            auto fuzzy = fuzzy_find_subcommands(
-                *cmd, t, 3);
-            if (fuzzy.size() == 1)
-            {
-                cmd = fuzzy[0].command;
-                continue;
-            }
-            break;
-        }
-
-        auto exec = cmd->execute(ctx);
+        auto exec = ctx.matched_command()->execute(ctx);
         if (exec.is_err())
         {
             std::cerr << exec.unwrap_err().what() << "\n";

@@ -159,6 +159,7 @@ namespace pjh::cli
             ParseContext ctx,
             std::string matched_path)
         {
+            ctx.set_matched_command(cmd);
             ctx.set_matched_path(std::move(matched_path));
 
             auto dr = cmd->apply_defaults(ctx);
