@@ -3,6 +3,7 @@
 
 #include "arg_def.hpp"
 #include "converter.hpp"
+#include "detail/concept.hpp"
 #include "option_def.hpp"
 #include "parse_context.hpp"
 #include "type.hpp"
@@ -103,6 +104,7 @@ namespace pjh::cli
         /// @tparam T Value type (bool → flag, others → value-consuming).
         /// @tparam Key Compile-time identifier (fixed_string).
         template <typename T, auto Key>
+            requires detail::Parseable<T>
         OptionDef &
         option(
             std::string long_name,
@@ -110,6 +112,7 @@ namespace pjh::cli
 
         /// @brief Register a named option with a default value (no short name).
         template <typename T, auto Key>
+            requires detail::Parseable<T>
         OptionDef &
         option(
             std::string long_name,
@@ -118,6 +121,7 @@ namespace pjh::cli
 
         /// @brief Register a named option with short name (no default).
         template <typename T, auto Key>
+            requires detail::Parseable<T>
         OptionDef &
         option(
             std::string long_name,
@@ -126,6 +130,7 @@ namespace pjh::cli
 
         /// @brief Register a named option with short name and a default value.
         template <typename T, auto Key>
+            requires detail::Parseable<T>
         OptionDef &
         option(
             std::string long_name,
@@ -137,6 +142,7 @@ namespace pjh::cli
         /// @tparam T Value type.
         /// @tparam Index Positional index (0, 1, 2, ...).
         template <typename T, size_t Index>
+            requires detail::Parseable<T>
         ArgDef &
         arg(
             std::string name,
@@ -285,6 +291,7 @@ namespace pjh::cli
     // ──────────────────────────────────────────────
 
     template <typename T, auto Key>
+        requires detail::Parseable<T>
     OptionDef &
     Command::option(
         std::string long_name,
@@ -297,6 +304,7 @@ namespace pjh::cli
     }
 
     template <typename T, auto Key>
+        requires detail::Parseable<T>
     OptionDef &
     Command::option(
         std::string long_name,
@@ -318,6 +326,7 @@ namespace pjh::cli
     }
 
     template <typename T, auto Key>
+        requires detail::Parseable<T>
     OptionDef &
     Command::option(
         std::string long_name,
@@ -336,7 +345,7 @@ namespace pjh::cli
         def.m_long_name = std::move(long_name);
         def.m_short_name = short_name;
         def.m_description = std::move(description);
-        def.m_has_value = !std::is_same_v<T, bool>;
+        def.m_has_value = !detail::Flag<T>;
         def.m_key_hash = h;
         def.m_apply =
             [h](ParseContext &ctx,
@@ -361,6 +370,7 @@ namespace pjh::cli
     }
 
     template <typename T, auto Key>
+        requires detail::Parseable<T>
     OptionDef &
     Command::option(
         std::string long_name,
@@ -383,6 +393,7 @@ namespace pjh::cli
     }
 
     template <typename T, size_t Index>
+        requires detail::Parseable<T>
     ArgDef &
     Command::arg(
         std::string name,

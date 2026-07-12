@@ -7,6 +7,7 @@
 #include "detail/string_utils.hpp"
 
 #include <charconv>
+#include <concepts>
 #include <string>
 #include <string_view>
 
@@ -19,7 +20,7 @@ namespace pjh::cli
         /// @brief Convert string to integer type using std::from_chars.
         /// @tparam T Integer type (int, long, unsigned, etc.)
         /// @return Ok(T) on success, Err(ParseError) on invalid input.
-        template <typename T>
+        template <std::integral T>
         auto from_chars_int(std::string_view s) -> ParseResult<T>
         {
             T v{};
@@ -33,7 +34,7 @@ namespace pjh::cli
         /// @brief Convert string to floating-point type using std::from_chars.
         /// @tparam T Float type (float, double).
         /// @return Ok(T) on success, Err(ParseError) on invalid input.
-        template <typename T>
+        template <std::floating_point T>
         auto from_chars_float(std::string_view s) -> ParseResult<T>
         {
             T v{};
