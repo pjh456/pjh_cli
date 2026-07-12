@@ -62,14 +62,10 @@ namespace pjh::cli
 
                 if (opt->m_has_value)
                 {
-                    if (j + 1 < arg.size())
-                    {
-                        auto r = opt->m_apply(
-                            ctx, arg.substr(j + 1));
-                        if (r.is_err())
-                            return r;
-                        break;
-                    }
+                    if (arg.size() != 2)
+                        return CliFailure{
+                            CliError(
+                                std::string("-") + c + " requires a value as a separate argument")};
                     if (++i >= args.size())
                         return CliFailure{
                             missing_value(

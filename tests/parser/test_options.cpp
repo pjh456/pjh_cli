@@ -51,17 +51,6 @@ TEST_CASE("Parser short option next token")
     CHECK(val == 8080);
 }
 
-TEST_CASE("Parser short option attached value")
-{
-    App app("test", "1.0", "Attached test");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
-    Argv argv{"test", "-p8080"};
-    auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
-    auto val = r.unwrap().get<int, fixed_string("port")>();
-    CHECK(val == 8080);
-}
-
 TEST_CASE("Parser multiple options")
 {
     App app("test", "1.0", "Multiple test");
@@ -108,28 +97,66 @@ TEST_CASE("Parser equals form type conversion failure")
     CHECK(r.is_err());
 }
 
-TEST_CASE("Parser short mixed bool flag then valued option")
+TEST_CASE("Parser short mixed bool flag then valued option errors")
 {
     App app("test", "1.0", "Mixed short");
     app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
     app.option<int, fixed_string("port")>("--port", 'p', "Port");
     Argv argv{"test", "-vp", "8080"};
     auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
-    auto &ctx = r.unwrap();
-    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
-    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+    CHECK(r.is_err());
 }
 
-TEST_CASE("Parser short mixed valued option then bool flag")
+TEST_CASE("Parser short mixed valued option then bool flag errors")
 {
     App app("test", "1.0", "Mixed short");
     app.option<int, fixed_string("port")>("--port", 'p', "Port");
     app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
     Argv argv{"test", "-pv", "8080"};
     auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser short option with attached value errors")
+{
+    App app("test", "1.0", "Attached test");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    Argv argv{"test", "-p8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser short valued option alone works")
+{
+    App app("test", "1.0", "Separate test");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    Argv argv{"test", "-p", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto val = r.unwrap().get<int, fixed_string("port")>();
+    CHECK(val == 8080);
+}
+
+TEST_CASE("Parser short flags group works")
+{
+    App app("test", "1.0", "Flag group");
+    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<bool, fixed_string("force")>("--force", 'f', "Force");
+    Argv argv{"test", "-vf"};
+    auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
     CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<bool, fixed_string("force")>() == true);
+}
+
+TEST_CASE("Parser valued option in group middle errors")
+{
+    App app("test", "1.0", "Group middle");
+    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<bool, fixed_string("force")>("--force", 'f', "Force");
+    Argv argv{"test", "-vpf", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
 }
