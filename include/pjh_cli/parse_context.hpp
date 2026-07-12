@@ -4,6 +4,8 @@
 #include "error.hpp"
 #include "fixed_string.hpp"
 
+#include <pjh_result.hpp>
+
 #include <any>
 #include <string>
 #include <string_view>
@@ -47,6 +49,19 @@ namespace pjh::cli
                 throw ParseLogicError(
                     "value not found for key");
             return std::any_cast<const T &>(it->second);
+        }
+
+        /// @brief Non-throwing accessor. Returns None if key is absent.
+        template <typename T, auto Key>
+        pjh::result::Option<T>
+        try_get() const
+        {
+            constexpr auto h = key_hash(Key);
+            auto it = m_values.find(h);
+            if (it == m_values.end())
+                return pjh::result::Option<T>::None();
+            return pjh::result::Option<T>::Some(
+                std::any_cast<T>(it->second));
         }
 
         /// @brief Check if a value exists for the given compile-time key.

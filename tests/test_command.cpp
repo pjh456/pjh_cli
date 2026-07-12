@@ -175,6 +175,23 @@ int main()
     assert(ctx.has_value(key_hash(fixed_string("port"))));
     assert(!ctx.has_value(key_hash(fixed_string("missing"))));
 
+    // ParseContext::try_get — Some/None
+    {
+        auto some_port = ctx.try_get<int, fixed_string("port")>();
+        assert(some_port.is_some());
+        assert(some_port.unwrap() == 8080);
+
+        auto none_port = ctx.try_get<int, fixed_string("missing")>();
+        assert(none_port.is_none());
+
+        auto some_idx0 = ctx.try_get<unsigned, 0>();
+        assert(some_idx0.is_some());
+        assert(some_idx0.unwrap() == 42u);
+
+        auto none_idx = ctx.try_get<unsigned, 999>();
+        assert(none_idx.is_none());
+    }
+
     // ParseContext: matched_path
     ctx.set_matched_path("serve start");
     assert(ctx.matched_path() == "serve start");
