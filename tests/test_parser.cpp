@@ -332,3 +332,233 @@ TEST_CASE("Parser extra positional args store no extra")
     CHECK(r.is_ok());
     CHECK(r.unwrap().extra_args().empty());
 }
+
+TEST_CASE("Parser error message unknown long option")
+{
+    App app("test", "1.0", "Err msg");
+    Argv argv{"test", "--bogus"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: unknown option: '--bogus'"));
+}
+
+TEST_CASE("Parser error message unknown short option")
+{
+    App app("test", "1.0", "Err msg");
+    Argv argv{"test", "-x"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: unknown option: '-x'"));
+}
+
+TEST_CASE("Parser error message missing value for long option")
+{
+    App app("test", "1.0", "Err msg");
+    app.option<int, fixed_string("port")>("--port", "Port");
+    Argv argv{"test", "--port"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: option '--port' requires a value"));
+}
+
+TEST_CASE("Parser error message missing value for short option")
+{
+    App app("test", "1.0", "Err msg");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    Argv argv{"test", "-p"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: option '-p' requires a value"));
+}
+
+TEST_CASE("Parser error message required option missing")
+{
+    App app("test", "1.0", "Err msg");
+    app.option<int, fixed_string("port")>("--port", "Port").required();
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: missing required option: 'port'"));
+}
+
+TEST_CASE("Parser error message required arg missing")
+{
+    App app("test", "1.0", "Err msg");
+    app.arg<std::string, 0>("file", "Input file").required();
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: missing required argument: 'file'"));
+}
+
+TEST_CASE("Parser error message type conversion failure")
+{
+    App app("test", "1.0", "Err msg");
+    app.option<int, fixed_string("port")>("--port", "Port");
+    Argv argv{"test", "--port", "notanumber"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: invalid integer: 'notanumber'"));
+}
+
+TEST_CASE("Parser error message disabled command")
+{
+    App app("test", "1.0", "Err msg");
+    app.add_command("oldcmd", "Deprecated").enabled([] { return false; });
+    Argv argv{"test", "oldcmd"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: command 'oldcmd' is not available"));
+}
+
+TEST_CASE("Parser equals form type conversion failure")
+{
+    App app("test", "1.0", "Equals conversion");
+    app.option<int, fixed_string("port")>("--port", "Port");
+    Argv argv{"test", "--port=notanumber"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser short mixed bool flag then valued option")
+{
+    App app("test", "1.0", "Mixed short");
+    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    Argv argv{"test", "-vp", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("Parser short mixed valued option then bool flag")
+{
+    App app("test", "1.0", "Mixed short");
+    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    Argv argv{"test", "-pv", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+}
+
+TEST_CASE("Parser double dash with no further args")
+{
+    App app("test", "1.0", "DD empty");
+    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    Argv argv{"test", "--verbose", "--"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+}
+
+TEST_CASE("Parser double dash with ExtraArgsPolicy::Error")
+{
+    App app("test", "1.0", "DD error");
+    app.set_extra_args(ExtraArgsPolicy::Error);
+    app.arg<std::string, 0>("file", "Input file");
+    Argv argv{"test", "--", "a.txt", "b.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser required option and required arg both missing")
+{
+    App app("test", "1.0", "Both required missing");
+    app.option<int, fixed_string("port")>("--port", "Port").required();
+    app.arg<std::string, 0>("file", "Input file").required();
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser required option with default still errors when missing")
+{
+    App app("test", "1.0", "Required default");
+    app.option<int, fixed_string("port")>("--port", "Port", 8080).required();
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser required arg insufficient args")
+{
+    App app("test", "1.0", "Insufficient required");
+    app.arg<std::string, 0>("src", "Source").required();
+    app.arg<std::string, 1>("dst", "Dest").required();
+    Argv argv{"test", "onlysrc"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser optional arg insufficient does not fail")
+{
+    App app("test", "1.0", "Insufficient optional");
+    app.arg<std::string, 0>("src", "Source");
+    app.arg<std::string, 1>("dst", "Dest");
+    Argv argv{"test", "onlysrc"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parser all positional store with no registered args")
+{
+    App app("test", "1.0", "All positional store");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    Argv argv{"test", "a.txt", "b.txt", "c.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    CHECK(extra.size() == 3);
+    CHECK(extra[0] == "a.txt");
+    CHECK(extra[1] == "b.txt");
+    CHECK(extra[2] == "c.txt");
+}
+
+TEST_CASE("Parser all positional ignore with no registered args")
+{
+    App app("test", "1.0", "All positional ignore");
+    Argv argv{"test", "a.txt", "b.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parser all positional error with no registered args")
+{
+    App app("test", "1.0", "All positional error");
+    app.set_extra_args(ExtraArgsPolicy::Error);
+    Argv argv{"test", "a.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser parse_fuzzy with store extra args")
+{
+    App app("test", "1.0", "Fuzzy store");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    auto &srv = app.add_command("server", "Server");
+    srv.arg<std::string, 0>("file", "File");
+    Argv argv{"test", "servr", "data.txt", "extra1"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.matched_path() == "server");
+    CHECK(ctx.get<std::string, 0>() == "data.txt");
+    auto extra = ctx.extra_args();
+    CHECK(extra.size() == 1);
+    CHECK(extra[0] == "extra1");
+}
+
+TEST_CASE("Parser subcommand with no args")
+{
+    App app("test", "1.0", "Sub no args");
+    app.add_command("status", "Show status");
+    Argv argv{"test", "status"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().matched_path() == "status");
+}
