@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(pjh_cli LANGUAGES CXX)
 
-add_subdirectory(third_party/pjh_result EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/pjh_result EXCLUDE_FROM_ALL)
 
 add_library(pjh_cli)
 target_sources(pjh_cli
