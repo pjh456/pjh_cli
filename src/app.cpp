@@ -1,8 +1,10 @@
 #include <pjh_cli/app.hpp>
 
+#include <cctype>
+#include <vector>
+
 namespace pjh::cli
 {
-
     App::App(
         std::string name,
         std::string version,
@@ -12,6 +14,199 @@ namespace pjh::cli
               std::move(description)),
           m_version(std::move(version))
     {
+    }
+
+    namespace
+    {
+
+        ParseResult<void>
+        consume_long(
+            const Command &cmd,
+            ParseContext &ctx,
+            std::string_view arg,
+            size_t &i,
+            const std::vector<std::string_view> &args)
+        {
+            auto name = arg.substr(2);
+            std::string_view value;
+            bool has_eq = false;
+
+            auto eq = name.find('=');
+            if (eq != std::string_view::npos)
+            {
+                value = name.substr(eq + 1);
+                name = name.substr(0, eq);
+                has_eq = true;
+            }
+
+            auto *opt = cmd.find_option_by_long(name);
+            if (!opt)
+                return ParseFailure{
+                    unknown_option(
+                        std::string("--") + std::string(name))};
+
+            if (opt->m_has_value)
+            {
+                if (has_eq)
+                    return opt->m_apply(ctx, value);
+                if (++i >= args.size())
+                    return ParseFailure{
+                        missing_value(
+                            std::string("--") + std::string(name))};
+                return opt->m_apply(ctx, args[i]);
+            }
+
+            return opt->m_apply(ctx, "true");
+        }
+
+        ParseResult<void>
+        consume_short(
+            const Command &cmd,
+            ParseContext &ctx,
+            std::string_view arg,
+            size_t &i,
+            const std::vector<std::string_view> &args)
+        {
+            for (size_t j = 1; j < arg.size(); j++)
+            {
+                char c = arg[j];
+                auto *opt = cmd.find_option_by_short(c);
+                if (!opt)
+                    return ParseFailure{
+                        unknown_option(
+                            std::string("-") + c)};
+
+                if (opt->m_has_value)
+                {
+                    if (j + 1 < arg.size())
+                    {
+                        auto r = opt->m_apply(
+                            ctx, arg.substr(j + 1));
+                        if (r.is_err())
+                            return r;
+                        break;
+                    }
+                    if (++i >= args.size())
+                        return ParseFailure{
+                            missing_value(
+                                std::string("-") + c)};
+                    auto r = opt->m_apply(ctx, args[i]);
+                    if (r.is_err())
+                        return r;
+                }
+                else
+                {
+                    auto r = opt->m_apply(ctx, "true");
+                    if (r.is_err())
+                        return r;
+                }
+            }
+            return ParseResult<void>::Ok();
+        }
+
+    } // namespace
+
+    ParseResult<ParseContext>
+    App::parse(
+        int argc,
+        char **argv)
+    {
+        std::vector<std::string_view> args;
+        for (int a = 1; a < argc; a++)
+            args.emplace_back(argv[a]);
+
+        // Walk subcommand tree
+        const Command *cmd = this;
+        size_t i = 0;
+        while (i < args.size())
+        {
+            auto *sub = cmd->find_subcommand(args[i]);
+            if (sub && sub->is_enabled())
+            {
+                cmd = sub;
+                i++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        ParseContext ctx;
+        ctx.set_matched_path(cmd->name());
+
+        // Process remaining args as options / positional
+        size_t arg_pos = 0;
+        bool double_dash = false;
+
+        while (i < args.size())
+        {
+            auto a = args[i];
+
+            if (!double_dash && a == "--")
+            {
+                double_dash = true;
+                i++;
+                continue;
+            }
+
+            if (!double_dash && a.size() > 1 && a[0] == '-')
+            {
+                ParseResult<void> r =
+                    (a[1] == '-')
+                        ? consume_long(*cmd, ctx, a, i, args)
+                        : consume_short(*cmd, ctx, a, i, args);
+                if (r.is_err())
+                    return ParseResult<ParseContext>::Err(
+                        std::move(r).unwrap_err());
+            }
+            else
+            {
+                if (arg_pos < cmd->args().size())
+                {
+                    auto r = cmd->args()[arg_pos].m_apply(ctx, a);
+                    if (r.is_err())
+                        return ParseResult<ParseContext>::Err(
+                            std::move(r).unwrap_err());
+                }
+                arg_pos++;
+            }
+
+            i++;
+        }
+
+        // Apply defaults
+        auto dr = cmd->apply_defaults(ctx);
+        if (dr.is_err())
+            return ParseResult<ParseContext>::Err(
+                std::move(dr).unwrap_err());
+
+        // Validate required options
+        for (const auto &opt : cmd->options())
+        {
+            if (opt.m_required &&
+                !ctx.has_value(opt.m_key_hash))
+            {
+                return ParseResult<ParseContext>::Err(
+                    missing_required_option(
+                        opt.m_long_name));
+            }
+        }
+
+        // Validate required positional args
+        for (const auto &arg : cmd->args())
+        {
+            if (arg.m_required &&
+                !ctx.has_value(arg.m_key_hash))
+            {
+                return ParseResult<ParseContext>::Err(
+                    missing_required_arg(
+                        arg.m_name));
+            }
+        }
+
+        return ParseResult<ParseContext>::Ok(
+            std::move(ctx));
     }
 
 } // namespace pjh::cli

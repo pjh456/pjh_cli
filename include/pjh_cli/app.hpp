@@ -24,6 +24,15 @@ namespace pjh::cli
         const std::string &
         version() const { return m_version; }
 
+        /// @brief Parse command-line arguments and produce a ParseContext.
+        /// @param argc Argument count (from main).
+        /// @param argv Argument vector (from main).
+        /// @return ParseContext on success, or a ParseError with details.
+        ParseResult<ParseContext>
+        parse(
+            int argc,
+            char **argv);
+
     private:
         std::string m_version;
     };

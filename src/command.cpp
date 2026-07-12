@@ -63,7 +63,8 @@ namespace pjh::cli
         ParseContext &ctx) const
     {
         for (auto &opt : m_options)
-            if (opt.m_apply_default)
+            if (opt.m_apply_default &&
+                !ctx.has_value(opt.m_key_hash))
                 opt.m_apply_default(ctx);
         return ParseResult<void>::Ok();
     }
