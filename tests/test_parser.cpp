@@ -54,6 +54,15 @@ int main()
         assert(val == 8080);
     }
 
+    // ── 3b. Long option with empty equals (missing value) ──
+    {
+        App app("test", "1.0", "Empty equals test");
+        app.option<int, fixed_string("port")>("--port", "Port number");
+        Argv argv{"test", "--port="};
+        auto r = app.parse(argv.argc(), argv.argv());
+        assert(r.is_err());
+    }
+
     // ── 4. Bool flag ──
     {
         App app("test", "1.0", "Flag test");

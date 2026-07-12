@@ -36,7 +36,13 @@ namespace pjh::cli
             if (opt->m_has_value)
             {
                 if (has_eq)
+                {
+                    if (value.empty())
+                        return ParseFailure{
+                            missing_value(
+                                std::string("--") + std::string(name))};
                     return opt->m_apply(ctx, value);
+                }
                 if (++i >= args.size())
                     return ParseFailure{
                         missing_value(
