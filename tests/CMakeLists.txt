@@ -7,13 +7,16 @@ set(PJH_CLI_TEST_SOURCES
     test_converter.cpp
     test_command.cpp
     test_matcher.cpp
-    test_console.cpp
     parser/test_options.cpp
     parser/test_flags.cpp
     parser/test_positional.cpp
     parser/test_subcommands.cpp
     parser/test_dash.cpp
     parser/test_errors.cpp
+    console/test_basics.cpp
+    console/test_process_line_help.cpp
+    console/test_process_line_parse.cpp
+    console/test_free_functions.cpp
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
