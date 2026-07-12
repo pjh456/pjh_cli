@@ -54,7 +54,7 @@ namespace pjh::cli
 
             int d = edit_distance(input, sub.name());
             if (d <= max_distance)
-                results.push_back({const_cast<Command *>(&sub), d});
+                results.push_back({&sub, d});
         }
 
         std::stable_sort(
