@@ -62,6 +62,14 @@ namespace pjh::cli
             static_cast<unsigned>(b));
     }
 
+    /// @brief Policy for handling extra positional arguments beyond registered arg<N>.
+    enum class ExtraArgsPolicy : unsigned
+    {
+        Ignore, ///< Silently discard (default, POSIX convention).
+        Error,  ///< Return ParseError on any extra positional argument.
+        Store,  ///< Append to ParseContext::extra_args() for runtime inspection.
+    };
+
     /// @brief Composite node in the command tree.
     ///
     /// Every Command can hold:
@@ -156,6 +164,10 @@ namespace pjh::cli
         Command &
         set_visibility(Visibility v);
 
+        /// @brief Set extra positional args handling policy (default: Ignore).
+        Command &
+        set_extra_args(ExtraArgsPolicy p);
+
         // ──────────────────────────────────────────
         //  Queries
         // ──────────────────────────────────────────
@@ -192,6 +204,10 @@ namespace pjh::cli
         const std::vector<ArgDef> &
         args()
             const { return m_args; }
+
+        ExtraArgsPolicy
+        extra_args_policy()
+            const { return m_extra_args_policy; }
 
         /// @brief Find a direct child subcommand by exact name match.
         Command *
@@ -252,6 +268,8 @@ namespace pjh::cli
             size_t>
             m_option_by_short;
 
+        ExtraArgsPolicy m_extra_args_policy =
+            ExtraArgsPolicy::Ignore;
         Visibility m_visibility =
             Visibility::Both;
         std::function<bool()> m_enabled =

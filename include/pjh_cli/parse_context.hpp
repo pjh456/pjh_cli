@@ -88,6 +88,10 @@ namespace pjh::cli
             return m_values.contains(hash);
         }
 
+        /// @brief Extra positional arguments collected when ExtraArgsPolicy::Store.
+        const std::vector<std::string> &
+        extra_args() const { return m_extra_args; }
+
         /// @brief Path of matched commands, e.g. "serve start".
         const std::string &
         matched_path() const { return m_matched_path; }
@@ -99,8 +103,16 @@ namespace pjh::cli
             m_matched_path = std::move(p);
         }
 
+        /// @brief Append an extra positional arg (used internally by parser).
+        void
+        add_extra_arg(std::string s)
+        {
+            m_extra_args.push_back(std::move(s));
+        }
+
     private:
         std::unordered_map<size_t, std::any> m_values;
+        std::vector<std::string> m_extra_args;
         std::string m_matched_path;
     };
 

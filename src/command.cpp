@@ -112,4 +112,11 @@ namespace pjh::cli
         return *this;
     }
 
+    Command &
+    Command::set_extra_args(ExtraArgsPolicy p)
+    {
+        m_extra_args_policy = p;
+        return *this;
+    }
+
 } // namespace pjh::cli

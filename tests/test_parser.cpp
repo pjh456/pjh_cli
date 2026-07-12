@@ -301,7 +301,7 @@ int main()
         assert(r.is_err());
     }
 
-    // ── 24. Extra positional args (beyond registered) ──
+    // ── 24. Extra positional args (beyond registered, default Ignore) ──
     {
         App app("test", "1.0", "Extra args test");
         app.arg<std::string, 0>("file", "Input file");
@@ -310,6 +310,43 @@ int main()
         assert(r.is_ok());
         auto f = r.unwrap().get<std::string, 0>();
         assert(f == "a.txt");
+    }
+
+    // ── 25. Extra positional args with Error policy ──
+    {
+        App app("test", "1.0", "Strict error test");
+        app.set_extra_args(ExtraArgsPolicy::Error);
+        app.arg<std::string, 0>("file", "Input file");
+        Argv argv{"test", "a.txt", "b.txt"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        assert(r.is_err());
+    }
+
+    // ── 26. Extra positional args with Store policy ──
+    {
+        App app("test", "1.0", "Store test");
+        app.set_extra_args(ExtraArgsPolicy::Store);
+        app.arg<std::string, 0>("file", "Input file");
+        Argv argv{"test", "a.txt", "b.txt", "c.txt"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        assert(r.is_ok());
+        auto &ctx = r.unwrap();
+        assert((ctx.get<std::string, 0>() == "a.txt"));
+        auto extra = ctx.extra_args();
+        assert(extra.size() == 2);
+        assert(extra[0] == "b.txt");
+        assert(extra[1] == "c.txt");
+    }
+
+    // ── 27. Store policy with no extra args ──
+    {
+        App app("test", "1.0", "Store no extra");
+        app.set_extra_args(ExtraArgsPolicy::Store);
+        app.arg<std::string, 0>("file", "Input file");
+        Argv argv{"test", "a.txt"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        assert(r.is_ok());
+        assert(r.unwrap().extra_args().empty());
     }
 
     return 0;

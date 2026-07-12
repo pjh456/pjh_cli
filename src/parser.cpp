@@ -135,6 +135,19 @@ namespace pjh::cli
                         if (r.is_err())
                             return r;
                     }
+                    else
+                    {
+                        switch (cmd->extra_args_policy())
+                        {
+                        case ExtraArgsPolicy::Error:
+                            return ParseFailure{parse_error(a, static_cast<int>(i))};
+                        case ExtraArgsPolicy::Store:
+                            ctx.add_extra_arg(std::string(a));
+                            break;
+                        default:
+                            break;
+                        }
+                    }
                     arg_pos++;
                 }
             }
