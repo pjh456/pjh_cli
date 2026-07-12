@@ -214,7 +214,7 @@ namespace pjh::cli
 
         /// @brief Execute the registered action callback.
         ParseResult<void>
-        execute(ParseContext &ctx);
+        execute(ParseContext &ctx) const;
 
     private:
         std::string m_name;

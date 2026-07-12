@@ -8,8 +8,10 @@ target_sources(pjh_cli
     PRIVATE
     src/command.cpp
     src/app.cpp
+    src/parser.cpp
     src/help.cpp
     src/matcher.cpp
+    src/console.cpp
 )
 target_include_directories(pjh_cli
     PUBLIC

@@ -21,5 +21,8 @@
 #include "pjh_cli/parse_context.hpp"
 #include "pjh_cli/command.hpp"
 #include "pjh_cli/app.hpp"
+#include "pjh_cli/console.hpp"
+#include "pjh_cli/matcher.hpp"
+#include "pjh_cli/parser.hpp"
 
 #endif // INCLUDE_PJH_CLI_HPP

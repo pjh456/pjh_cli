@@ -70,7 +70,7 @@ namespace pjh::cli
     }
 
     ParseResult<void>
-    Command::execute(ParseContext &ctx)
+    Command::execute(ParseContext &ctx) const
     {
         if (!m_action)
             return ParseResult<void>::Ok();
