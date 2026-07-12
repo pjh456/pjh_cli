@@ -50,7 +50,7 @@ namespace pjh::cli
         -> fixed_string<N>;
 
     /// @brief Hash a size_t key (identity — positional arg index is its own hash).
-    constexpr size_t
+    consteval size_t
     key_hash(size_t k) noexcept
     {
         return k;
@@ -59,7 +59,7 @@ namespace pjh::cli
     /// @brief Hash a fixed_string key (FNV-1a).
     /// @tparam N String length including null terminator.
     template <size_t N>
-    constexpr size_t
+    consteval size_t
     key_hash(
         const fixed_string<N> &s) noexcept
     {
