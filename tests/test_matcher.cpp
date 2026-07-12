@@ -7,21 +7,24 @@
 
 using namespace pjh::cli;
 
-struct Argv
+namespace
 {
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-
-    Argv(std::initializer_list<std::string> list)
-        : storage(list)
+    struct Argv
     {
-        for (auto &s : storage)
-            ptrs.push_back(s.data());
-    }
+        std::vector<std::string> storage;
+        std::vector<char *> ptrs;
 
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
+        Argv(std::initializer_list<std::string> list)
+            : storage(list)
+        {
+            for (auto &s : storage)
+                ptrs.push_back(s.data());
+        }
+
+        int argc() const { return static_cast<int>(ptrs.size()); }
+        char **argv() { return ptrs.data(); }
+    };
+}
 
 TEST_CASE("edit_distance")
 {
@@ -108,8 +111,10 @@ TEST_CASE("complete subcommand prefix")
     bool has_server = false, has_serve = false;
     for (const auto &c : candidates)
     {
-        if (c == "server") has_server = true;
-        if (c == "serve") has_serve = true;
+        if (c == "server")
+            has_server = true;
+        if (c == "serve")
+            has_serve = true;
     }
     CHECK(has_server);
     CHECK(has_serve);
@@ -138,8 +143,10 @@ TEST_CASE("complete short option prefix")
     bool has_v = false, has_p = false;
     for (const auto &c : candidates)
     {
-        if (c == "-v") has_v = true;
-        if (c == "-p") has_p = true;
+        if (c == "-v")
+            has_v = true;
+        if (c == "-p")
+            has_p = true;
     }
     CHECK(has_v);
     CHECK(has_p);
