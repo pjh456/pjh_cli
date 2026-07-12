@@ -4,8 +4,8 @@
 #include "error.hpp"
 #include "type.hpp"
 
-#include <algorithm>
-#include <cctype>
+#include "detail/string_utils.hpp"
+
 #include <charconv>
 #include <string>
 #include <string_view>
@@ -15,25 +15,6 @@ namespace pjh::cli
 
     namespace detail
     {
-
-        /// @brief Case-insensitive string equality (ASCII only).
-        constexpr bool
-        case_insensitive_equal(
-            std::string_view a,
-            std::string_view b) noexcept
-        {
-            return a.size() == b.size() &&
-                   std::equal(
-                       a.begin(), a.end(),
-                       b.begin(),
-                       [](char x, char y) noexcept
-                       {
-                           return std::tolower(
-                                      static_cast<unsigned char>(x)) ==
-                                  std::tolower(
-                                      static_cast<unsigned char>(y));
-                       });
-        }
 
         /// @brief Convert string to integer type using std::from_chars.
         /// @tparam T Integer type (int, long, unsigned, etc.)

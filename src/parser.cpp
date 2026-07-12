@@ -1,4 +1,5 @@
 #include <pjh_cli/parser.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
 
 namespace pjh::cli
@@ -13,17 +14,8 @@ namespace pjh::cli
             size_t &i,
             std::span<const std::string_view> args)
         {
-            auto name = arg.substr(2);
-            std::string_view value;
-            bool has_eq = false;
-
-            auto eq = name.find('=');
-            if (eq != std::string_view::npos)
-            {
-                value = name.substr(eq + 1);
-                name = name.substr(0, eq);
-                has_eq = true;
-            }
+            auto [name, value, has_eq] =
+                detail::split_name_value(arg.substr(2));
 
             auto *opt = cmd.find_option_by_long(name);
             if (!opt)

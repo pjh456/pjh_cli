@@ -1,4 +1,5 @@
 #include <pjh_cli/matcher.hpp>
+#include <pjh_cli/detail/command_utils.hpp>
 
 #include <algorithm>
 #include <sstream>
@@ -47,11 +48,8 @@ namespace pjh::cli
 
         for (const auto &sub : parent.subcommands())
         {
-            if (!sub.is_enabled())
+            if (!detail::is_visible_and_enabled(sub, mode))
                 continue;
-            if ((sub.visibility() & mode) == Visibility::Hidden)
-                continue;
-
             int d = edit_distance(input, sub.name());
             if (d <= max_distance)
                 results.push_back({&sub, d});
@@ -76,9 +74,7 @@ namespace pjh::cli
         std::vector<std::string> names;
         for (const auto &sub : cmd.subcommands())
         {
-            if (!sub.is_enabled())
-                continue;
-            if ((sub.visibility() & mode) == Visibility::Hidden)
+            if (!detail::is_visible_and_enabled(sub, mode))
                 continue;
             names.push_back(sub.name());
         }
@@ -96,9 +92,7 @@ namespace pjh::cli
         // Subcommand name completion
         for (const auto &sub : cmd.subcommands())
         {
-            if (!sub.is_enabled())
-                continue;
-            if ((sub.visibility() & mode) == Visibility::Hidden)
+            if (!detail::is_visible_and_enabled(sub, mode))
                 continue;
             if (sub.name().starts_with(prefix))
                 candidates.push_back(sub.name());
@@ -162,30 +156,7 @@ namespace pjh::cli
 
         // Options summary
         for (const auto &opt : cmd.options())
-        {
-            os << " [";
-            if (opt.m_short_name != 0)
-                os << "-" << opt.m_short_name;
-            if (opt.m_short_name != 0 && !opt.m_long_name.empty())
-                os << "|";
-            if (!opt.m_long_name.empty())
-                os << "--" << opt.m_long_name;
-
-            if (opt.m_has_value)
-            {
-                os << " ";
-                auto label = opt.m_long_name.empty()
-                                 ? std::string(1, opt.m_short_name)
-                                 : opt.m_long_name;
-                std::transform(
-                    label.begin(), label.end(),
-                    label.begin(),
-                    [](unsigned char c)
-                    { return static_cast<char>(std::toupper(c)); });
-                os << label;
-            }
-            os << "]";
-        }
+            os << " [" << detail::option_left_label(opt, "|") << "]";
 
         // Positional args
         for (const auto &arg : cmd.args())
@@ -199,16 +170,14 @@ namespace pjh::cli
         // Subcommands (only if no args left to consume)
         if (!cmd.subcommands().empty())
         {
-            bool has_visible = false;
-            for (const auto &sub : cmd.subcommands())
-            {
-                if (sub.is_enabled() &&
-                    sub.visibility() != Visibility::Hidden)
+            bool has_visible = std::any_of(
+                cmd.subcommands().begin(),
+                cmd.subcommands().end(),
+                [](const Command &sub)
                 {
-                    has_visible = true;
-                    break;
-                }
-            }
+                    return detail::is_visible_and_enabled(
+                        sub, Visibility::Both);
+                });
             if (has_visible)
                 os << " <command>";
         }
@@ -246,34 +215,11 @@ namespace pjh::cli
         {
             os << "Options:\n";
 
-            auto opt_left = [](const OptionDef &opt) -> std::string
-            {
-                std::string left;
-                if (opt.m_short_name != 0)
-                    left = std::string("-") + opt.m_short_name;
-                if (opt.m_short_name != 0 && !opt.m_long_name.empty())
-                    left += ", ";
-                if (!opt.m_long_name.empty())
-                    left += "--" + opt.m_long_name;
-                if (opt.m_has_value)
-                {
-                    auto label =
-                        opt.m_long_name.empty()
-                            ? std::string(1, opt.m_short_name)
-                            : opt.m_long_name;
-                    std::transform(
-                        label.begin(), label.end(),
-                        label.begin(),
-                        [](unsigned char c)
-                        { return static_cast<char>(std::toupper(c)); });
-                    left += " " + label;
-                }
-                return left;
-            };
-
             size_t max_left = 0;
             for (const auto &opt : cmd.options())
-                max_left = std::max(max_left, opt_left(opt).size());
+                max_left = std::max(
+                    max_left,
+                    detail::option_left_label(opt).size());
             size_t left_width = std::min(max_left, size_t(32));
 
             for (const auto &opt : cmd.options())
@@ -281,7 +227,10 @@ namespace pjh::cli
                 std::string right = opt.m_description;
                 if (opt.m_required)
                     right += " (required)";
-                append_help_line(os, opt_left(opt), right, left_width);
+                append_help_line(
+                    os,
+                    detail::option_left_label(opt),
+                    right, left_width);
             }
             os << "\n";
         }
@@ -306,25 +255,23 @@ namespace pjh::cli
         }
 
         // Subcommands
-        bool has_visible = false;
         size_t max_left = 0;
+        size_t visible_count = 0;
         for (const auto &sub : cmd.subcommands())
         {
-            if (!sub.is_enabled() ||
-                sub.visibility() == Visibility::Hidden)
+            if (!detail::is_visible_and_enabled(sub, Visibility::Both))
                 continue;
-            has_visible = true;
+            visible_count++;
             max_left = std::max(max_left, sub.name().size());
         }
 
-        if (has_visible)
+        if (visible_count > 0)
         {
             os << "Subcommands:\n";
             size_t left_width = std::min(max_left, size_t(28));
             for (const auto &sub : cmd.subcommands())
             {
-                if (!sub.is_enabled() ||
-                    sub.visibility() == Visibility::Hidden)
+                if (!detail::is_visible_and_enabled(sub, Visibility::Both))
                     continue;
                 append_help_line(os, sub.name(), sub.description(), left_width);
             }
