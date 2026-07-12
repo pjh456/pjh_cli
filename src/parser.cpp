@@ -1,8 +1,6 @@
 #include <pjh_cli/parser.hpp>
 #include <pjh_cli/matcher.hpp>
 
-#include <vector>
-
 namespace pjh::cli
 {
     namespace
@@ -13,7 +11,7 @@ namespace pjh::cli
             ParseContext &ctx,
             std::string_view arg,
             size_t &i,
-            const std::vector<std::string_view> &args)
+            std::span<const std::string_view> args)
         {
             auto name = arg.substr(2);
             std::string_view value;
@@ -59,7 +57,7 @@ namespace pjh::cli
             ParseContext &ctx,
             std::string_view arg,
             size_t &i,
-            const std::vector<std::string_view> &args)
+            std::span<const std::string_view> args)
         {
             for (size_t j = 1; j < arg.size(); j++)
             {
@@ -103,7 +101,7 @@ namespace pjh::cli
             const Command *cmd,
             ParseContext &ctx,
             size_t start,
-            const std::vector<std::string_view> &args)
+            std::span<const std::string_view> args)
         {
             size_t arg_pos = 0;
             bool double_dash = false;
@@ -199,7 +197,7 @@ namespace pjh::cli
     ParseResult<ParseContext>
     parse_command(
         const Command &root,
-        const std::vector<std::string_view> &args)
+        std::span<const std::string_view> args)
     {
         const Command *cmd = &root;
         size_t i = 0;
@@ -229,7 +227,7 @@ namespace pjh::cli
     ParseResult<ParseContext>
     parse_command_fuzzy(
         const Command &root,
-        const std::vector<std::string_view> &args)
+        std::span<const std::string_view> args)
     {
         const Command *cmd = &root;
         size_t i = 0;

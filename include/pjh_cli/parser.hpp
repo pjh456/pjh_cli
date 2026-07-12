@@ -5,8 +5,8 @@
 #include "parse_context.hpp"
 #include "type.hpp"
 
+#include <span>
 #include <string_view>
-#include <vector>
 
 namespace pjh::cli
 {
@@ -14,13 +14,13 @@ namespace pjh::cli
     ParseResult<ParseContext>
     parse_command(
         const Command &root,
-        const std::vector<std::string_view> &args);
+        std::span<const std::string_view> args);
 
     /// @brief Parse args against a command tree with fuzzy subcommand matching.
     ParseResult<ParseContext>
     parse_command_fuzzy(
         const Command &root,
-        const std::vector<std::string_view> &args);
+        std::span<const std::string_view> args);
 }
 
 #endif
