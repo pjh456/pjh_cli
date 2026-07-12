@@ -6,8 +6,6 @@ add_subdirectory(third_party/pjh_result EXCLUDE_FROM_ALL)
 add_library(pjh_cli)
 target_sources(pjh_cli
     PRIVATE
-        src/tokenizer.cpp
-        src/converter.cpp
         src/help.cpp
 )
 target_include_directories(pjh_cli
