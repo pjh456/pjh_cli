@@ -35,8 +35,9 @@ namespace pjh::cli
             const noexcept { return N - 1; }
 
         /// @brief Equality comparison.
+        template <size_t M>
         constexpr bool operator==(
-            const fixed_string &rhs)
+            const fixed_string<M> &rhs)
             const noexcept
         {
             return view() == rhs.view();
