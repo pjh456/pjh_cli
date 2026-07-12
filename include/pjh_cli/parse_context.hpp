@@ -63,7 +63,7 @@ namespace pjh::cli
             if (it == m_values.end())
                 return pjh::result::Option<T>::None();
             return pjh::result::Option<T>::Some(
-                std::any_cast<T>(it->second));
+                std::any_cast<const T &>(it->second));
         }
 
         /// @brief Check if a value exists for the given compile-time key.

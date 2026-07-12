@@ -36,7 +36,9 @@ namespace pjh::cli
                 line == "q")
                 break;
 
-            process_line(line);
+            auto r = process_line(line);
+            if (r.is_err())
+                std::cerr << r.unwrap_err().what() << "\n";
         }
     }
 
@@ -83,7 +85,7 @@ namespace pjh::cli
 
     } // namespace
 
-    void
+    ParseResult<void>
     InteractiveConsole::process_line(
         const std::string &line)
     {
@@ -96,9 +98,7 @@ namespace pjh::cli
             {
                 auto names = list_subcommands(m_root);
                 if (names.empty())
-                {
                     std::cout << "No subcommands available.\n";
-                }
                 else
                 {
                     std::cout << "Subcommands:";
@@ -106,7 +106,7 @@ namespace pjh::cli
                         std::cout << " " << n;
                     std::cout << "\n";
                 }
-                return;
+                return ParseResult<void>::Ok();
             }
 
             // Search by substring
@@ -144,12 +144,12 @@ namespace pjh::cli
                 }
             }
             std::cout << "\n";
-            return;
+            return ParseResult<void>::Ok();
         }
 
         auto tokens = tokenize_line(line);
         if (tokens.empty())
-            return;
+            return ParseResult<void>::Ok();
 
         // "help" → show formatted help
         if (tokens.size() == 1 &&
@@ -158,7 +158,7 @@ namespace pjh::cli
              tokens[0] == "-h"))
         {
             std::cout << format_help(m_root, m_root.name());
-            return;
+            return ParseResult<void>::Ok();
         }
 
         std::vector<std::string_view> args;
@@ -167,18 +167,11 @@ namespace pjh::cli
 
         auto r = parse_command(m_root, args, 3);
         if (r.is_err())
-        {
-            std::cerr << r.unwrap_err().what() << "\n";
-            return;
-        }
+            return ParseResult<void>::Err(r.unwrap_err());
 
         auto &ctx = r.unwrap();
 
-        auto exec = ctx.matched_command()->execute(ctx);
-        if (exec.is_err())
-        {
-            std::cerr << exec.unwrap_err().what() << "\n";
-        }
+        return ctx.matched_command()->execute(ctx);
     }
 
 } // namespace pjh::cli

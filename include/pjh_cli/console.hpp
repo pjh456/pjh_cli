@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_CONSOLE_HPP
 
 #include "command.hpp"
+#include "type.hpp"
 
 #include <string>
 #include <vector>
@@ -37,7 +38,7 @@ namespace pjh::cli
         std::vector<std::string> m_history;
         size_t m_history_index = 0;
 
-        void process_line(
+        ParseResult<void> process_line(
             const std::string &line);
     };
 

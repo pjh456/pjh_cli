@@ -198,11 +198,16 @@ namespace pjh::cli
         while (i < args.size())
         {
             auto *sub = cmd->find_subcommand(args[i]);
-            if (sub && sub->is_enabled())
+            if (sub)
             {
-                cmd = sub;
-                i++;
-                continue;
+                if (sub->is_enabled())
+                {
+                    cmd = sub;
+                    i++;
+                    continue;
+                }
+                return ParseResult<ParseContext>::Err(
+                    command_disabled(args[i]));
             }
 
             if (max_fuzzy_distance > 0)
