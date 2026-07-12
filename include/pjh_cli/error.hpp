@@ -12,20 +12,20 @@ namespace pjh::cli
     /// @brief Error type for parse failures.
     ///
     /// Subclass of std::runtime_error. Used as the error (E) type in
-    /// ParseResult<T> = Result<T, ParseError>.
+    /// CliResult<T> = Result<T, CliError>.
     /// Every message is automatically prefixed with "Parse Error: ".
-    class ParseError
+    class CliError
         : public std::runtime_error
     {
     public:
-        explicit ParseError(
+        explicit CliError(
             const std::string &msg)
             : std::runtime_error(
                   std::string("Parse Error: ") + msg)
         {
         }
 
-        explicit ParseError(
+        explicit CliError(
             const char *msg)
             : std::runtime_error(
                   std::string("Parse Error: ") + msg)
@@ -37,7 +37,7 @@ namespace pjh::cli
     ///
     /// Thrown when the library API is used incorrectly, e.g. calling
     /// ParseContext::get() without checking has() first.
-    class ParseLogicError
+    class LogicError
         : public std::logic_error
     {
     public:
@@ -45,12 +45,12 @@ namespace pjh::cli
     };
 
     /// @brief Generic parse error at a given argument position.
-    inline ParseError
+    inline CliError
     parse_error(
         std::string_view arg_name,
         int position)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "parse error at argument '{}', "
                 "position {}",
@@ -59,57 +59,57 @@ namespace pjh::cli
     }
 
     /// @brief User specified an option that was not registered.
-    inline ParseError
+    inline CliError
     unknown_option(
         std::string_view name)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "unknown option: '{}'",
                 name));
     }
 
     /// @brief Option declared as taking a value, but none provided.
-    inline ParseError
+    inline CliError
     missing_value(
         std::string_view name)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "option '{}' requires a value",
                 name));
     }
 
     /// @brief Required option was not present on the command line.
-    inline ParseError
+    inline CliError
     missing_required_option(
         std::string_view name)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "missing required option: '{}'",
                 name));
     }
 
     /// @brief Required positional argument was not provided.
-    inline ParseError
+    inline CliError
     missing_required_arg(
         std::string_view name)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "missing required argument: '{}'",
                 name));
     }
 
     /// @brief String value could not be converted to the expected type.
-    inline ParseError
+    inline CliError
     type_conversion_error(
         std::string_view name,
         std::string_view value,
         std::string_view expected_type)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "invalid value '{}' for '{}': "
                 "expected {}",
@@ -118,7 +118,7 @@ namespace pjh::cli
     }
 
     /// @brief Multiple commands matched the input (fuzzy match ambiguity).
-    inline ParseError
+    inline CliError
     ambiguous_command(
         std::string_view input,
         const std::vector<std::string> &candidates)
@@ -132,15 +132,15 @@ namespace pjh::cli
                 "{} {}",
                 std::move(msg),
                 c);
-        return ParseError(msg);
+        return CliError(msg);
     }
 
     /// @brief Command exists but is currently disabled via enabled_predicate.
-    inline ParseError
+    inline CliError
     command_disabled(
         std::string_view name)
     {
-        return ParseError(
+        return CliError(
             std::format(
                 "command '{}' is not available",
                 name));

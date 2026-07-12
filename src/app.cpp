@@ -14,7 +14,7 @@ namespace pjh::cli
     {
     }
 
-    ParseResult<ParseContext>
+    CliResult<ParseContext>
     App::parse(
         int argc,
         char **argv)
@@ -22,7 +22,7 @@ namespace pjh::cli
         return parse_command(*this, argc, argv);
     }
 
-    ParseResult<ParseContext>
+    CliResult<ParseContext>
     App::parse_fuzzy(
         int argc,
         char **argv)

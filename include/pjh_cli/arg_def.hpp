@@ -24,7 +24,7 @@ namespace pjh::cli
 
         /// @brief Type-erased converter: parse string value and store in context.
         std::function<
-            ParseResult<void>(
+            CliResult<void>(
                 ParseContext &,
                 std::string_view)>
             m_apply;

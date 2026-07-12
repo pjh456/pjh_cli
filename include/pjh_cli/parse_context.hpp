@@ -26,7 +26,7 @@ namespace pjh::cli
         /// @brief Retrieve a value by its compile-time key.
         /// @tparam T Expected value type.
         /// @tparam Key Compile-time key (fixed_string for options, size_t for args).
-        /// @throws ParseLogicError if the key has no stored value.
+        /// @throws LogicError if the key has no stored value.
         /// @throws std::bad_any_cast if stored type does not match T.
         template <typename T, auto Key>
         T &
@@ -35,7 +35,7 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto it = m_values.find(h);
             if (it == m_values.end())
-                throw ParseLogicError(
+                throw LogicError(
                     "value not found for key");
             return std::any_cast<T &>(it->second);
         }
@@ -48,7 +48,7 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto it = m_values.find(h);
             if (it == m_values.end())
-                throw ParseLogicError(
+                throw LogicError(
                     "value not found for key");
             return std::any_cast<const T &>(it->second);
         }

@@ -43,10 +43,10 @@ int main()
         int called = 0;
         app.action(
             [&called](ParseContext &)
-                -> ParseResult<void>
+                -> CliResult<void>
             {
             ++called;
-            return ParseResult<void>::Ok(); });
+            return CliResult<void>::Ok(); });
 
         auto ctx = app.create_context();
         const App &const_app = app;

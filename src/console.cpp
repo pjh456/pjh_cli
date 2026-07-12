@@ -85,7 +85,7 @@ namespace pjh::cli
 
     } // namespace
 
-    ParseResult<void>
+    CliResult<void>
     InteractiveConsole::process_line(
         const std::string &line)
     {
@@ -106,7 +106,7 @@ namespace pjh::cli
                         std::cout << " " << n;
                     std::cout << "\n";
                 }
-                return ParseResult<void>::Ok();
+                return CliResult<void>::Ok();
             }
 
             // Search by substring
@@ -144,12 +144,12 @@ namespace pjh::cli
                 }
             }
             std::cout << "\n";
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         }
 
         auto tokens = tokenize_line(line);
         if (tokens.empty())
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
 
         // "help" → show formatted help
         if (tokens.size() == 1 &&
@@ -158,7 +158,7 @@ namespace pjh::cli
              tokens[0] == "-h"))
         {
             std::cout << format_help(m_root, m_root.name());
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         }
 
         std::vector<std::string_view> args;
@@ -167,7 +167,7 @@ namespace pjh::cli
 
         auto r = parse_command(m_root, args, 3);
         if (r.is_err())
-            return ParseResult<void>::Err(r.unwrap_err());
+            return CliResult<void>::Err(r.unwrap_err());
 
         auto &ctx = r.unwrap();
 

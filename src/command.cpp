@@ -68,7 +68,7 @@ namespace pjh::cli
         return ParseContext{};
     }
 
-    ParseResult<void>
+    CliResult<void>
     Command::apply_defaults(
         ParseContext &ctx) const
     {
@@ -76,21 +76,21 @@ namespace pjh::cli
             if (opt.m_apply_default &&
                 !ctx.has_value(opt.m_key_hash))
                 opt.m_apply_default(ctx);
-        return ParseResult<void>::Ok();
+        return CliResult<void>::Ok();
     }
 
-    ParseResult<void>
+    CliResult<void>
     Command::execute(ParseContext &ctx) const
     {
         if (!m_action)
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         return m_action(ctx);
     }
 
     Command &
     Command::action(
         std::function<
-            ParseResult<void>(ParseContext &)>
+            CliResult<void>(ParseContext &)>
             fn)
     {
         m_action = std::move(fn);

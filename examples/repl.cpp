@@ -11,24 +11,24 @@ int main(int argc, char **argv)
     auto &add = app.add_command("add", "Add two numbers");
     add.arg<int, 0>("a", "First number").required();
     add.arg<int, 1>("b", "Second number").required();
-    add.action([](ParseContext &ctx) -> ParseResult<void>
+    add.action([](ParseContext &ctx) -> CliResult<void>
     {
         auto a = ctx.get<int, 0>();
         auto b = ctx.get<int, 1>();
         std::cout << a << " + " << b << " = " << (a + b) << "\n";
-        return ParseResult<void>::Ok();
+        return CliResult<void>::Ok();
     });
 
     // sub <a> <b>
     auto &sub = app.add_command("sub", "Subtract two numbers");
     sub.arg<int, 0>("a", "First number").required();
     sub.arg<int, 1>("b", "Second number").required();
-    sub.action([](ParseContext &ctx) -> ParseResult<void>
+    sub.action([](ParseContext &ctx) -> CliResult<void>
     {
         auto a = ctx.get<int, 0>();
         auto b = ctx.get<int, 1>();
         std::cout << a << " - " << b << " = " << (a - b) << "\n";
-        return ParseResult<void>::Ok();
+        return CliResult<void>::Ok();
     });
 
     // Batch mode: execute and exit

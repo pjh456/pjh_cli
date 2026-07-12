@@ -143,10 +143,10 @@ int main()
 
     int action_called = 0;
     auto &act_cmd = app.add_command("act", "Action test");
-    act_cmd.action([&action_called](ParseContext &) -> ParseResult<void>
+    act_cmd.action([&action_called](ParseContext &) -> CliResult<void>
                    {
         ++action_called;
-        return ParseResult<void>::Ok(); });
+        return CliResult<void>::Ok(); });
 
     // ── ParseContext: basic get/set ──
 
@@ -225,10 +225,10 @@ int main()
     {
         App app3("test3", "1.0", "Execute test");
         int counter = 0;
-        app3.action([&counter](ParseContext &) -> ParseResult<void>
+        app3.action([&counter](ParseContext &) -> CliResult<void>
                     {
             ++counter;
-            return ParseResult<void>::Ok(); });
+            return CliResult<void>::Ok(); });
 
         auto ctx3 = app3.create_context();
         auto res = app3.execute(ctx3);

@@ -38,7 +38,7 @@ namespace pjh::cli
         std::vector<std::string> m_history;
         size_t m_history_index = 0;
 
-        ParseResult<void> process_line(
+        CliResult<void> process_line(
             const std::string &line);
     };
 

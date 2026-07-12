@@ -67,7 +67,7 @@ namespace pjh::cli
     enum class ExtraArgsPolicy : unsigned
     {
         Ignore, ///< Silently discard (default, POSIX convention).
-        Error,  ///< Return ParseError on any extra positional argument.
+        Error,  ///< Return CliError on any extra positional argument.
         Store,  ///< Append to ParseContext::extra_args() for runtime inspection.
     };
 
@@ -158,7 +158,7 @@ namespace pjh::cli
         Command &
         action(
             std::function<
-                ParseResult<void>(ParseContext &)>
+                CliResult<void>(ParseContext &)>
                 fn);
 
         /// @brief Set the runtime enable predicate.
@@ -246,13 +246,13 @@ namespace pjh::cli
         create_context() const noexcept;
 
         /// @brief Pre-fill context with default values from registered options.
-        ParseResult<void>
+        CliResult<void>
         apply_defaults(
             ParseContext &ctx)
             const;
 
         /// @brief Execute the registered action callback.
-        ParseResult<void>
+        CliResult<void>
         execute(ParseContext &ctx) const;
 
     private:
@@ -282,7 +282,7 @@ namespace pjh::cli
             []
         { return true; };
         std::function<
-            ParseResult<void>(ParseContext &)>
+            CliResult<void>(ParseContext &)>
             m_action;
     };
 
@@ -350,14 +350,14 @@ namespace pjh::cli
         def.m_apply =
             [h](ParseContext &ctx,
                 std::string_view s)
-            -> ParseResult<void>
+            -> CliResult<void>
         {
             auto r = Converter<T>::from_string(s);
             if (r.is_err())
-                return ParseResult<void>::Err(
+                return CliResult<void>::Err(
                     std::move(r).unwrap_err());
             ctx.set_value<T>(h, r.unwrap());
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         };
 
         m_option_by_long[def.m_long_name] =
@@ -409,14 +409,14 @@ namespace pjh::cli
         def.m_apply =
             [h](ParseContext &ctx,
                 std::string_view s)
-            -> ParseResult<void>
+            -> CliResult<void>
         {
             auto r = Converter<T>::from_string(s);
             if (r.is_err())
-                return ParseResult<void>::Err(
+                return CliResult<void>::Err(
                     std::move(r).unwrap_err());
             ctx.set_value<T>(h, r.unwrap());
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         };
 
         return def;

@@ -10,12 +10,12 @@ namespace pjh::cli::detail
 {
 
     /// @brief Trait: true if T has a valid Converter<T> specialization
-    ///        returning ParseResult<T>.
+    ///        returning CliResult<T>.
     template <typename T, typename = void>
     struct is_parseable : std::false_type {};
 
     /// @brief Specialization matched when Converter<T>::from_string exists
-    ///        and returns ParseResult<T>.
+    ///        and returns CliResult<T>.
     template <typename T>
     struct is_parseable<
         T,
@@ -25,7 +25,7 @@ namespace pjh::cli::detail
         : std::is_same<
               decltype(Converter<T>::from_string(
                   std::declval<std::string_view>())),
-              ParseResult<T>>
+              CliResult<T>>
     {
     };
 
@@ -37,7 +37,7 @@ namespace pjh::cli::detail
     /// @brief Concept: T can be parsed from string by the library.
     ///
     /// Satisfied when a Converter<T> specialization with a valid
-    /// from_string method returning ParseResult<T> exists.
+    /// from_string method returning CliResult<T> exists.
     /// @tparam T Candidate type.
     template <typename T>
     concept Parseable = is_parseable_v<T>;

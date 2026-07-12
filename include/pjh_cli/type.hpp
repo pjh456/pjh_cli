@@ -7,20 +7,20 @@
 
 namespace pjh::cli
 {
-    /// @brief Result type with ParseError as the error variant.
+    /// @brief Result type with CliError as the error variant.
     ///
-    /// Wraps pjh::result::Result<T, ParseError> for CLI parse operations.
+    /// Wraps pjh::result::Result<T, CliError> for CLI parse operations.
     /// @tparam T Success type.
     template <typename T>
-    using ParseResult =
-        pjh::result::Result<T, ParseError>;
+    using CliResult =
+        pjh::result::Result<T, CliError>;
 
-    /// @brief Convenience alias for returning ParseError from Result-returning functions.
+    /// @brief Convenience alias for returning CliError from Result-returning functions.
     ///
-    /// Usage: `return ParseFailure{ParseError("...")};`
-    /// Implicitly converts to any ParseResult<T> with matching error type.
-    using ParseFailure =
-        pjh::result::Failure<ParseError>;
+    /// Usage: `return CliFailure{CliError("...")};`
+    /// Implicitly converts to any CliResult<T> with matching error type.
+    using CliFailure =
+        pjh::result::Failure<CliError>;
 
 } // namespace pjh::cli
 

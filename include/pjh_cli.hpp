@@ -9,7 +9,7 @@
 ///   - Compile-time option keys via fixed_string NTTP
 ///   - Positional argument support by index
 ///   - Fuzzy command matching and tab completion
-///   - Result<T, ParseError> based error handling (no exceptions for parse errors)
+///   - Result<T, CliError> based error handling (no exceptions for parse errors)
 
 #include "pjh_cli/fixed_string.hpp"
 #include "pjh_cli/token.hpp"

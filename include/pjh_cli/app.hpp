@@ -27,8 +27,8 @@ namespace pjh::cli
         /// @brief Parse command-line arguments and produce a ParseContext.
         /// @param argc Argument count (from main).
         /// @param argv Argument vector (from main).
-        /// @return ParseContext on success, or a ParseError with details.
-        ParseResult<ParseContext>
+        /// @return ParseContext on success, or a CliError with details.
+        CliResult<ParseContext>
         parse(
             int argc,
             char **argv);
@@ -38,8 +38,8 @@ namespace pjh::cli
         /// When an exact subcommand match fails, falls back to Levenshtein
         /// distance matching (max_distance = 3). If exactly one close match
         /// is found, it is used transparently.
-        /// @return ParseContext on success, or a ParseError with details.
-        ParseResult<ParseContext>
+        /// @return ParseContext on success, or a CliError with details.
+        CliResult<ParseContext>
         parse_fuzzy(
             int argc,
             char **argv);

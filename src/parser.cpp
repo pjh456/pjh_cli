@@ -6,7 +6,7 @@ namespace pjh::cli
 {
     namespace
     {
-        ParseResult<void>
+        CliResult<void>
         consume_long(
             const Command &cmd,
             ParseContext &ctx,
@@ -19,7 +19,7 @@ namespace pjh::cli
 
             auto *opt = cmd.find_option_by_long(name);
             if (!opt)
-                return ParseFailure{
+                return CliFailure{
                     unknown_option(
                         std::string("--") + std::string(name))};
 
@@ -28,13 +28,13 @@ namespace pjh::cli
                 if (has_eq)
                 {
                     if (value.empty())
-                        return ParseFailure{
+                        return CliFailure{
                             missing_value(
                                 std::string("--") + std::string(name))};
                     return opt->m_apply(ctx, value);
                 }
                 if (++i >= args.size())
-                    return ParseFailure{
+                    return CliFailure{
                         missing_value(
                             std::string("--") + std::string(name))};
                 return opt->m_apply(ctx, args[i]);
@@ -43,7 +43,7 @@ namespace pjh::cli
             return opt->m_apply(ctx, "true");
         }
 
-        ParseResult<void>
+        CliResult<void>
         consume_short(
             const Command &cmd,
             ParseContext &ctx,
@@ -56,7 +56,7 @@ namespace pjh::cli
                 char c = arg[j];
                 auto *opt = cmd.find_option_by_short(c);
                 if (!opt)
-                    return ParseFailure{
+                    return CliFailure{
                         unknown_option(
                             std::string("-") + c)};
 
@@ -71,7 +71,7 @@ namespace pjh::cli
                         break;
                     }
                     if (++i >= args.size())
-                        return ParseFailure{
+                        return CliFailure{
                             missing_value(
                                 std::string("-") + c)};
                     auto r = opt->m_apply(ctx, args[i]);
@@ -85,10 +85,10 @@ namespace pjh::cli
                         return r;
                 }
             }
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         }
 
-        ParseResult<void>
+        CliResult<void>
         process_remaining(
             const Command *cmd,
             ParseContext &ctx,
@@ -110,7 +110,7 @@ namespace pjh::cli
 
                 if (!double_dash && a.size() > 1 && a[0] == '-')
                 {
-                    ParseResult<void> r =
+                    CliResult<void> r =
                         (a[1] == '-')
                             ? consume_long(*cmd, ctx, a, i, args)
                             : consume_short(*cmd, ctx, a, i, args);
@@ -130,7 +130,7 @@ namespace pjh::cli
                         switch (cmd->extra_args_policy())
                         {
                         case ExtraArgsPolicy::Error:
-                            return ParseFailure{parse_error(a, static_cast<int>(i))};
+                            return CliFailure{parse_error(a, static_cast<int>(i))};
                         case ExtraArgsPolicy::Store:
                             ctx.add_extra_arg(std::string(a));
                             break;
@@ -142,10 +142,10 @@ namespace pjh::cli
                 }
             }
 
-            return ParseResult<void>::Ok();
+            return CliResult<void>::Ok();
         }
 
-        ParseResult<ParseContext>
+        CliResult<ParseContext>
         finish_parse(
             const Command *cmd,
             ParseContext ctx,
@@ -156,7 +156,7 @@ namespace pjh::cli
 
             auto dr = cmd->apply_defaults(ctx);
             if (dr.is_err())
-                return ParseResult<ParseContext>::Err(
+                return CliResult<ParseContext>::Err(
                     std::move(dr).unwrap_err());
 
             for (const auto &opt : cmd->options())
@@ -164,7 +164,7 @@ namespace pjh::cli
                 if (opt.m_required &&
                     !ctx.has_value(opt.m_key_hash))
                 {
-                    return ParseResult<ParseContext>::Err(
+                    return CliResult<ParseContext>::Err(
                         missing_required_option(
                             opt.m_long_name));
                 }
@@ -175,19 +175,19 @@ namespace pjh::cli
                 if (arg.m_required &&
                     !ctx.has_value(arg.m_key_hash))
                 {
-                    return ParseResult<ParseContext>::Err(
+                    return CliResult<ParseContext>::Err(
                         missing_required_arg(
                             arg.m_name));
                 }
             }
 
-            return ParseResult<ParseContext>::Ok(
+            return CliResult<ParseContext>::Ok(
                 std::move(ctx));
         }
 
     } // namespace
 
-    ParseResult<ParseContext>
+    CliResult<ParseContext>
     parse_command(
         const Command &root,
         std::span<const std::string_view> args,
@@ -206,7 +206,7 @@ namespace pjh::cli
                     i++;
                     continue;
                 }
-                return ParseResult<ParseContext>::Err(
+                return CliResult<ParseContext>::Err(
                     command_disabled(args[i]));
             }
 
@@ -228,7 +228,7 @@ namespace pjh::cli
         ParseContext ctx;
         auto r = process_remaining(cmd, ctx, i, args);
         if (r.is_err())
-            return ParseResult<ParseContext>::Err(
+            return CliResult<ParseContext>::Err(
                 std::move(r).unwrap_err());
 
         return finish_parse(cmd, std::move(ctx), cmd->name());
