@@ -55,13 +55,10 @@ namespace pjh::cli
                 results.push_back({&sub, d});
         }
 
-        std::stable_sort(
-            results.begin(),
-            results.end(),
-            [](const FuzzyMatch &a, const FuzzyMatch &b)
-            {
-                return a.distance < b.distance;
-            });
+        std::ranges::stable_sort(
+            results,
+            {},
+            &FuzzyMatch::distance);
 
         return results;
     }
@@ -129,12 +126,9 @@ namespace pjh::cli
             }
         }
 
-        std::stable_sort(candidates.begin(), candidates.end());
-        candidates.erase(
-            std::unique(
-                candidates.begin(),
-                candidates.end()),
-            candidates.end());
+        std::ranges::stable_sort(candidates);
+        auto [first, last] = std::ranges::unique(candidates);
+        candidates.erase(first, last);
 
         return candidates;
     }

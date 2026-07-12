@@ -1,5 +1,7 @@
 #include <pjh_cli/command.hpp>
 
+#include <algorithm>
+
 namespace pjh::cli
 {
     Command::Command(
@@ -27,20 +29,18 @@ namespace pjh::cli
     Command::find_subcommand(
         std::string_view name) noexcept
     {
-        for (auto &cmd : m_subcommands)
-            if (cmd.m_name == name)
-                return &cmd;
-        return nullptr;
+        auto it = std::ranges::find(
+            m_subcommands, name, &Command::m_name);
+        return it != m_subcommands.end() ? &*it : nullptr;
     }
 
     const Command *
     Command::find_subcommand(
         std::string_view name) const noexcept
     {
-        for (const auto &cmd : m_subcommands)
-            if (cmd.m_name == name)
-                return &cmd;
-        return nullptr;
+        auto it = std::ranges::find(
+            m_subcommands, name, &Command::m_name);
+        return it != m_subcommands.end() ? &*it : nullptr;
     }
 
     const OptionDef *
