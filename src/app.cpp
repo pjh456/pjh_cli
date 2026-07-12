@@ -33,7 +33,7 @@ namespace pjh::cli
         std::vector<std::string_view> args;
         for (int a = 1; a < argc; a++)
             args.emplace_back(argv[a]);
-        return parse_command_fuzzy(*this, args);
+        return parse_command(*this, args, 3);
     }
 
 } // namespace pjh::cli

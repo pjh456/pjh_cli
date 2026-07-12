@@ -197,37 +197,8 @@ namespace pjh::cli
     ParseResult<ParseContext>
     parse_command(
         const Command &root,
-        std::span<const std::string_view> args)
-    {
-        const Command *cmd = &root;
-        size_t i = 0;
-        while (i < args.size())
-        {
-            auto *sub = cmd->find_subcommand(args[i]);
-            if (sub && sub->is_enabled())
-            {
-                cmd = sub;
-                i++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        ParseContext ctx;
-        auto r = process_remaining(cmd, ctx, i, args);
-        if (r.is_err())
-            return ParseResult<ParseContext>::Err(
-                std::move(r).unwrap_err());
-
-        return finish_parse(cmd, std::move(ctx), cmd->name());
-    }
-
-    ParseResult<ParseContext>
-    parse_command_fuzzy(
-        const Command &root,
-        std::span<const std::string_view> args)
+        std::span<const std::string_view> args,
+        int max_fuzzy_distance)
     {
         const Command *cmd = &root;
         size_t i = 0;
@@ -241,14 +212,16 @@ namespace pjh::cli
                 continue;
             }
 
-            auto fuzzy = fuzzy_find_subcommands(
-                *cmd, args[i], 3, Visibility::Both);
-
-            if (fuzzy.size() == 1)
+            if (max_fuzzy_distance > 0)
             {
-                cmd = fuzzy[0].command;
-                i++;
-                continue;
+                auto fuzzy = fuzzy_find_subcommands(
+                    *cmd, args[i], max_fuzzy_distance, Visibility::Both);
+                if (fuzzy.size() == 1)
+                {
+                    cmd = fuzzy[0].command;
+                    i++;
+                    continue;
+                }
             }
 
             break;

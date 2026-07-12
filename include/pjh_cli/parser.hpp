@@ -10,17 +10,13 @@
 
 namespace pjh::cli
 {
-    /// @brief Parse args against a command tree with exact matching.
+    /// @brief Parse args against a command tree.
+    /// @param max_fuzzy_distance 0 = exact only, >0 = also try fuzzy (Levenshtein).
     ParseResult<ParseContext>
     parse_command(
         const Command &root,
-        std::span<const std::string_view> args);
-
-    /// @brief Parse args against a command tree with fuzzy subcommand matching.
-    ParseResult<ParseContext>
-    parse_command_fuzzy(
-        const Command &root,
-        std::span<const std::string_view> args);
+        std::span<const std::string_view> args,
+        int max_fuzzy_distance = 0);
 }
 
 #endif

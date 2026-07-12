@@ -32,7 +32,7 @@ int main()
         app.add_command("config", "Config");
 
         std::vector<std::string_view> args{"servr"};
-        auto r = parse_command_fuzzy(app, args);
+        auto r = parse_command(app, args, 3);
         assert(r.is_ok());
         assert(r.unwrap().matched_path() == "server");
     }

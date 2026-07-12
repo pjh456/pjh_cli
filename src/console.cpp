@@ -166,7 +166,7 @@ namespace pjh::cli
         for (const auto &t : tokens)
             args.emplace_back(t);
 
-        auto r = parse_command_fuzzy(m_root, args);
+        auto r = parse_command(m_root, args, 3);
         if (r.is_err())
         {
             std::cerr << r.unwrap_err().what() << "\n";
