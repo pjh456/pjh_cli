@@ -123,15 +123,15 @@ namespace pjh::cli
         std::string_view input,
         const std::vector<std::string> &candidates)
     {
-        std::string msg =
-            std::format(
-                "ambiguous command '{}', "
-                "candidates:",
-                input);
+        std::string msg = std::format(
+            "ambiguous command '{}', "
+            "candidates:",
+            input);
         for (const auto &c : candidates)
-        {
-            msg += " " + c;
-        }
+            msg = std::format(
+                "{} {}",
+                std::move(msg),
+                c);
         return ParseError(msg);
     }
 
