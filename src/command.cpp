@@ -25,11 +25,21 @@ namespace pjh::cli
 
     Command *
     Command::find_subcommand(
-        std::string_view name) const
+        std::string_view name)
     {
         for (auto &cmd : m_subcommands)
             if (cmd.m_name == name)
-                return const_cast<Command *>(&cmd);
+                return &cmd;
+        return nullptr;
+    }
+
+    const Command *
+    Command::find_subcommand(
+        std::string_view name) const
+    {
+        for (const auto &cmd : m_subcommands)
+            if (cmd.m_name == name)
+                return &cmd;
         return nullptr;
     }
 

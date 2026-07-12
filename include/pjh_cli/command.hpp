@@ -184,6 +184,11 @@ namespace pjh::cli
         /// @brief Find a direct child subcommand by exact name match.
         Command *
         find_subcommand(
+            std::string_view name);
+
+        /// @brief Const overload.
+        const Command *
+        find_subcommand(
             std::string_view name)
             const;
 
