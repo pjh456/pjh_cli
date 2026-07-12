@@ -246,17 +246,7 @@ namespace pjh::cli
         {
             os << "Options:\n";
 
-            size_t max_left = 0;
-
-            // First pass: compute widths
-            struct OptLine
-            {
-                std::string left;
-                std::string right;
-            };
-            std::vector<OptLine> lines;
-
-            for (const auto &opt : cmd.options())
+            auto opt_left = [](const OptionDef &opt) -> std::string
             {
                 std::string left;
                 if (opt.m_short_name != 0)
@@ -267,9 +257,10 @@ namespace pjh::cli
                     left += "--" + opt.m_long_name;
                 if (opt.m_has_value)
                 {
-                    auto label = opt.m_long_name.empty()
-                                     ? std::string(1, opt.m_short_name)
-                                     : opt.m_long_name;
+                    auto label =
+                        opt.m_long_name.empty()
+                            ? std::string(1, opt.m_short_name)
+                            : opt.m_long_name;
                     std::transform(
                         label.begin(), label.end(),
                         label.begin(),
@@ -277,21 +268,21 @@ namespace pjh::cli
                         { return static_cast<char>(std::toupper(c)); });
                     left += " " + label;
                 }
+                return left;
+            };
 
+            size_t max_left = 0;
+            for (const auto &opt : cmd.options())
+                max_left = std::max(max_left, opt_left(opt).size());
+            size_t left_width = std::min(max_left, size_t(32));
+
+            for (const auto &opt : cmd.options())
+            {
                 std::string right = opt.m_description;
                 if (opt.m_required)
                     right += " (required)";
-
-                max_left = std::max(max_left, left.size());
-                lines.push_back({std::move(left), std::move(right)});
+                append_help_line(os, opt_left(opt), right, left_width);
             }
-
-            // Find min width that fits the longest
-            size_t left_width = std::min(max_left, size_t(32));
-
-            for (const auto &line : lines)
-                append_help_line(os, line.left, line.right, left_width);
-
             os << "\n";
         }
 
@@ -300,68 +291,43 @@ namespace pjh::cli
         {
             os << "Arguments:\n";
             size_t max_left = 0;
-            struct ArgLine
-            {
-                std::string left;
-                std::string right;
-            };
-            std::vector<ArgLine> lines;
+            for (const auto &arg : cmd.args())
+                max_left = std::max(max_left, arg.m_name.size());
+            size_t left_width = std::min(max_left, size_t(28));
 
             for (const auto &arg : cmd.args())
             {
                 std::string right = arg.m_description;
                 if (arg.m_required)
                     right += " (required)";
-
-                max_left = std::max(max_left, arg.m_name.size());
-                lines.push_back(
-                    {arg.m_name, std::move(right)});
+                append_help_line(os, arg.m_name, right, left_width);
             }
-
-            size_t left_width = std::min(max_left, size_t(28));
-            for (const auto &line : lines)
-                append_help_line(os, line.left, line.right, left_width);
             os << "\n";
         }
 
         // Subcommands
         bool has_visible = false;
+        size_t max_left = 0;
         for (const auto &sub : cmd.subcommands())
         {
-            if (sub.is_enabled() &&
-                sub.visibility() != Visibility::Hidden)
-            {
-                has_visible = true;
-                break;
-            }
+            if (!sub.is_enabled() ||
+                sub.visibility() == Visibility::Hidden)
+                continue;
+            has_visible = true;
+            max_left = std::max(max_left, sub.name().size());
         }
 
         if (has_visible)
         {
             os << "Subcommands:\n";
-            size_t max_left = 0;
-            struct SubLine
-            {
-                std::string left;
-                std::string right;
-            };
-            std::vector<SubLine> lines;
-
+            size_t left_width = std::min(max_left, size_t(28));
             for (const auto &sub : cmd.subcommands())
             {
                 if (!sub.is_enabled() ||
                     sub.visibility() == Visibility::Hidden)
                     continue;
-
-                max_left = std::max(
-                    max_left, sub.name().size());
-                lines.push_back(
-                    {sub.name(), sub.description()});
+                append_help_line(os, sub.name(), sub.description(), left_width);
             }
-
-            size_t left_width = std::min(max_left, size_t(28));
-            for (const auto &line : lines)
-                append_help_line(os, line.left, line.right, left_width);
         }
 
         return os.str();
