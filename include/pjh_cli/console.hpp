@@ -31,15 +31,15 @@ namespace pjh::cli
         void
         set_prompt(std::string p) { m_prompt = std::move(p); }
 
+        CliResult<void> process_line(
+            const std::string &line);
+
     private:
         Command &m_root;
         std::string m_prompt;
         bool m_running = false;
         std::vector<std::string> m_history;
         size_t m_history_index = 0;
-
-        CliResult<void> process_line(
-            const std::string &line);
     };
 
 } // namespace pjh::cli
