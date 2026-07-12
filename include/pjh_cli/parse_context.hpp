@@ -36,6 +36,19 @@ namespace pjh::cli
             return std::any_cast<T &>(it->second);
         }
 
+        /// @brief Const overload of get().
+        template <typename T, auto Key>
+        const T &
+        get() const
+        {
+            constexpr auto h = key_hash(Key);
+            auto it = m_values.find(h);
+            if (it == m_values.end())
+                throw ParseLogicError(
+                    "value not found for key");
+            return std::any_cast<const T &>(it->second);
+        }
+
         /// @brief Check if a value exists for the given compile-time key.
         template <auto Key>
         bool
