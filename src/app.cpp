@@ -19,10 +19,7 @@ namespace pjh::cli
         int argc,
         char **argv)
     {
-        std::vector<std::string_view> args;
-        for (int a = 1; a < argc; a++)
-            args.emplace_back(argv[a]);
-        return parse_command(*this, args);
+        return parse_command(*this, argc, argv);
     }
 
     ParseResult<ParseContext>
@@ -30,10 +27,7 @@ namespace pjh::cli
         int argc,
         char **argv)
     {
-        std::vector<std::string_view> args;
-        for (int a = 1; a < argc; a++)
-            args.emplace_back(argv[a]);
-        return parse_command(*this, args, 3);
+        return parse_command(*this, argc, argv, 3);
     }
 
 } // namespace pjh::cli
