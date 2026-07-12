@@ -17,6 +17,18 @@
 
 namespace pjh::cli
 {
+    namespace detail
+    {
+        struct transparent_string_hash
+        {
+            using is_transparent = void;
+            size_t operator()(std::string_view sv) const noexcept
+            {
+                return std::hash<std::string_view>{}(sv);
+            }
+        };
+    }
+
     /// @brief Bitmask flags controlling where a Command appears.
     ///
     /// Combine with `|`:  `set_visibility(Visibility::Cli | Visibility::Repl)`
@@ -231,8 +243,9 @@ namespace pjh::cli
         std::list<Command> m_subcommands;
 
         std::unordered_map<
-            std::string,
-            size_t>
+            std::string, size_t,
+            detail::transparent_string_hash,
+            std::equal_to<void>>
             m_option_by_long;
         std::unordered_map<
             char,

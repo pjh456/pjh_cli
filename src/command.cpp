@@ -47,7 +47,7 @@ namespace pjh::cli
     Command::find_option_by_long(
         std::string_view name) const
     {
-        auto it = m_option_by_long.find(std::string(name));
+        auto it = m_option_by_long.find(name);
         if (it == m_option_by_long.end())
             return nullptr;
         return &m_options[it->second];
