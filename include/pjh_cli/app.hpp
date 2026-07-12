@@ -22,7 +22,7 @@ namespace pjh::cli
 
         /// @brief The version string.
         const std::string &
-        version() const { return m_version; }
+        version() const noexcept { return m_version; }
 
         /// @brief Parse command-line arguments and produce a ParseContext.
         /// @param argc Argument count (from main).

@@ -25,7 +25,7 @@ namespace pjh::cli
 
     Command *
     Command::find_subcommand(
-        std::string_view name)
+        std::string_view name) noexcept
     {
         for (auto &cmd : m_subcommands)
             if (cmd.m_name == name)
@@ -35,7 +35,7 @@ namespace pjh::cli
 
     const Command *
     Command::find_subcommand(
-        std::string_view name) const
+        std::string_view name) const noexcept
     {
         for (const auto &cmd : m_subcommands)
             if (cmd.m_name == name)
@@ -45,7 +45,7 @@ namespace pjh::cli
 
     const OptionDef *
     Command::find_option_by_long(
-        std::string_view name) const
+        std::string_view name) const noexcept
     {
         auto it = m_option_by_long.find(name);
         if (it == m_option_by_long.end())
@@ -54,7 +54,7 @@ namespace pjh::cli
     }
 
     const OptionDef *
-    Command::find_option_by_short(char c) const
+    Command::find_option_by_short(char c) const noexcept
     {
         auto it = m_option_by_short.find(c);
         if (it == m_option_by_short.end())
@@ -63,7 +63,7 @@ namespace pjh::cli
     }
 
     ParseContext
-    Command::create_context() const
+    Command::create_context() const noexcept
     {
         return ParseContext{};
     }

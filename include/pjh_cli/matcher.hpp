@@ -12,7 +12,7 @@ namespace pjh::cli
     /// @brief Compute edit distance (Levenshtein) between two strings.
     int edit_distance(
         std::string_view a,
-        std::string_view b);
+        std::string_view b) noexcept;
 
     /// @brief A fuzzy match result.
     struct FuzzyMatch

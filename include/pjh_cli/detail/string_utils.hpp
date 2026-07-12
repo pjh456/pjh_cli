@@ -46,7 +46,7 @@ namespace pjh::cli::detail
     };
 
     inline SplitNameValue
-    split_name_value(std::string_view arg)
+    split_name_value(std::string_view arg) noexcept
     {
         auto eq = arg.find('=');
         if (eq == std::string_view::npos)

@@ -180,15 +180,15 @@ namespace pjh::cli
 
         const std::string &
         name()
-            const { return m_name; }
+            const noexcept { return m_name; }
 
         const std::string &
         description()
-            const { return m_description; }
+            const noexcept { return m_description; }
 
         Visibility
         visibility()
-            const { return m_visibility; }
+            const noexcept { return m_visibility; }
 
         /// @brief Evaluate the enabled predicate.
         bool
@@ -197,45 +197,45 @@ namespace pjh::cli
 
         Command *
         parent()
-            const { return m_parent; }
+            const noexcept { return m_parent; }
 
         const std::list<Command> &
         subcommands()
-            const { return m_subcommands; }
+            const noexcept { return m_subcommands; }
 
         const std::vector<OptionDef> &
         options()
-            const { return m_options; }
+            const noexcept { return m_options; }
 
         const std::vector<ArgDef> &
         args()
-            const { return m_args; }
+            const noexcept { return m_args; }
 
         ExtraArgsPolicy
         extra_args_policy()
-            const { return m_extra_args_policy; }
+            const noexcept { return m_extra_args_policy; }
 
         /// @brief Find a direct child subcommand by exact name match.
         Command *
         find_subcommand(
-            std::string_view name);
+            std::string_view name) noexcept;
 
         /// @brief Const overload.
         const Command *
         find_subcommand(
             std::string_view name)
-            const;
+            const noexcept;
 
         /// @brief Look up an option by its long name (without -- prefix).
         const OptionDef *
         find_option_by_long(
             std::string_view name)
-            const;
+            const noexcept;
 
         /// @brief Look up an option by its short character.
         const OptionDef *
         find_option_by_short(char c)
-            const;
+            const noexcept;
 
         // ──────────────────────────────────────────
         //  Parser helpers
@@ -243,7 +243,7 @@ namespace pjh::cli
 
         /// @brief Create an empty ParseContext for this command.
         ParseContext
-        create_context() const;
+        create_context() const noexcept;
 
         /// @brief Pre-fill context with default values from registered options.
         ParseResult<void>

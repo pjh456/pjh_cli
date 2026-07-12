@@ -25,7 +25,7 @@ namespace pjh::cli
         void stop();
 
         const std::string &
-        prompt() const { return m_prompt; }
+        prompt() const noexcept { return m_prompt; }
 
         void
         set_prompt(std::string p) { m_prompt = std::move(p); }

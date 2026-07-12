@@ -69,7 +69,7 @@ namespace pjh::cli
         /// @brief Check if a value exists for the given compile-time key.
         template <auto Key>
         bool
-        has() const
+        has() const noexcept
         {
             constexpr auto h = key_hash(Key);
             return m_values.contains(h);
@@ -85,22 +85,22 @@ namespace pjh::cli
 
         /// @brief Check if a value exists by runtime hash (used internally).
         bool
-        has_value(size_t hash) const
+        has_value(size_t hash) const noexcept
         {
             return m_values.contains(hash);
         }
 
         /// @brief Extra positional arguments collected when ExtraArgsPolicy::Store.
         const std::vector<std::string> &
-        extra_args() const { return m_extra_args; }
+        extra_args() const noexcept { return m_extra_args; }
 
         /// @brief The leaf command matched during parsing.
         const Command *
-        matched_command() const { return m_matched_cmd; }
+        matched_command() const noexcept { return m_matched_cmd; }
 
         /// @brief Path of matched commands, e.g. "serve start".
         const std::string &
-        matched_path() const { return m_matched_path; }
+        matched_path() const noexcept { return m_matched_path; }
 
         /// @brief Set the matched command (used internally by parser).
         void
