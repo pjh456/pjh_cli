@@ -6,9 +6,14 @@ set(PJH_CLI_TEST_SOURCES
     test_fixed_string.cpp
     test_converter.cpp
     test_command.cpp
-    test_parser.cpp
     test_matcher.cpp
     test_console.cpp
+    parser/test_options.cpp
+    parser/test_flags.cpp
+    parser/test_positional.cpp
+    parser/test_subcommands.cpp
+    parser/test_dash.cpp
+    parser/test_errors.cpp
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
