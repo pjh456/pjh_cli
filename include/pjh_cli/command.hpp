@@ -319,13 +319,13 @@ namespace pjh::cli
             std::move(long_name),
             0,
             std::move(description));
-        def.m_apply_default =
+        def.set_apply_default(
             [h = key_hash(Key),
              v = std::move(default_value)](
                 ParseContext &ctx) mutable
         {
             ctx.set_value<T>(h, std::move(v));
-        };
+        });
         return OptionDefWithDefault(def);
     }
 
@@ -346,12 +346,12 @@ namespace pjh::cli
         constexpr size_t h = key_hash(Key);
 
         auto &def = m_options.emplace_back();
-        def.m_long_name = std::move(long_name);
-        def.m_short_name = short_name;
-        def.m_description = std::move(description);
-        def.m_has_value = !detail::Flag<T>;
-        def.m_key_hash = h;
-        def.m_apply =
+        def.set_long_name(std::move(long_name));
+        def.set_short_name(short_name);
+        def.set_description(std::move(description));
+        def.set_has_value(!detail::Flag<T>);
+        def.set_key_hash(h);
+        def.set_apply(
             [h](ParseContext &ctx,
                 std::string_view s)
             -> CliResult<void>
@@ -362,9 +362,9 @@ namespace pjh::cli
                     std::move(r).unwrap_err());
             ctx.set_value<T>(h, r.unwrap());
             return CliResult<void>::Ok();
-        };
+        });
 
-        m_option_by_long[def.m_long_name] =
+        m_option_by_long[def.long_name()] =
             m_options.size() - 1;
         if (short_name != 0)
             m_option_by_short[short_name] =
@@ -386,13 +386,13 @@ namespace pjh::cli
             std::move(long_name),
             short_name,
             std::move(description));
-        def.m_apply_default =
+        def.set_apply_default(
             [h = key_hash(Key),
              v = std::move(default_value)](
                 ParseContext &ctx) mutable
         {
             ctx.set_value<T>(h, std::move(v));
-        };
+        });
         return OptionDefWithDefault(def);
     }
 

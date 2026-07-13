@@ -54,59 +54,59 @@ TEST_CASE("is_visible_and_enabled disabled")
 TEST_CASE("option_left_label long only no value")
 {
     OptionDef opt;
-    opt.m_long_name = "verbose";
-    opt.m_has_value = false;
+    opt.set_long_name("verbose");
+    opt.set_has_value(false);
     CHECK(option_left_label(opt) == "--verbose");
 }
 
 TEST_CASE("option_left_label long only with value")
 {
     OptionDef opt;
-    opt.m_long_name = "port";
-    opt.m_has_value = true;
+    opt.set_long_name("port");
+    opt.set_has_value(true);
     CHECK(option_left_label(opt) == "--port PORT");
 }
 
 TEST_CASE("option_left_label short only no value")
 {
     OptionDef opt;
-    opt.m_short_name = 'v';
-    opt.m_has_value = false;
+    opt.set_short_name('v');
+    opt.set_has_value(false);
     CHECK(option_left_label(opt) == "-v");
 }
 
 TEST_CASE("option_left_label short only with value")
 {
     OptionDef opt;
-    opt.m_short_name = 'p';
-    opt.m_has_value = true;
+    opt.set_short_name('p');
+    opt.set_has_value(true);
     CHECK(option_left_label(opt) == "-p P");
 }
 
 TEST_CASE("option_left_label both no value")
 {
     OptionDef opt;
-    opt.m_long_name = "verbose";
-    opt.m_short_name = 'v';
-    opt.m_has_value = false;
+    opt.set_long_name("verbose");
+    opt.set_short_name('v');
+    opt.set_has_value(false);
     CHECK(option_left_label(opt) == "-v, --verbose");
 }
 
 TEST_CASE("option_left_label both with value")
 {
     OptionDef opt;
-    opt.m_long_name = "port";
-    opt.m_short_name = 'p';
-    opt.m_has_value = true;
+    opt.set_long_name("port");
+    opt.set_short_name('p');
+    opt.set_has_value(true);
     CHECK(option_left_label(opt) == "-p, --port PORT");
 }
 
 TEST_CASE("option_left_label both with custom separator")
 {
     OptionDef opt;
-    opt.m_long_name = "verbose";
-    opt.m_short_name = 'v';
-    opt.m_has_value = false;
+    opt.set_long_name("verbose");
+    opt.set_short_name('v');
+    opt.set_has_value(false);
     CHECK(option_left_label(opt, "|") == "-v|--verbose");
 }
 

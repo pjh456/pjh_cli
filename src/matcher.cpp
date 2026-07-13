@@ -103,26 +103,26 @@ namespace pjh::cli
                 // Long option: --... or --
                 auto opt_prefix = prefix.substr(2);
                 for (const auto &opt : cmd.options())
-                    if (opt.m_long_name.starts_with(opt_prefix))
+                    if (opt.long_name().starts_with(opt_prefix))
                         candidates.push_back(
-                            "--" + opt.m_long_name);
+                            "--" + opt.long_name());
             }
             else if (prefix.size() == 1)
             {
                 // Bare "-": list all short options
                 for (const auto &opt : cmd.options())
-                    if (opt.m_short_name != 0)
+                    if (opt.short_name() != 0)
                         candidates.push_back(
-                            std::string("-") + opt.m_short_name);
+                            std::string("-") + opt.short_name());
             }
             else
             {
                 // "-x" or "-xyz": match the first char
                 char c = prefix[1];
                 for (const auto &opt : cmd.options())
-                    if (opt.m_short_name == c)
+                    if (opt.short_name() == c)
                         candidates.push_back(
-                            std::string("-") + opt.m_short_name);
+                            std::string("-") + opt.short_name());
             }
         }
 
@@ -218,8 +218,8 @@ namespace pjh::cli
 
             for (const auto &opt : cmd.options())
             {
-                std::string right = opt.m_description;
-                if (opt.m_required)
+                std::string right = opt.description();
+                if (opt.is_required())
                     right += " (required)";
                 append_help_line(
                     os,

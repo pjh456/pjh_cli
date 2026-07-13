@@ -20,45 +20,45 @@ TEST_CASE("Option bool flag no short no default")
 {
     App app("test", "1.0", "Test");
     auto &opt = app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
-    CHECK(opt.m_long_name == "verbose");
-    CHECK(opt.m_short_name == 0);
-    CHECK(opt.m_has_value == false);
-    CHECK(opt.m_required == false);
-    CHECK(opt.m_key_hash != 0);
+    CHECK(opt.long_name() == "verbose");
+    CHECK(opt.short_name() == 0);
+    CHECK(opt.has_value() == false);
+    CHECK(opt.is_required() == false);
+    CHECK(opt.key_hash() != 0);
 }
 
 TEST_CASE("Option int with short no default")
 {
     App app("test", "1.0", "Test");
     auto &opt = app.option<int, fixed_string("port")>("--port", 'p', "Port number");
-    CHECK(opt.m_long_name == "port");
-    CHECK(opt.m_short_name == 'p');
-    CHECK(opt.m_has_value == true);
-    CHECK(opt.m_key_hash != 0);
+    CHECK(opt.long_name() == "port");
+    CHECK(opt.short_name() == 'p');
+    CHECK(opt.has_value() == true);
+    CHECK(opt.key_hash() != 0);
 }
 
 TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
     auto &opt = app.option<std::string, fixed_string("host")>("--host", 'h', "Host address");
-    CHECK(opt.m_long_name == "host");
-    CHECK(opt.m_short_name == 'h');
-    CHECK(opt.m_has_value == true);
+    CHECK(opt.long_name() == "host");
+    CHECK(opt.short_name() == 'h');
+    CHECK(opt.has_value() == true);
 }
 
 TEST_CASE("Option int no short")
 {
     App app("test", "1.0", "Test");
     auto &opt = app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds");
-    CHECK(opt.m_long_name == "timeout");
-    CHECK(opt.m_short_name == 0);
+    CHECK(opt.long_name() == "timeout");
+    CHECK(opt.short_name() == 0);
 }
 
 TEST_CASE("Option required chain")
 {
     App app("test", "1.0", "Test");
     auto &opt = app.option<int, fixed_string("required-opt")>("--required-opt", 'r', "Required option").required();
-    CHECK(opt.m_required == true);
+    CHECK(opt.is_required() == true);
 }
 
 TEST_CASE("find_option_by_long")
@@ -69,11 +69,11 @@ TEST_CASE("find_option_by_long")
 
     auto *found1 = app.find_option_by_long("verbose");
     CHECK(found1 != nullptr);
-    CHECK(found1->m_long_name == "verbose");
+    CHECK(found1->long_name() == "verbose");
 
     auto *found2 = app.find_option_by_long("port");
     CHECK(found2 != nullptr);
-    CHECK(found2->m_long_name == "port");
+    CHECK(found2->long_name() == "port");
 
     auto *found3 = app.find_option_by_long("nonexistent");
     CHECK(found3 == nullptr);
@@ -86,7 +86,7 @@ TEST_CASE("find_option_by_short")
 
     auto *found4 = app.find_option_by_short('p');
     CHECK(found4 != nullptr);
-    CHECK(found4->m_short_name == 'p');
+    CHECK(found4->short_name() == 'p');
 
     auto *found5 = app.find_option_by_short('x');
     CHECK(found5 == nullptr);

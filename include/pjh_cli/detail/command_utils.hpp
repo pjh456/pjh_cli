@@ -26,18 +26,18 @@ namespace pjh::cli::detail
         std::string_view sep = ", ")
     {
         std::string left;
-        if (opt.m_short_name != 0)
-            left = std::string("-") + opt.m_short_name;
-        if (opt.m_short_name != 0 && !opt.m_long_name.empty())
+        if (opt.short_name() != 0)
+            left = std::string("-") + opt.short_name();
+        if (opt.short_name() != 0 && !opt.long_name().empty())
             left += sep;
-        if (!opt.m_long_name.empty())
-            left += "--" + opt.m_long_name;
-        if (opt.m_has_value)
+        if (!opt.long_name().empty())
+            left += "--" + opt.long_name();
+        if (opt.has_value())
         {
             auto label =
-                opt.m_long_name.empty()
-                    ? std::string(1, opt.m_short_name)
-                    : opt.m_long_name;
+                opt.long_name().empty()
+                    ? std::string(1, opt.short_name())
+                    : opt.long_name();
             left += " " + to_upper_copy(label);
         }
         return left;

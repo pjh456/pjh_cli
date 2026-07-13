@@ -23,7 +23,7 @@ namespace pjh::cli
                     unknown_option(
                         std::string("--") + std::string(name))};
 
-            if (opt->m_has_value)
+            if (opt->has_value())
             {
                 if (has_eq)
                 {
@@ -31,16 +31,16 @@ namespace pjh::cli
                         return CliFailure{
                             missing_value(
                                 std::string("--") + std::string(name))};
-                    return opt->m_apply(ctx, value);
+                    return opt->call_apply(ctx, value);
                 }
                 if (++i >= args.size())
                     return CliFailure{
                         missing_value(
                             std::string("--") + std::string(name))};
-                return opt->m_apply(ctx, args[i]);
+                return opt->call_apply(ctx, args[i]);
             }
 
-            return opt->m_apply(ctx, "true");
+            return opt->call_apply(ctx, "true");
         }
 
         CliResult<void>
@@ -60,7 +60,7 @@ namespace pjh::cli
                         unknown_option(
                             std::string("-") + c)};
 
-                if (opt->m_has_value)
+                if (opt->has_value())
                 {
                     if (arg.size() != 2)
                         return CliFailure{
@@ -70,13 +70,13 @@ namespace pjh::cli
                         return CliFailure{
                             missing_value(
                                 std::string("-") + c)};
-                    auto r = opt->m_apply(ctx, args[i]);
+                    auto r = opt->call_apply(ctx, args[i]);
                     if (r.is_err())
                         return r;
                 }
                 else
                 {
-                    auto r = opt->m_apply(ctx, "true");
+                    auto r = opt->call_apply(ctx, "true");
                     if (r.is_err())
                         return r;
                 }
@@ -157,12 +157,12 @@ namespace pjh::cli
 
             for (const auto &opt : cmd->options())
             {
-                if (opt.m_required &&
-                    !ctx.has_value(opt.m_key_hash))
+                if (opt.is_required() &&
+                    !ctx.has_value(opt.key_hash()))
                 {
                     return CliResult<ParseContext>::Err(
                         missing_required_option(
-                            opt.m_long_name));
+                            opt.long_name()));
                 }
             }
 
