@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 #define INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 
+#include "detail/concept.hpp"
 #include "error.hpp"
 #include "fixed_string.hpp"
 
@@ -29,6 +30,7 @@ namespace pjh::cli
         /// @throws LogicError if the key has no stored value.
         /// @throws std::bad_any_cast if stored type does not match T.
         template <typename T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
         T &
         get()
         {
@@ -37,11 +39,16 @@ namespace pjh::cli
             if (it == m_values.end())
                 throw LogicError(
                     "value not found for key");
-            return std::any_cast<T &>(it->second);
+            auto *p = std::any_cast<T>(&it->second);
+            if (!p)
+                throw LogicError(
+                    "type mismatch for key");
+            return *p;
         }
 
         /// @brief Const overload of get().
         template <typename T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
         const T &
         get() const
         {
@@ -50,11 +57,16 @@ namespace pjh::cli
             if (it == m_values.end())
                 throw LogicError(
                     "value not found for key");
-            return std::any_cast<const T &>(it->second);
+            auto *p = std::any_cast<T>(&it->second);
+            if (!p)
+                throw LogicError(
+                    "type mismatch for key");
+            return *p;
         }
 
         /// @brief Non-throwing accessor. Returns None if key is absent.
         template <typename T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
         pjh::result::Option<T>
         try_get() const
         {
@@ -62,12 +74,15 @@ namespace pjh::cli
             auto it = m_values.find(h);
             if (it == m_values.end())
                 return pjh::result::Option<T>::None();
-            return pjh::result::Option<T>::Some(
-                std::any_cast<const T &>(it->second));
+            auto *p = std::any_cast<T>(&it->second);
+            if (!p)
+                return pjh::result::Option<T>::None();
+            return pjh::result::Option<T>::Some(*p);
         }
 
         /// @brief Check if a value exists for the given compile-time key.
         template <auto Key>
+            requires detail::OptionKey<decltype(Key)>
         bool
         has() const noexcept
         {
