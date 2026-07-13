@@ -105,7 +105,7 @@ namespace pjh::cli
                 for (const auto &opt : cmd.options())
                     if (opt.long_name().starts_with(opt_prefix))
                         candidates.push_back(
-                            "--" + opt.long_name());
+                            std::format("--{}", opt.long_name()));
             }
             else if (prefix.size() == 1)
             {
@@ -113,7 +113,7 @@ namespace pjh::cli
                 for (const auto &opt : cmd.options())
                     if (opt.short_name() != 0)
                         candidates.push_back(
-                            std::string("-") + opt.short_name());
+                            std::format("-{}", opt.short_name()));
             }
             else
             {
@@ -122,7 +122,7 @@ namespace pjh::cli
                 for (const auto &opt : cmd.options())
                     if (opt.short_name() == c)
                         candidates.push_back(
-                            std::string("-") + opt.short_name());
+                            std::format("-{}", opt.short_name()));
             }
         }
 

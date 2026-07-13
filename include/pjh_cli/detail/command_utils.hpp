@@ -27,7 +27,7 @@ namespace pjh::cli::detail
     {
         std::string left;
         if (opt.short_name() != 0)
-            left = std::string("-") + opt.short_name();
+            left = std::format("-{}", opt.short_name());
         if (opt.short_name() != 0 && !opt.long_name().empty())
             left += sep;
         if (!opt.long_name().empty())

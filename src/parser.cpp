@@ -21,7 +21,7 @@ namespace pjh::cli
             if (!opt)
                 return CliFailure{
                     unknown_option(
-                        std::string("--") + std::string(name))};
+                        std::format("--{}", name))};
 
             if (opt->has_value())
             {
@@ -30,13 +30,13 @@ namespace pjh::cli
                     if (value.empty())
                         return CliFailure{
                             missing_value(
-                                std::string("--") + std::string(name))};
+                                std::format("--{}", name))};
                     return opt->call_apply(ctx, value);
                 }
                 if (++i >= args.size())
                     return CliFailure{
                         missing_value(
-                            std::string("--") + std::string(name))};
+                            std::format("--{}", name))};
                 return opt->call_apply(ctx, args[i]);
             }
 
@@ -58,18 +58,18 @@ namespace pjh::cli
                 if (!opt)
                     return CliFailure{
                         unknown_option(
-                            std::string("-") + c)};
+                            std::format("-{}", c))};
 
                 if (opt->has_value())
                 {
                     if (arg.size() != 2)
                         return CliFailure{
                             CliError(
-                                std::string("-") + c + " requires a value as a separate argument")};
+                                std::format("-{} requires a value as a separate argument", c))};
                     if (++i >= args.size())
                         return CliFailure{
                             missing_value(
-                                std::string("-") + c)};
+                                std::format("-{}", c))};
                     auto r = opt->call_apply(ctx, args[i]);
                     if (r.is_err())
                         return r;
