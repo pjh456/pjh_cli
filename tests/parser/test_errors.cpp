@@ -72,15 +72,6 @@ TEST_CASE("Parser required option and required arg both missing")
     CHECK(r.is_err());
 }
 
-TEST_CASE("Parser required option with default still errors when missing")
-{
-    App app("test", "1.0", "Required default");
-    app.option<int, fixed_string("port")>("--port", "Port", 8080).required();
-    Argv argv{"test"};
-    auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_err());
-}
-
 TEST_CASE("Parser error message unknown long option")
 {
     App app("test", "1.0", "Err msg");

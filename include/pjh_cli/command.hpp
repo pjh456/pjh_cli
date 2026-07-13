@@ -111,9 +111,11 @@ namespace pjh::cli
             std::string description);
 
         /// @brief Register a named option with a default value (no short name).
+        /// @note Returns OptionDefWithDefault — .required() is NOT available,
+        ///       because default + required is a contradiction.
         template <typename T, auto Key>
             requires detail::Parseable<T>
-        OptionDef &
+        OptionDefWithDefault
         option(
             std::string long_name,
             std::string description,
@@ -129,9 +131,11 @@ namespace pjh::cli
             std::string description);
 
         /// @brief Register a named option with short name and a default value.
+        /// @note Returns OptionDefWithDefault — .required() is NOT available,
+        ///       because default + required is a contradiction.
         template <typename T, auto Key>
             requires detail::Parseable<T>
-        OptionDef &
+        OptionDefWithDefault
         option(
             std::string long_name,
             char short_name,
@@ -305,7 +309,7 @@ namespace pjh::cli
 
     template <typename T, auto Key>
         requires detail::Parseable<T>
-    OptionDef &
+    OptionDefWithDefault
     Command::option(
         std::string long_name,
         std::string description,
@@ -322,7 +326,7 @@ namespace pjh::cli
         {
             ctx.set_value<T>(h, std::move(v));
         };
-        return def;
+        return OptionDefWithDefault(def);
     }
 
     template <typename T, auto Key>
@@ -371,7 +375,7 @@ namespace pjh::cli
 
     template <typename T, auto Key>
         requires detail::Parseable<T>
-    OptionDef &
+    OptionDefWithDefault
     Command::option(
         std::string long_name,
         char short_name,
@@ -389,7 +393,7 @@ namespace pjh::cli
         {
             ctx.set_value<T>(h, std::move(v));
         };
-        return def;
+        return OptionDefWithDefault(def);
     }
 
     template <typename T, size_t Index>

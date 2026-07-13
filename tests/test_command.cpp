@@ -37,23 +37,21 @@ TEST_CASE("Option int with short no default")
     CHECK(opt.m_key_hash != 0);
 }
 
-TEST_CASE("Option string with short and default")
+TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<std::string, fixed_string("host")>("--host", 'h', "Host address", std::string("0.0.0.0"));
+    auto &opt = app.option<std::string, fixed_string("host")>("--host", 'h', "Host address");
     CHECK(opt.m_long_name == "host");
     CHECK(opt.m_short_name == 'h');
     CHECK(opt.m_has_value == true);
-    CHECK(static_cast<bool>(opt.m_apply_default));
 }
 
-TEST_CASE("Option int with default no short")
+TEST_CASE("Option int no short")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
+    auto &opt = app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds");
     CHECK(opt.m_long_name == "timeout");
     CHECK(opt.m_short_name == 0);
-    CHECK(static_cast<bool>(opt.m_apply_default));
 }
 
 TEST_CASE("Option required chain")

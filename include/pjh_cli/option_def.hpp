@@ -62,6 +62,31 @@ namespace pjh::cli
         }
     };
 
+    /// @brief Proxy returned by option() when a default is provided.
+    ///
+    /// Excludes .required() to prevent default + required contradiction at compile time.
+    class OptionDefWithDefault
+    {
+        OptionDef &m_def;
+
+    public:
+        explicit OptionDefWithDefault(
+            OptionDef &def) noexcept
+            : m_def(def)
+        {
+        }
+
+        OptionDefWithDefault &
+        completer(
+            std::function<
+                std::vector<std::string>()>
+                fn)
+        {
+            m_def.completer(std::move(fn));
+            return *this;
+        }
+    };
+
 } // namespace pjh::cli
 
 #endif // INCLUDE_PJH_CLI_OPTION_DEF_HPP
