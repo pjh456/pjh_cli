@@ -8,13 +8,13 @@
 #include "parse_context.hpp"
 #include "type.hpp"
 
+#include <deque>
 #include <functional>
 #include <list>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
-#include <vector>
 
 namespace pjh::cli
 {
@@ -196,11 +196,11 @@ namespace pjh::cli
         subcommands()
             const noexcept { return m_subcommands; }
 
-        const std::vector<OptionDef> &
+        const std::deque<OptionDef> &
         options()
             const noexcept { return m_options; }
 
-        const std::vector<ArgDef> &
+        const std::deque<ArgDef> &
         args()
             const noexcept { return m_args; }
 
@@ -253,8 +253,8 @@ namespace pjh::cli
         std::string m_description;
         Command *m_parent = nullptr;
 
-        std::vector<OptionDef> m_options;
-        std::vector<ArgDef> m_args;
+        std::deque<OptionDef> m_options;
+        std::deque<ArgDef> m_args;
         std::list<Command> m_subcommands;
 
         std::unordered_map<

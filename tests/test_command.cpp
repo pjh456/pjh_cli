@@ -263,6 +263,44 @@ TEST_CASE("Command options count")
     CHECK(app.args().size() == 2);
 }
 
+TEST_CASE("OptionDef reference stability across registrations")
+{
+    App app("test", "1.0", "Test");
+
+    auto &first = app.option<int, 0>("--opt0", "original");
+    auto *addr = &first;
+
+    [&app]<size_t... Is>(std::index_sequence<Is...>) {
+        ((void)app.option<int, Is + 1>(
+            std::format("--opt{}", Is + 1), ""), ...);
+    }(std::make_index_sequence<30>());
+
+    CHECK(&first == addr);
+    CHECK(first.description() == "original");
+    CHECK(first.long_name() == "opt0");
+    first.set_description("modified");
+    CHECK(first.description() == "modified");
+}
+
+TEST_CASE("ArgDef reference stability across registrations")
+{
+    App app("test", "1.0", "Test");
+
+    auto &first = app.arg<std::string, 0>("arg0", "original");
+    auto *addr = &first;
+
+    [&app]<size_t... Is>(std::index_sequence<Is...>) {
+        ((void)app.arg<std::string, Is + 1>(
+            std::format("arg{}", Is + 1), ""), ...);
+    }(std::make_index_sequence<30>());
+
+    CHECK(&first == addr);
+    CHECK(first.m_name == "arg0");
+    CHECK(first.m_index == 0);
+    first.m_name = "modified";
+    CHECK(first.m_name == "modified");
+}
+
 TEST_CASE("key_hash constexpr correctness")
 {
     constexpr auto h1 = key_hash(fixed_string("test"));
