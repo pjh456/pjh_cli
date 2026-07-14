@@ -22,6 +22,7 @@ namespace pjh::cli
             std::move(description));
         auto &child = m_subcommands.back();
         child.m_parent = this;
+        child.m_extra_args_policy = m_extra_args_policy;
         return child;
     }
 
