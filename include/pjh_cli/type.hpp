@@ -5,6 +5,10 @@
 
 #include "error.hpp"
 
+#include <concepts>
+#include <filesystem>
+#include <type_traits>
+
 namespace pjh::cli
 {
     /// @brief Result type with CliError as the error variant.
@@ -21,6 +25,17 @@ namespace pjh::cli
     /// Implicitly converts to any CliResult<T> with matching error type.
     using CliFailure =
         pjh::result::Failure<CliError>;
+
+    namespace detail
+    {
+        template <typename T>
+        concept BuiltinType =
+            std::same_as<T, bool> ||
+            std::same_as<T, int> ||
+            std::same_as<T, double> ||
+            std::same_as<T, std::string> ||
+            std::same_as<T, std::filesystem::path>;
+    }
 
 } // namespace pjh::cli
 

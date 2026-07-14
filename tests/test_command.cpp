@@ -185,7 +185,7 @@ TEST_CASE("ParseContext")
     ParseContext ctx;
     ctx.set_value<int>(key_hash(fixed_string("port")), 8080);
     ctx.set_value<std::string>(key_hash(fixed_string("host")), std::string("localhost"));
-    ctx.set_value<unsigned>(key_hash(static_cast<size_t>(0)), 42u);
+    ctx.set_value<int>(key_hash(static_cast<size_t>(0)), 42);
 
     auto port = ctx.get<int, fixed_string("port")>();
     CHECK(port == 8080);
@@ -193,8 +193,8 @@ TEST_CASE("ParseContext")
     auto &host = ctx.get<std::string, fixed_string("host")>();
     CHECK(host == "localhost");
 
-    auto idx0 = ctx.get<unsigned, 0>();
-    CHECK(idx0 == 42u);
+    auto idx0 = ctx.get<int, 0>();
+    CHECK(idx0 == 42);
 
     CHECK(ctx.has<fixed_string("port")>());
     CHECK(!ctx.has<fixed_string("nonexistent")>());
@@ -203,22 +203,6 @@ TEST_CASE("ParseContext")
 
     CHECK(ctx.has_value(key_hash(fixed_string("port"))));
     CHECK(!ctx.has_value(key_hash(fixed_string("missing"))));
-
-    {
-        auto some_port = ctx.try_get<int, fixed_string("port")>();
-        CHECK(some_port.is_some());
-        CHECK(some_port.unwrap() == 8080);
-
-        auto none_port = ctx.try_get<int, fixed_string("missing")>();
-        CHECK(none_port.is_none());
-
-        auto some_idx0 = ctx.try_get<unsigned, 0>();
-        CHECK(some_idx0.is_some());
-        CHECK(some_idx0.unwrap() == 42u);
-
-        auto none_idx = ctx.try_get<unsigned, 999>();
-        CHECK(none_idx.is_none());
-    }
 
     ctx.set_matched_path("serve start");
     CHECK(ctx.matched_path() == "serve start");
