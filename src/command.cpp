@@ -1,4 +1,5 @@
 #include <pjh_cli/command.hpp>
+#include <pjh_cli/detail/apply_value.hpp>
 
 #include <algorithm>
 
@@ -74,9 +75,16 @@ namespace pjh::cli
         ParseContext &ctx) const
     {
         for (auto &opt : m_options)
-            if (opt.has_apply_default() &&
-                !ctx.has_value(opt.key_hash()))
-                opt.call_apply_default(ctx);
+        {
+            if (!opt.has_default() ||
+                ctx.has_value(opt.key_hash()))
+                continue;
+            auto r = detail::apply_value(
+                ctx, opt.key_hash(),
+                opt.value_tag(), opt.default_str());
+            if (r.is_err())
+                return r;
+        }
         return CliResult<void>::Ok();
     }
 

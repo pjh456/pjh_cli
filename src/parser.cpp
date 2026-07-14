@@ -1,3 +1,4 @@
+#include <pjh_cli/detail/apply_value.hpp>
 #include <pjh_cli/parser.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
@@ -31,16 +32,21 @@ namespace pjh::cli
                         return CliFailure{
                             missing_value(
                                 std::format("--{}", name))};
-                    return opt->call_apply(ctx, value);
+                    return detail::apply_value(
+                        ctx, opt->key_hash(),
+                        opt->value_tag(), value);
                 }
                 if (++i >= args.size())
                     return CliFailure{
                         missing_value(
                             std::format("--{}", name))};
-                return opt->call_apply(ctx, args[i]);
+                return detail::apply_value(
+                    ctx, opt->key_hash(),
+                    opt->value_tag(), args[i]);
             }
 
-            return opt->call_apply(ctx, "true");
+            ctx.set_value<bool>(opt->key_hash(), true);
+            return CliResult<void>::Ok();
         }
 
         CliResult<void>
@@ -70,15 +76,16 @@ namespace pjh::cli
                         return CliFailure{
                             missing_value(
                                 std::format("-{}", c))};
-                    auto r = opt->call_apply(ctx, args[i]);
+                    auto r = detail::apply_value(
+                        ctx, opt->key_hash(),
+                        opt->value_tag(), args[i]);
                     if (r.is_err())
                         return r;
                 }
                 else
                 {
-                    auto r = opt->call_apply(ctx, "true");
-                    if (r.is_err())
-                        return r;
+                    ctx.set_value<bool>(
+                        opt->key_hash(), true);
                 }
             }
             return CliResult<void>::Ok();
@@ -117,7 +124,10 @@ namespace pjh::cli
                 {
                     if (arg_pos < cmd->args().size())
                     {
-                        auto r = cmd->args()[arg_pos].m_apply(ctx, a);
+                        auto &arg = cmd->args()[arg_pos];
+                        auto r = detail::apply_value(
+                            ctx, arg.m_key_hash,
+                            arg.m_value_tag, a);
                         if (r.is_err())
                             return r;
                     }

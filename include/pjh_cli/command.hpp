@@ -2,8 +2,8 @@
 #define INCLUDE_PJH_CLI_COMMAND_HPP
 
 #include "arg_def.hpp"
-#include "converter.hpp"
 #include "detail/concept.hpp"
+#include "detail/string_utils.hpp"
 #include "option_def.hpp"
 #include "parse_context.hpp"
 #include "type.hpp"
@@ -18,17 +18,6 @@
 
 namespace pjh::cli
 {
-    namespace detail
-    {
-        struct transparent_string_hash
-        {
-            using is_transparent = void;
-            size_t operator()(std::string_view sv) const noexcept
-            {
-                return std::hash<std::string_view>{}(sv);
-            }
-        };
-    }
 
     /// @brief Bitmask flags controlling where a Command appears.
     ///
@@ -319,13 +308,8 @@ namespace pjh::cli
             std::move(long_name),
             0,
             std::move(description));
-        def.set_apply_default(
-            [h = key_hash(Key),
-             v = std::move(default_value)](
-                ParseContext &ctx) mutable
-        {
-            ctx.set_value<T>(h, std::move(v));
-        });
+        def.set_default_str(
+            detail::default_to_string(default_value));
         return OptionDefWithDefault(def);
     }
 
@@ -351,18 +335,7 @@ namespace pjh::cli
         def.set_description(std::move(description));
         def.set_has_value(!std::same_as<T, bool>);
         def.set_key_hash(h);
-        def.set_apply(
-            [h](ParseContext &ctx,
-                std::string_view s)
-            -> CliResult<void>
-        {
-            auto r = Converter<T>::from_string(s);
-            if (r.is_err())
-                return CliResult<void>::Err(
-                    std::move(r).unwrap_err());
-            ctx.set_value<T>(h, r.unwrap());
-            return CliResult<void>::Ok();
-        });
+        def.set_value_tag(detail::value_tag_v<T>);
 
         m_option_by_long[def.long_name()] =
             m_options.size() - 1;
@@ -386,13 +359,8 @@ namespace pjh::cli
             std::move(long_name),
             short_name,
             std::move(description));
-        def.set_apply_default(
-            [h = key_hash(Key),
-             v = std::move(default_value)](
-                ParseContext &ctx) mutable
-        {
-            ctx.set_value<T>(h, std::move(v));
-        });
+        def.set_default_str(
+            detail::default_to_string(default_value));
         return OptionDefWithDefault(def);
     }
 
@@ -410,18 +378,7 @@ namespace pjh::cli
         def.m_description = std::move(description);
         def.m_index = Index;
         def.m_key_hash = h;
-        def.m_apply =
-            [h](ParseContext &ctx,
-                std::string_view s)
-            -> CliResult<void>
-        {
-            auto r = Converter<T>::from_string(s);
-            if (r.is_err())
-                return CliResult<void>::Err(
-                    std::move(r).unwrap_err());
-            ctx.set_value<T>(h, r.unwrap());
-            return CliResult<void>::Ok();
-        };
+        def.m_value_tag = detail::value_tag_v<T>;
 
         return def;
     }

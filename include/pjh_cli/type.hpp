@@ -26,6 +26,16 @@ namespace pjh::cli
     using CliFailure =
         pjh::result::Failure<CliError>;
 
+    /// @brief Runtime type tag for the five builtin option types.
+    enum class ValueTag : uint8_t
+    {
+        Bool,
+        Int,
+        Double,
+        String,
+        Path,
+    };
+
     namespace detail
     {
         template <typename T>
@@ -35,6 +45,16 @@ namespace pjh::cli
             std::same_as<T, double> ||
             std::same_as<T, std::string> ||
             std::same_as<T, std::filesystem::path>;
+
+        /// @brief Compile-time ValueTag lookup for each BuiltinType.
+        template <BuiltinType T>
+        inline constexpr ValueTag value_tag_v =
+            std::same_as<T, bool>                    ? ValueTag::Bool
+            : std::same_as<T, int>                   ? ValueTag::Int
+            : std::same_as<T, double>                ? ValueTag::Double
+            : std::same_as<T, std::string>           ? ValueTag::String
+            : std::same_as<T, std::filesystem::path> ? ValueTag::Path
+                                                     : ValueTag::Bool;
     }
 
 } // namespace pjh::cli

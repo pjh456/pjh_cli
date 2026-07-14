@@ -1,6 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_DEF_HPP
 #define INCLUDE_PJH_CLI_OPTION_DEF_HPP
 
+#include <pjh_result.hpp>
+
 #include "type.hpp"
 
 #include <functional>
@@ -19,6 +21,9 @@ namespace pjh::cli
     class OptionDef
     {
     public:
+        /// @brief Default constructor (initializes m_default_str to None).
+        OptionDef() : m_default_str(pjh::result::Option<std::string>::None()) {}
+
         // ── Getters ──
 
         /// @brief Get the long option name (e.g. "verbose").
@@ -45,12 +50,17 @@ namespace pjh::cli
         size_t
         key_hash() const noexcept { return m_key_hash; }
 
-        /// @brief Whether a default-value applicator has been registered.
+        /// @brief Get the runtime type tag.
+        ValueTag
+        value_tag() const noexcept { return m_value_tag; }
+
+        /// @brief Whether a default value has been registered.
         bool
-        has_apply_default() const noexcept
-        {
-            return static_cast<bool>(m_apply_default);
-        }
+        has_default() const noexcept { return m_default_str.is_some(); }
+
+        /// @brief Get the default value string (empty if no default).
+        const std::string &
+        default_str() const noexcept { return m_default_str.unwrap(); }
 
         // ── Setters ──
 
@@ -110,47 +120,20 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Register the parse-time apply callback.
+        /// @brief Set the runtime type tag.
         OptionDef &
-        set_apply(
-            std::function<
-                CliResult<void>(
-                    ParseContext &,
-                    std::string_view)>
-                fn)
+        set_value_tag(ValueTag t)
         {
-            m_apply = std::move(fn);
+            m_value_tag = t;
             return *this;
         }
 
-        /// @brief Register the default-value applicator callback.
+        /// @brief Register the default value string.
         OptionDef &
-        set_apply_default(
-            std::function<void(ParseContext &)>
-                fn)
+        set_default_str(std::string s)
         {
-            m_apply_default = std::move(fn);
+            m_default_str = decltype(m_default_str)::Some(std::move(s));
             return *this;
-        }
-
-        // ── Call operations (for parser internals) ──
-
-        /// @brief Invoke the parse-time apply callback.
-        CliResult<void>
-        call_apply(
-            ParseContext &ctx,
-            std::string_view s) const
-        {
-            return m_apply(ctx, s);
-        }
-
-        /// @brief Invoke the default-value applicator if one exists.
-        void
-        call_apply_default(
-            ParseContext &ctx) const
-        {
-            if (m_apply_default)
-                m_apply_default(ctx);
         }
 
         // ── Fluent chaining ──
@@ -189,16 +172,8 @@ namespace pjh::cli
         bool m_has_value{};
         bool m_required{};
         size_t m_key_hash{};
-
-        std::function<
-            CliResult<void>(
-                ParseContext &,
-                std::string_view)>
-            m_apply;
-
-        std::function<
-            void(ParseContext &)>
-            m_apply_default;
+        ValueTag m_value_tag{};
+        pjh::result::Option<std::string> m_default_str;
 
         std::function<
             std::vector<std::string>()>
@@ -238,8 +213,7 @@ namespace pjh::cli
         bool
         has_value() const noexcept { return m_def.has_value(); }
 
-        /// @brief Whether the option is required (delegated, always false
-        ///        because OptionDefWithDefault cannot be marked required).
+        /// @brief Whether the option is required (always false for default-wrapped options).
         bool
         is_required() const noexcept { return m_def.is_required(); }
 
@@ -247,12 +221,17 @@ namespace pjh::cli
         size_t
         key_hash() const noexcept { return m_def.key_hash(); }
 
-        /// @brief Whether a default-value applicator exists (delegated).
+        /// @brief Get the runtime type tag (delegated).
+        ValueTag
+        value_tag() const noexcept { return m_def.value_tag(); }
+
+        /// @brief Whether a default value exists (delegated).
         bool
-        has_apply_default() const noexcept
-        {
-            return m_def.has_apply_default();
-        }
+        has_default() const noexcept { return m_def.has_default(); }
+
+        /// @brief Get the default value string (delegated).
+        const std::string &
+        default_str() const noexcept { return m_def.default_str(); }
 
         // ── Setters (forward all except required()) ──
 
@@ -312,46 +291,20 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Register the parse-time apply callback (delegated).
+        /// @brief Set the runtime type tag (delegated).
         OptionDefWithDefault &
-        set_apply(
-            std::function<
-                CliResult<void>(
-                    ParseContext &,
-                    std::string_view)>
-                fn)
+        set_value_tag(ValueTag t)
         {
-            m_def.set_apply(std::move(fn));
+            m_def.set_value_tag(t);
             return *this;
         }
 
-        /// @brief Register the default-value applicator (delegated).
+        /// @brief Register the default value string (delegated).
         OptionDefWithDefault &
-        set_apply_default(
-            std::function<void(ParseContext &)>
-                fn)
+        set_default_str(std::string s)
         {
-            m_def.set_apply_default(std::move(fn));
+            m_def.set_default_str(std::move(s));
             return *this;
-        }
-
-        // ── Call operations ──
-
-        /// @brief Invoke the parse-time apply callback (delegated).
-        CliResult<void>
-        call_apply(
-            ParseContext &ctx,
-            std::string_view s) const
-        {
-            return m_def.call_apply(ctx, s);
-        }
-
-        /// @brief Invoke the default-value applicator (delegated).
-        void
-        call_apply_default(
-            ParseContext &ctx) const
-        {
-            m_def.call_apply_default(ctx);
         }
 
         // ── Fluent chaining (only completer, NOT required) ──

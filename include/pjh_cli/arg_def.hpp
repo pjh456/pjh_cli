@@ -3,14 +3,11 @@
 
 #include "type.hpp"
 
-#include <functional>
 #include <string>
 #include <string_view>
 
 namespace pjh::cli
 {
-    class ParseContext;
-
     /// @brief Definition of a single positional argument.
     ///
     /// Indexed by compile-time size_t. The parser fills arguments in index order.
@@ -21,13 +18,7 @@ namespace pjh::cli
         size_t m_index{};          ///< Positional index
         bool m_required{};         ///< Fail parse if not provided
         size_t m_key_hash{};       ///< Runtime hash (== compile-time key_hash(index))
-
-        /// @brief Type-erased converter: parse string value and store in context.
-        std::function<
-            CliResult<void>(
-                ParseContext &,
-                std::string_view)>
-            m_apply;
+        ValueTag m_value_tag{};    ///< Type tag for runtime dispatch
 
         /// @brief Mark this argument as required.
         ArgDef &
