@@ -6,14 +6,24 @@
 
 namespace pjh::cli
 {
-    /// @brief String-valued option.  Soon: .choices(), .repeatable()
+    /// @brief String-valued option.
+    ///
+    /// Created by `OptionBuilder::str()`.  Overrides `parse_value()` and
+    /// `apply_default()` to store values as `std::string` in `ParseContext`.
+    /// Future chain methods: .choices(), .repeatable()
     class StrOption : public OptionDef
     {
     public:
+        /// @brief Construct with no default value.
         StrOption() : m_default(pjh::result::Option<std::string>::None()) {}
 
+        /// @brief Whether a default string value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Store the raw string directly (passthrough).
+        /// @param ctx Parse context.
+        /// @param raw CLI token value (stored as-is).
+        /// @return Always Ok.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {
@@ -21,6 +31,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Apply the default string value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
@@ -28,6 +39,9 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Register a typed default value.
+        /// @param v Default string value.
+        /// @return *this for chaining.
         StrOption &default_value(std::string v)
         {
             m_default = decltype(m_default)::Some(std::move(v));

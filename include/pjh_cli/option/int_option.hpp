@@ -7,14 +7,24 @@
 
 namespace pjh::cli
 {
-    /// @brief Integer-valued option.  Soon: .min(), .max(), .count()
+    /// @brief Integer-valued option.
+    ///
+    /// Created by `OptionBuilder::integer()`.  Overrides `parse_value()` and
+    /// `apply_default()` to store values as `int` in `ParseContext`.
+    /// Future chain methods: .min(), .max(), .count()
     class IntOption : public OptionDef
     {
     public:
+        /// @brief Construct with no default value.
         IntOption() : m_default(pjh::result::Option<int>::None()) {}
 
+        /// @brief Whether a default int value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Parse the raw string as an int and store in @p ctx.
+        /// @param ctx Parse context.
+        /// @param raw CLI token value to parse.
+        /// @return Ok on success, or a CliError on invalid integer format.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {
@@ -25,6 +35,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Apply the default int value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
@@ -32,6 +43,9 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Register a typed default value.
+        /// @param v Default int value.
+        /// @return *this for chaining.
         IntOption &default_value(int v)
         {
             m_default = decltype(m_default)::Some(v);

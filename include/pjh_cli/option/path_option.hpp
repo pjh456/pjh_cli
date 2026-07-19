@@ -9,13 +9,23 @@
 namespace pjh::cli
 {
     /// @brief Filesystem path option.
+    ///
+    /// Created by `OptionBuilder::path()`.  Overrides `parse_value()` and
+    /// `apply_default()` to store values as `std::filesystem::path` in
+    /// `ParseContext`.
     class PathOption : public OptionDef
     {
     public:
+        /// @brief Construct with no default value.
         PathOption() : m_default(pjh::result::Option<std::filesystem::path>::None()) {}
 
+        /// @brief Whether a default path value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Convert the raw string to a filesystem path and store.
+        /// @param ctx Parse context.
+        /// @param raw CLI token value (path string).
+        /// @return Always Ok.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {
@@ -23,6 +33,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Apply the default path value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
@@ -30,6 +41,9 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Register a typed default value.
+        /// @param v Default path value.
+        /// @return *this for chaining.
         PathOption &default_value(std::filesystem::path v)
         {
             m_default = decltype(m_default)::Some(std::move(v));
