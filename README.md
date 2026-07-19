@@ -102,6 +102,7 @@ app.parse_fuzzy(argc, argv);
 | `ctx.get<T, Key>()` | Get value (throws if absent) |
 | `ctx.has<Key>()` | Check key exists |
 | `ctx.try_get<T, Key>()` | Get → `Option<T>` (no throw) |
+| `ctx.get_or<T, Key>(fallback)` | Get or return fallback (no throw) |
 | `ctx.matched_path()` | Matched subcommand path, e.g. `"server start"` |
 | `ctx.matched_command()` | Leaf command pointer |
 | `ctx.extra_args()` | Extra positional args (when policy is `Store`) |

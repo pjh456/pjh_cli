@@ -65,6 +65,39 @@ namespace pjh::cli
             return m_present.contains(h);
         }
 
+        /// @brief Try to retrieve a value; returns None if absent (no throw).
+        /// @tparam T Expected value type.
+        /// @tparam Key Compile-time key.
+        /// @return `Option<T>` — `Some(value)` if present, `None()` if absent.
+        template <detail::BuiltinType T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
+        pjh::result::Option<T> try_get() const
+        {
+            constexpr auto h = key_hash(Key);
+            auto &map = typed_map<T>();
+            auto it = map.find(h);
+            if (it == map.end())
+                return pjh::result::Option<T>::None();
+            return pjh::result::Option<T>::Some(it->second);
+        }
+
+        /// @brief Retrieve a value or return @p fallback if absent (no throw).
+        /// @tparam T Expected value type.
+        /// @tparam Key Compile-time key.
+        /// @param fallback Default to use if the key has no stored value.
+        /// @return The stored value, or @p fallback.
+        template <detail::BuiltinType T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
+        T get_or(T fallback) const
+        {
+            constexpr auto h = key_hash(Key);
+            auto &map = typed_map<T>();
+            auto it = map.find(h);
+            if (it == map.end())
+                return fallback;
+            return it->second;
+        }
+
         /// @brief Store a value (used internally by parser).
         template <detail::BuiltinType T>
         void set_value(size_t hash, T value)
