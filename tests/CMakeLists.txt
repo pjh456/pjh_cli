@@ -7,6 +7,13 @@ set(PJH_CLI_TEST_SOURCES
     test_converter.cpp
     test_command.cpp
     test_matcher.cpp
+    test_parse_context.cpp
+    option/test_bool_option.cpp
+    option/test_count_option.cpp
+    option/test_float_option.cpp
+    option/test_int_option.cpp
+    option/test_path_option.cpp
+    option/test_str_option.cpp
     parser/test_options.cpp
     parser/test_flags.cpp
     parser/test_positional.cpp

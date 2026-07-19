@@ -7,6 +7,9 @@ int main(int argc, char **argv)
 {
     App app("deploy", "1.0.0", "Subcommand tree example");
 
+    // Parent-level option — must appear BEFORE the subcommand name
+    app.option<fixed_string("dryrun")>("--dry-run", "Dry run (no-op)").boolean();
+
     // server start [--port N] [--daemon]
     auto &server = app.add_command("server", "Server management");
     auto &server_start = server.add_command("start", "Start server");
@@ -31,6 +34,12 @@ int main(int argc, char **argv)
 
     auto &ctx = r.unwrap();
     std::cout << "path: " << ctx.matched_path();
+
+    // Parent option — only accessible if placed before subcommand
+    // e.g. deploy --dry-run server start  →  ctx.has<"dryrun">() == true
+    if (ctx.has<fixed_string("dryrun")>())
+        std::cout << ", dry-run";
+
     if (ctx.has<fixed_string("port")>())
         std::cout << ", port: " << ctx.get<int, fixed_string("port")>();
     if (ctx.has<fixed_string("daemon")>())

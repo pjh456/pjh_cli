@@ -7,6 +7,9 @@ int main(int argc, char **argv)
 {
     App app("pkg", "1.0.0", "Package manager example with fuzzy matching");
 
+    // Parent-level option
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+
     auto &install = app.add_command("install", "Install a package");
     install.arg<std::string, 0>("name", "Package name").required();
     install.option<fixed_string("global")>("--global", 'g', "Install globally").boolean();
@@ -35,8 +38,15 @@ int main(int argc, char **argv)
 
     auto &ctx = r.unwrap();
     std::cout << "command: " << ctx.matched_path() << "\n";
+
+    // Use try_get for optional values (no throw)
+    auto v = ctx.try_get<int, fixed_string("verbose")>();
+    if (v.is_some())
+        std::cout << "  verbose count: " << v.unwrap() << "\n";
+
     if (ctx.has<fixed_string("global")>())
         std::cout << "  --global\n";
+
     if (ctx.has<0>())
         std::cout << "  arg: " << ctx.get<std::string, 0>() << "\n";
     return 0;
