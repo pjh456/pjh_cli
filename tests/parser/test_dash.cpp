@@ -5,7 +5,7 @@
 TEST_CASE("Parser double dash separator")
 {
     App app("test", "1.0", "Double dash test");
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     app.arg<std::string, 0>("file", "Input file");
     Argv argv{"test", "--verbose", "--", "--file=foo"};
     auto r = app.parse(argv.argc(), argv.argv());
@@ -18,7 +18,7 @@ TEST_CASE("Parser double dash separator")
 TEST_CASE("Parser double dash with no further args")
 {
     App app("test", "1.0", "DD empty");
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     Argv argv{"test", "--verbose", "--"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());

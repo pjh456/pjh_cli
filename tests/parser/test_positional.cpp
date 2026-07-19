@@ -18,7 +18,7 @@ TEST_CASE("Parser positional args")
 TEST_CASE("Parser mixed options and positional args")
 {
     App app("test", "1.0", "Mixed test");
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     app.arg<std::string, 0>("file", "Input file");
     Argv argv{"test", "--verbose", "data.txt"};
     auto r = app.parse(argv.argc(), argv.argv());

@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     app.arg<std::string, 0>("source", "Source file path").required();
     app.arg<std::string, 1>("dest", "Destination path").required();
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose output");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
 
     auto r = app.parse(argc, argv);
     if (r.is_err())

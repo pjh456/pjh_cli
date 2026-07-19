@@ -8,17 +8,18 @@ int main(int argc, char **argv)
     App app("options", "1.0.0", "Option type examples");
 
     // Bool flag
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Enable verbose output");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Enable verbose output")
+        .boolean();
 
     // Valued option with short name
-    app.option<int, fixed_string("port")>("--port", 'p', "Port number", 8080);
+    app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
 
     // String with default
-    app.option<std::string, fixed_string("host")>(
+    app.option<fixed_string("host")>(
         "--host", 'H', "Host address", std::string("localhost"));
 
     // Required option
-    app.option<std::string, fixed_string("token")>("--token", "API token").required();
+    app.option<fixed_string("token")>("--token", "API token").str().required();
 
     auto r = app.parse(argc, argv);
     if (r.is_err())

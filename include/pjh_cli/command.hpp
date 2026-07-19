@@ -61,23 +61,6 @@ namespace pjh::cli
 
     namespace detail
     {
-        /// @brief Create the right OptionDef subclass for BuiltinType T.
-        /// @tparam T Option value type (bool, int, double, string, path).
-        template <typename T>
-        auto make_typed_option()
-        {
-            if constexpr (std::same_as<T, bool>)
-                return std::unique_ptr<OptionDef>(std::make_unique<BoolOption>());
-            else if constexpr (std::same_as<T, int>)
-                return std::unique_ptr<OptionDef>(std::make_unique<IntOption>());
-            else if constexpr (std::same_as<T, double>)
-                return std::unique_ptr<OptionDef>(std::make_unique<FloatOption>());
-            else if constexpr (std::same_as<T, std::string>)
-                return std::unique_ptr<OptionDef>(std::make_unique<StrOption>());
-            else if constexpr (std::same_as<T, std::filesystem::path>)
-                return std::unique_ptr<OptionDef>(std::make_unique<PathOption>());
-        }
-
         /// @brief Dispatch an OptionBuilder to the correct typed subclass and
         ///        set a default value.
         ///
@@ -211,40 +194,6 @@ namespace pjh::cli
         }
 
         // ──────────────────────────────────────────
-        //  Registration — option (old style, backward compat)
-        // ──────────────────────────────────────────
-
-        /// @brief Register a named option (no short name, no default).
-        /// @deprecated Use option<Key>(name, desc).integer() etc. instead.
-        template <typename T, auto Key>
-            requires detail::BuiltinType<T>
-        OptionDef &option(std::string long_name, std::string description);
-
-        /// @brief Register a named option with a default value.
-        /// @deprecated Use option<Key>(name, desc, T) instead.
-        template <typename T, auto Key>
-            requires detail::BuiltinType<T>
-        OptionDef &option(
-            std::string long_name, std::string description, T default_value);
-
-        /// @brief Register a named option with short name (no default).
-        /// @deprecated Use option<Key>(name, short, desc).integer() etc.
-        template <typename T, auto Key>
-            requires detail::BuiltinType<T>
-        OptionDef &option(
-            std::string long_name, char short_name, std::string description);
-
-        /// @brief Register a named option with short name and a default value.
-        /// @deprecated Use option<Key>(name, short, desc, T) instead.
-        template <typename T, auto Key>
-            requires detail::BuiltinType<T>
-        OptionDef &option(
-            std::string long_name,
-            char short_name,
-            std::string description,
-            T default_value);
-
-        // ──────────────────────────────────────────
         //  Registration — other
         // ──────────────────────────────────────────
 
@@ -334,7 +283,7 @@ namespace pjh::cli
         ///
         /// Registers the option in the by-long-name and by-short-name lookup
         /// maps, then transfers ownership into m_options.  Called by
-        /// OptionBuilder and the backward-compat option<T, Key>() overloads.
+        /// OptionBuilder and the auto-dispatch option<Key>() overloads.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             m_option_by_long[opt->long_name()] = opt.get();
@@ -368,63 +317,6 @@ namespace pjh::cli
         };
         std::function<CliResult<void>(ParseContext &)> m_action;
     };
-
-    // ──────────────────────────────────────────────
-    //  Old-style template implementations (backward compat)
-    // ──────────────────────────────────────────────
-
-    template <typename T, auto Key>
-        requires detail::BuiltinType<T>
-    OptionDef &Command::option(std::string long_name, std::string description)
-    {
-        return option<T, Key>(std::move(long_name), 0, std::move(description));
-    }
-
-    template <typename T, auto Key>
-        requires detail::BuiltinType<T>
-    OptionDef &Command::option(
-        std::string long_name, std::string description, T default_value)
-    {
-        auto &def = option<T, Key>(std::move(long_name), 0, std::move(description));
-        def.set_default_str(detail::default_to_string(default_value));
-        return def;
-    }
-
-    template <typename T, auto Key>
-        requires detail::BuiltinType<T>
-    OptionDef &Command::option(
-        std::string long_name, char short_name, std::string description)
-    {
-        // Strip leading "--" if present
-        if (long_name.size() > 2 && long_name[0] == '-' && long_name[1] == '-')
-            long_name = long_name.substr(2);
-
-        constexpr size_t h = key_hash(Key);
-        constexpr bool is_bool = std::same_as<T, bool>;
-
-        auto ptr = detail::make_typed_option<T>();
-        ptr->set_long_name(std::move(long_name));
-        ptr->set_short_name(short_name);
-        ptr->set_description(std::move(description));
-        ptr->set_has_value(!is_bool);
-        ptr->set_key_hash(h);
-        ptr->set_value_tag(detail::value_tag_v<T>);
-
-        auto &ref = *ptr;
-        add_option(std::move(ptr));
-        return ref;
-    }
-
-    template <typename T, auto Key>
-        requires detail::BuiltinType<T>
-    OptionDef &Command::option(
-        std::string long_name, char short_name, std::string description, T default_value)
-    {
-        auto &def =
-            option<T, Key>(std::move(long_name), short_name, std::move(description));
-        def.set_default_str(detail::default_to_string(default_value));
-        return def;
-    }
 
     // ──────────────────────────────────────────────
     //  arg<T, Index>

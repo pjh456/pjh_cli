@@ -21,7 +21,7 @@ TEST_CASE("Option bool flag no short no default")
 {
     App app("test", "1.0", "Test");
     auto &opt =
-        app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
+        app.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
     CHECK(opt.long_name() == "verbose");
     CHECK(opt.short_name() == 0);
     CHECK(opt.has_value() == false);
@@ -32,7 +32,7 @@ TEST_CASE("Option bool flag no short no default")
 TEST_CASE("Option int with short no default")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<int, fixed_string("port")>("--port", 'p', "Port number");
+    auto &opt = app.option<fixed_string("port")>("--port", 'p', "Port number").integer();
     CHECK(opt.long_name() == "port");
     CHECK(opt.short_name() == 'p');
     CHECK(opt.has_value() == true);
@@ -43,7 +43,7 @@ TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
     auto &opt =
-        app.option<std::string, fixed_string("host")>("--host", 'h', "Host address");
+        app.option<fixed_string("host")>("--host", 'h', "Host address").str();
     CHECK(opt.long_name() == "host");
     CHECK(opt.short_name() == 'h');
     CHECK(opt.has_value() == true);
@@ -53,7 +53,7 @@ TEST_CASE("Option int no short")
 {
     App app("test", "1.0", "Test");
     auto &opt =
-        app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds");
+        app.option<fixed_string("timeout")>("--timeout", "Timeout in seconds").integer();
     CHECK(opt.long_name() == "timeout");
     CHECK(opt.short_name() == 0);
 }
@@ -61,8 +61,8 @@ TEST_CASE("Option int no short")
 TEST_CASE("Option required chain")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<int, fixed_string("required-opt")>(
-                       "--required-opt", 'r', "Required option")
+    auto &opt = app.option<fixed_string("required-opt")>(
+                       "--required-opt", 'r', "Required option").integer()
                     .required();
     CHECK(opt.is_required() == true);
 }
@@ -70,8 +70,8 @@ TEST_CASE("Option required chain")
 TEST_CASE("find_option_by_long")
 {
     App app("test", "1.0", "Test");
-    app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port number");
+    app.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port number").integer();
 
     auto *found1 = app.find_option_by_long("verbose");
     CHECK(found1 != nullptr);
@@ -88,7 +88,7 @@ TEST_CASE("find_option_by_long")
 TEST_CASE("find_option_by_short")
 {
     App app("test", "1.0", "Test");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port number");
+    app.option<fixed_string("port")>("--port", 'p', "Port number").integer();
 
     auto *found4 = app.find_option_by_short('p');
     CHECK(found4 != nullptr);
@@ -222,7 +222,7 @@ TEST_CASE("ParseContext")
 TEST_CASE("Command apply defaults")
 {
     App app2("test2", "1.0", "Default test");
-    app2.option<int, fixed_string("x")>("--x", "X value", 100);
+    app2.option<fixed_string("x")>("--x", "X value", 100);
     auto ctx2 = app2.create_context();
     auto res = app2.apply_defaults(ctx2);
     CHECK(res.is_ok());
@@ -261,13 +261,13 @@ TEST_CASE("Command execute")
 TEST_CASE("Command options count")
 {
     App app("test", "1.0", "Test");
-    app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port number");
-    app.option<std::string, fixed_string("host")>(
+    app.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port number").integer();
+    app.option<fixed_string("host")>(
         "--host", 'h', "Host address", std::string("0.0.0.0"));
-    app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
-    app.option<int, fixed_string("required-opt")>(
-           "--required-opt", 'r', "Required option")
+    app.option<fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
+    app.option<fixed_string("required-opt")>(
+           "--required-opt", 'r', "Required option").integer()
         .required();
     app.arg<std::string, 0>("source", "Source file");
     app.arg<std::string, 1>("dest", "Destination").required();
@@ -280,12 +280,12 @@ TEST_CASE("OptionDef reference stability across registrations")
 {
     App app("test", "1.0", "Test");
 
-    auto &first = app.option<int, 0>("--opt0", "original");
+    auto &first = app.option<0>("--opt0", "original").integer();
     auto *addr = &first;
 
     [&app]<size_t... Is>(std::index_sequence<Is...>)
     {
-        ((void)app.option<int, Is + 1>(std::format("--opt{}", Is + 1), ""), ...);
+        ((void)app.option<Is + 1>(std::format("--opt{}", Is + 1), "").integer(), ...);
     }(std::make_index_sequence<30>());
 
     CHECK(&first == addr);

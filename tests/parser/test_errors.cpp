@@ -21,7 +21,7 @@ TEST_CASE("Parser unknown short option")
 TEST_CASE("Parser missing value for long option")
 {
     App app("test", "1.0", "Missing value test");
-    app.option<int, fixed_string("port")>("--port", "Port");
+    app.option<fixed_string("port")>("--port", "Port").integer();
     Argv argv{"test", "--port"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -30,7 +30,7 @@ TEST_CASE("Parser missing value for long option")
 TEST_CASE("Parser missing value for short option")
 {
     App app("test", "1.0", "Missing short value test");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
     Argv argv{"test", "-p"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -39,7 +39,7 @@ TEST_CASE("Parser missing value for short option")
 TEST_CASE("Parser required option missing")
 {
     App app("test", "1.0", "Required opt test");
-    app.option<int, fixed_string("port")>("--port", "Port").required();
+    app.option<fixed_string("port")>("--port", "Port").integer().required();
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -57,7 +57,7 @@ TEST_CASE("Parser required positional arg missing")
 TEST_CASE("Parser type conversion failure")
 {
     App app("test", "1.0", "Conversion test");
-    app.option<int, fixed_string("port")>("--port", "Port");
+    app.option<fixed_string("port")>("--port", "Port").integer();
     Argv argv{"test", "--port", "notanumber"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -66,7 +66,7 @@ TEST_CASE("Parser type conversion failure")
 TEST_CASE("Parser required option and required arg both missing")
 {
     App app("test", "1.0", "Both required missing");
-    app.option<int, fixed_string("port")>("--port", "Port").required();
+    app.option<fixed_string("port")>("--port", "Port").integer().required();
     app.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
@@ -96,7 +96,7 @@ TEST_CASE("Parser error message unknown short option")
 TEST_CASE("Parser error message missing value for long option")
 {
     App app("test", "1.0", "Err msg");
-    app.option<int, fixed_string("port")>("--port", "Port");
+    app.option<fixed_string("port")>("--port", "Port").integer();
     Argv argv{"test", "--port"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -108,7 +108,7 @@ TEST_CASE("Parser error message missing value for long option")
 TEST_CASE("Parser error message missing value for short option")
 {
     App app("test", "1.0", "Err msg");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
     Argv argv{"test", "-p"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -120,7 +120,7 @@ TEST_CASE("Parser error message missing value for short option")
 TEST_CASE("Parser error message required option missing")
 {
     App app("test", "1.0", "Err msg");
-    app.option<int, fixed_string("port")>("--port", "Port").required();
+    app.option<fixed_string("port")>("--port", "Port").integer().required();
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
@@ -144,7 +144,7 @@ TEST_CASE("Parser error message required arg missing")
 TEST_CASE("Parser error message type conversion failure")
 {
     App app("test", "1.0", "Err msg");
-    app.option<int, fixed_string("port")>("--port", "Port");
+    app.option<fixed_string("port")>("--port", "Port").integer();
     Argv argv{"test", "--port", "notanumber"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());

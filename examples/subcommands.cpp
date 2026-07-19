@@ -10,15 +10,16 @@ int main(int argc, char **argv)
     // server start [--port N] [--daemon]
     auto &server = app.add_command("server", "Server management");
     auto &server_start = server.add_command("start", "Start server");
-    server_start.option<int, fixed_string("port")>("--port", 'p', "Port", 8080);
-    server_start.option<bool, fixed_string("daemon")>("--daemon", 'd', "Run as daemon");
+    server_start.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+    server_start.option<fixed_string("daemon")>("--daemon", 'd', "Run as daemon")
+        .boolean();
 
     server.add_command("stop", "Stop server");
 
     // config show [--format FMT]
     auto &config = app.add_command("config", "Configuration commands");
     auto &config_show = config.add_command("show", "Show configuration");
-    config_show.option<std::string, fixed_string("format")>(
+    config_show.option<fixed_string("format")>(
         "--format", 'f', "Output format", std::string("yaml"));
 
     auto r = app.parse(argc, argv);

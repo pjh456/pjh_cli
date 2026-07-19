@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     app.set_extra_args(ExtraArgsPolicy::Store);
 
-    app.option<bool, fixed_string("compress")>("--compress", 'z', "Compress archive");
+    app.option<fixed_string("compress")>("--compress", 'z', "Compress archive").boolean();
     app.arg<std::string, 0>("output", "Archive file name").required();
 
     auto r = app.parse(argc, argv);

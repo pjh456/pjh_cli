@@ -124,8 +124,8 @@ TEST_CASE("complete subcommand prefix")
 TEST_CASE("complete long option prefix")
 {
     App app("test", "1.0", "Option complete");
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
 
     auto candidates = complete(app, "--ver");
     CHECK(!candidates.empty());
@@ -135,8 +135,8 @@ TEST_CASE("complete long option prefix")
 TEST_CASE("complete short option prefix")
 {
     App app("test", "1.0", "Option complete");
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
 
     auto candidates = complete(app, "-");
     bool has_v = false, has_p = false;
@@ -154,8 +154,8 @@ TEST_CASE("complete short option prefix")
 TEST_CASE("format_usage")
 {
     App app("test", "1.0", "Test app");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port", 8080);
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose");
+    app.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     app.arg<std::string, 0>("source", "Source file").required();
     app.arg<std::string, 1>("dest", "Destination");
 
@@ -170,8 +170,8 @@ TEST_CASE("format_usage")
 TEST_CASE("format_help")
 {
     App app("test", "1.0", "Test application");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port number", 8080);
-    app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Enable verbose");
+    app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Enable verbose").boolean();
     app.arg<std::string, 0>("file", "Input file").required();
     app.add_command("serve", "Start the server");
 
@@ -188,7 +188,7 @@ TEST_CASE("parse_fuzzy exact match")
 {
     App app("test", "1.0", "Fuzzy parse");
     auto &serve = app.add_command("server", "Server");
-    serve.option<int, fixed_string("port")>("--port", 'p', "Port", 8080);
+    serve.option<fixed_string("port")>("--port", 'p', "Port", 8080);
 
     Argv argv{"test", "server", "--port", "3000"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());

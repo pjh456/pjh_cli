@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     auto &install = app.add_command("install", "Install a package");
     install.arg<std::string, 0>("name", "Package name").required();
-    install.option<bool, fixed_string("global")>("--global", 'g', "Install globally");
+    install.option<fixed_string("global")>("--global", 'g', "Install globally").boolean();
 
     auto &remove = app.add_command("remove", "Remove a package");
     remove.arg<std::string, 0>("name", "Package name").required();

@@ -6,7 +6,7 @@ TEST_CASE("Parser subcommand matching")
 {
     App app("test", "1.0", "Subcommand test");
     auto &serve = app.add_command("serve", "Start server");
-    serve.option<int, fixed_string("port")>("--port", 'p', "Port");
+    serve.option<fixed_string("port")>("--port", 'p', "Port").integer();
     Argv argv{"test", "serve", "--port", "8080"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -20,7 +20,7 @@ TEST_CASE("Parser deep subcommand nesting")
     App app("test", "1.0", "Nested test");
     auto &db = app.add_command("db", "Database commands");
     auto &migrate = db.add_command("migrate", "Run migrations");
-    migrate.option<std::string, fixed_string("name")>("--name", 'n', "Migration name");
+    migrate.option<fixed_string("name")>("--name", 'n', "Migration name").str();
     Argv argv{"test", "db", "migrate", "--name", "v2"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -33,7 +33,7 @@ TEST_CASE("Parser disabled subcommand skipped")
 {
     App app("test", "1.0", "Disabled test");
     auto &active = app.add_command("active", "Available");
-    active.option<bool, fixed_string("x")>("--x", 'x', "Flag");
+    active.option<fixed_string("x")>("--x", 'x', "Flag").boolean();
     app.add_command("disabled", "Unavailable").enabled([] { return false; });
     Argv argv{"test", "active", "--x"};
     auto r = app.parse(argv.argc(), argv.argv());

@@ -5,7 +5,7 @@
 TEST_CASE("Parser bool flag")
 {
     App app("test", "1.0", "Flag test");
-    app.option<bool, fixed_string("verbose")>("--verbose", "Verbose");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose").boolean();
     Argv argv{"test", "--verbose"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -16,9 +16,9 @@ TEST_CASE("Parser bool flag")
 TEST_CASE("Parser multiple short flags")
 {
     App app("test", "1.0", "Short flags test");
-    app.option<bool, fixed_string("a")>("--a", 'a', "Flag A");
-    app.option<bool, fixed_string("b")>("--b", 'b', "Flag B");
-    app.option<bool, fixed_string("c")>("--c", 'c', "Flag C");
+    app.option<fixed_string("a")>("--a", 'a', "Flag A").boolean();
+    app.option<fixed_string("b")>("--b", 'b', "Flag B").boolean();
+    app.option<fixed_string("c")>("--c", 'c', "Flag C").boolean();
     Argv argv{"test", "-abc"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());

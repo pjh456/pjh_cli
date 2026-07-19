@@ -17,7 +17,7 @@ TEST_CASE("edit_distance after refactor")
 TEST_CASE("parse_command free function")
 {
     App app("test", "1.0", "Free function parse");
-    app.option<int, fixed_string("port")>("--port", 'p', "Port");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
 
     std::vector<std::string_view> args{"--port", "9090"};
     auto r = parse_command(app, args);

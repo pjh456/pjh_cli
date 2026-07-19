@@ -15,13 +15,13 @@ C++20 CLI library with Rust-style error handling. Compile-time option keys, subc
 App app("myapp", "1.0.0", "Description");
 
 // Flag (bool → no value consumed)
-app.option<bool, fixed_string("verbose")>("--verbose", 'v', "Verbose output");
+app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
 
 // Valued option with default
-app.option<int, fixed_string("port")>("--port", 'p', "Port number", 8080);
+app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
 
 // Required option
-app.option<std::string, fixed_string("token")>("--token", "API token").required();
+app.option<fixed_string("token")>("--token", "API token").str().required();
 
 auto r = app.parse(argc, argv);
 if (r.is_err()) { /* r.unwrap_err().what() */ return 1; }
@@ -87,7 +87,8 @@ app.parse_fuzzy(argc, argv);
 | Expression | Purpose |
 |---|---|
 | `App(name, version, desc)` | Root command |
-| `cmd.option<T, Key>(long, short?, desc?, default?)` | Named option |
+| `cmd.option<Key>(long, short?)... .integer()/boolean()/str()` | Named option |
+| `cmd.option<Key>(long, short?, desc, default)` | Auto-dispatch option |
 | `cmd.arg<T, Index>(name, desc)` | Positional argument |
 | `cmd.add_command(name, desc)` | Child subcommand |
 | `cmd.action(fn)` | Execute callback on match |
