@@ -1,34 +1,23 @@
-#include <pjh_cli/detail/string_utils.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli/detail/string_utils.hpp>
 #include <string>
 #include <string_view>
 
 using namespace pjh::cli::detail;
 
-TEST_CASE("to_upper_copy all lowercase")
-{
-    CHECK(to_upper_copy("hello") == "HELLO");
-}
+TEST_CASE("to_upper_copy all lowercase") { CHECK(to_upper_copy("hello") == "HELLO"); }
 
-TEST_CASE("to_upper_copy already upper")
-{
-    CHECK(to_upper_copy("HELLO") == "HELLO");
-}
+TEST_CASE("to_upper_copy already upper") { CHECK(to_upper_copy("HELLO") == "HELLO"); }
 
-TEST_CASE("to_upper_copy mixed")
-{
-    CHECK(to_upper_copy("HeLLo WoRLd") == "HELLO WORLD");
-}
+TEST_CASE("to_upper_copy mixed") { CHECK(to_upper_copy("HeLLo WoRLd") == "HELLO WORLD"); }
 
 TEST_CASE("to_upper_copy digits and symbols")
 {
     CHECK(to_upper_copy("port123-xyz") == "PORT123-XYZ");
 }
 
-TEST_CASE("to_upper_copy empty")
-{
-    CHECK(to_upper_copy("").empty());
-}
+TEST_CASE("to_upper_copy empty") { CHECK(to_upper_copy("").empty()); }
 
 TEST_CASE("to_upper_copy single char")
 {

@@ -9,14 +9,8 @@ struct CoutCapture
 {
     std::stringstream buf;
     std::streambuf *old;
-    CoutCapture()
-        : old(std::cout.rdbuf(buf.rdbuf()))
-    {
-    }
-    ~CoutCapture()
-    {
-        std::cout.rdbuf(old);
-    }
+    CoutCapture() : old(std::cout.rdbuf(buf.rdbuf())) {}
+    ~CoutCapture() { std::cout.rdbuf(old); }
     std::string str() const { return buf.str(); }
 };
 

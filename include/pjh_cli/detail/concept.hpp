@@ -1,24 +1,30 @@
 #ifndef INCLUDE_PJH_CLI_DETAIL_CONCEPT_HPP
 #define INCLUDE_PJH_CLI_DETAIL_CONCEPT_HPP
 
-#include "../fixed_string.hpp"
-#include "../type.hpp"
-
 #include <concepts>
 #include <type_traits>
+
+#include "../fixed_string.hpp"
+#include "../type.hpp"
 
 namespace pjh::cli::detail
 {
 
     /// @brief Trait: true if T is a valid option/argument key type.
     template <typename T>
-    struct is_option_key : std::false_type {};
+    struct is_option_key : std::false_type
+    {
+    };
 
     template <std::integral T>
-    struct is_option_key<T> : std::true_type {};
+    struct is_option_key<T> : std::true_type
+    {
+    };
 
     template <size_t N>
-    struct is_option_key<fixed_string<N>> : std::true_type {};
+    struct is_option_key<fixed_string<N>> : std::true_type
+    {
+    };
 
     /// @brief Concept: valid compile-time key for option/arg access.
     ///
@@ -27,6 +33,6 @@ namespace pjh::cli::detail
     template <typename T>
     concept OptionKey = is_option_key<T>::value;
 
-} // namespace pjh::cli::detail
+}  // namespace pjh::cli::detail
 
 #endif

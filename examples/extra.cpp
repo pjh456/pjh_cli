@@ -1,5 +1,5 @@
-#include <pjh_cli.hpp>
 #include <iostream>
+#include <pjh_cli.hpp>
 
 using namespace pjh::cli;
 
@@ -26,8 +26,7 @@ int main(int argc, char **argv)
     if (!extra.empty())
     {
         std::cout << "input files:";
-        for (const auto &f : extra)
-            std::cout << " " << f;
+        for (const auto &f : extra) std::cout << " " << f;
         std::cout << "\n";
     }
     return 0;

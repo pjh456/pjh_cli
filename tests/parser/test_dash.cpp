@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser double dash separator")

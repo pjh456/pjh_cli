@@ -1,5 +1,6 @@
-#include <pjh_cli.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli.hpp>
 #include <string>
 #include <string_view>
 
@@ -19,7 +20,8 @@ TEST_CASE("Command construction")
 TEST_CASE("Option bool flag no short no default")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
+    auto &opt =
+        app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
     CHECK(opt.long_name() == "verbose");
     CHECK(opt.short_name() == 0);
     CHECK(opt.has_value() == false);
@@ -40,7 +42,8 @@ TEST_CASE("Option int with short no default")
 TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<std::string, fixed_string("host")>("--host", 'h', "Host address");
+    auto &opt =
+        app.option<std::string, fixed_string("host")>("--host", 'h', "Host address");
     CHECK(opt.long_name() == "host");
     CHECK(opt.short_name() == 'h');
     CHECK(opt.has_value() == true);
@@ -49,7 +52,8 @@ TEST_CASE("Option string with short")
 TEST_CASE("Option int no short")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds");
+    auto &opt =
+        app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds");
     CHECK(opt.long_name() == "timeout");
     CHECK(opt.short_name() == 0);
 }
@@ -57,7 +61,9 @@ TEST_CASE("Option int no short")
 TEST_CASE("Option required chain")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<int, fixed_string("required-opt")>("--required-opt", 'r', "Required option").required();
+    auto &opt = app.option<int, fixed_string("required-opt")>(
+                       "--required-opt", 'r', "Required option")
+                    .required();
     CHECK(opt.is_required() == true);
 }
 
@@ -172,10 +178,12 @@ TEST_CASE("subcommand action callback")
 
     int action_called = 0;
     auto &act_cmd = app.add_command("act", "Action test");
-    act_cmd.action([&action_called](ParseContext &) -> CliResult<void> {
-        ++action_called;
-        return CliResult<void>::Ok();
-    });
+    act_cmd.action(
+        [&action_called](ParseContext &) -> CliResult<void>
+        {
+            ++action_called;
+            return CliResult<void>::Ok();
+        });
 }
 
 TEST_CASE("ParseContext")
@@ -232,10 +240,12 @@ TEST_CASE("Command execute")
 {
     App app3("test3", "1.0", "Execute test");
     int counter = 0;
-    app3.action([&counter](ParseContext &) -> CliResult<void> {
-        ++counter;
-        return CliResult<void>::Ok();
-    });
+    app3.action(
+        [&counter](ParseContext &) -> CliResult<void>
+        {
+            ++counter;
+            return CliResult<void>::Ok();
+        });
 
     auto ctx3 = app3.create_context();
     auto res = app3.execute(ctx3);
@@ -253,9 +263,12 @@ TEST_CASE("Command options count")
     App app("test", "1.0", "Test");
     app.option<bool, fixed_string("verbose")>("--verbose", "Enable verbose output");
     app.option<int, fixed_string("port")>("--port", 'p', "Port number");
-    app.option<std::string, fixed_string("host")>("--host", 'h', "Host address", std::string("0.0.0.0"));
+    app.option<std::string, fixed_string("host")>(
+        "--host", 'h', "Host address", std::string("0.0.0.0"));
     app.option<int, fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
-    app.option<int, fixed_string("required-opt")>("--required-opt", 'r', "Required option").required();
+    app.option<int, fixed_string("required-opt")>(
+           "--required-opt", 'r', "Required option")
+        .required();
     app.arg<std::string, 0>("source", "Source file");
     app.arg<std::string, 1>("dest", "Destination").required();
 
@@ -270,9 +283,9 @@ TEST_CASE("OptionDef reference stability across registrations")
     auto &first = app.option<int, 0>("--opt0", "original");
     auto *addr = &first;
 
-    [&app]<size_t... Is>(std::index_sequence<Is...>) {
-        ((void)app.option<int, Is + 1>(
-            std::format("--opt{}", Is + 1), ""), ...);
+    [&app]<size_t... Is>(std::index_sequence<Is...>)
+    {
+        ((void)app.option<int, Is + 1>(std::format("--opt{}", Is + 1), ""), ...);
     }(std::make_index_sequence<30>());
 
     CHECK(&first == addr);
@@ -289,9 +302,9 @@ TEST_CASE("ArgDef reference stability across registrations")
     auto &first = app.arg<std::string, 0>("arg0", "original");
     auto *addr = &first;
 
-    [&app]<size_t... Is>(std::index_sequence<Is...>) {
-        ((void)app.arg<std::string, Is + 1>(
-            std::format("arg{}", Is + 1), ""), ...);
+    [&app]<size_t... Is>(std::index_sequence<Is...>)
+    {
+        ((void)app.arg<std::string, Is + 1>(std::format("arg{}", Is + 1), ""), ...);
     }(std::make_index_sequence<30>());
 
     CHECK(&first == addr);

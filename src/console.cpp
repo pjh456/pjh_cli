@@ -1,22 +1,17 @@
+#include <iostream>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
-
-#include <iostream>
 #include <sstream>
 
 namespace pjh::cli
 {
-    InteractiveConsole::InteractiveConsole(
-        Command &root,
-        std::string prompt)
-        : m_root(root),
-          m_prompt(std::move(prompt))
+    InteractiveConsole::InteractiveConsole(Command &root, std::string prompt) :
+        m_root(root), m_prompt(std::move(prompt))
     {
     }
 
-    void
-    InteractiveConsole::run()
+    void InteractiveConsole::run()
     {
         m_running = true;
         std::string line;
@@ -31,9 +26,7 @@ namespace pjh::cli
             if (line.empty())
                 continue;
 
-            if (line == "quit" ||
-                line == "exit" ||
-                line == "q")
+            if (line == "quit" || line == "exit" || line == "q")
                 break;
 
             auto r = process_line(line);
@@ -42,17 +35,11 @@ namespace pjh::cli
         }
     }
 
-    void
-    InteractiveConsole::stop()
-    {
-        m_running = false;
-    }
+    void InteractiveConsole::stop() { m_running = false; }
 
     namespace
     {
-        std::vector<std::string>
-        tokenize_line(
-            const std::string &line)
+        std::vector<std::string> tokenize_line(const std::string &line)
         {
             std::vector<std::string> tokens;
             std::string tok;
@@ -83,11 +70,9 @@ namespace pjh::cli
             return tokens;
         }
 
-    } // namespace
+    }  // namespace
 
-    CliResult<void>
-    InteractiveConsole::process_line(
-        const std::string &line)
+    CliResult<void> InteractiveConsole::process_line(const std::string &line)
     {
         // "?" or "?query" → search / list
         if (line[0] == '?')
@@ -102,8 +87,7 @@ namespace pjh::cli
                 else
                 {
                     std::cout << "Subcommands:";
-                    for (const auto &n : names)
-                        std::cout << " " << n;
+                    for (const auto &n : names) std::cout << " " << n;
                     std::cout << "\n";
                 }
                 return CliResult<void>::Ok();
@@ -129,13 +113,11 @@ namespace pjh::cli
             }
             if (!found)
             {
-                auto fuzzy = fuzzy_find_subcommands(
-                    m_root, query, 3);
+                auto fuzzy = fuzzy_find_subcommands(m_root, query, 3);
                 if (!fuzzy.empty())
                 {
                     std::cout << "Did you mean:";
-                    for (const auto &f : fuzzy)
-                        std::cout << " " << f.command->name();
+                    for (const auto &f : fuzzy) std::cout << " " << f.command->name();
                 }
                 else
                 {
@@ -153,17 +135,14 @@ namespace pjh::cli
 
         // "help" → show formatted help
         if (tokens.size() == 1 &&
-            (tokens[0] == "help" ||
-             tokens[0] == "--help" ||
-             tokens[0] == "-h"))
+            (tokens[0] == "help" || tokens[0] == "--help" || tokens[0] == "-h"))
         {
             std::cout << format_help(m_root, m_root.name());
             return CliResult<void>::Ok();
         }
 
         std::vector<std::string_view> args;
-        for (const auto &t : tokens)
-            args.emplace_back(t);
+        for (const auto &t : tokens) args.emplace_back(t);
 
         auto r = parse_command(m_root, args, 3);
         if (r.is_err())
@@ -174,4 +153,4 @@ namespace pjh::cli
         return ctx.matched_command()->execute(ctx);
     }
 
-} // namespace pjh::cli
+}  // namespace pjh::cli

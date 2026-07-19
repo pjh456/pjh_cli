@@ -1,5 +1,6 @@
-#include <pjh_cli.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli.hpp>
 #include <string>
 #include <string_view>
 
@@ -46,13 +47,17 @@ TEST_CASE("LogicError is logic_error")
 TEST_CASE("parse_error format")
 {
     auto e = parse_error("--port", 5);
-    CHECK(std::string_view(e.what()) == "Parse Error: parse error at argument '--port', position 5");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: parse error at argument '--port', position 5");
 }
 
 TEST_CASE("parse_error negative position")
 {
     auto e = parse_error("arg", -1);
-    CHECK(std::string_view(e.what()) == "Parse Error: parse error at argument 'arg', position -1");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: parse error at argument 'arg', position -1");
 }
 
 TEST_CASE("unknown_option format")
@@ -94,20 +99,25 @@ TEST_CASE("missing_required_arg format")
 TEST_CASE("type_conversion_error format")
 {
     auto e = type_conversion_error("--port", "abc", "integer");
-    CHECK(std::string_view(e.what()) == "Parse Error: invalid value 'abc' for '--port': expected integer");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: invalid value 'abc' for '--port': expected integer");
 }
 
 TEST_CASE("type_conversion_error empty parts")
 {
     auto e = type_conversion_error("", "", "");
-    CHECK(std::string_view(e.what()) == "Parse Error: invalid value '' for '': expected ");
+    CHECK(
+        std::string_view(e.what()) == "Parse Error: invalid value '' for '': expected ");
 }
 
 TEST_CASE("ambiguous_command format")
 {
     auto e = ambiguous_command("st", {"start", "stop"});
     auto msg = std::string_view(e.what());
-    CHECK(msg.find("Parse Error: ambiguous command 'st', candidates:") != std::string_view::npos);
+    CHECK(
+        msg.find("Parse Error: ambiguous command 'st', candidates:") !=
+        std::string_view::npos);
     CHECK(msg.find("start") != std::string_view::npos);
     CHECK(msg.find("stop") != std::string_view::npos);
 }
@@ -115,7 +125,8 @@ TEST_CASE("ambiguous_command format")
 TEST_CASE("ambiguous_command empty candidates")
 {
     auto e = ambiguous_command("x", {});
-    CHECK(std::string_view(e.what()) == "Parse Error: ambiguous command 'x', candidates:");
+    CHECK(
+        std::string_view(e.what()) == "Parse Error: ambiguous command 'x', candidates:");
 }
 
 TEST_CASE("ambiguous_command single candidate")

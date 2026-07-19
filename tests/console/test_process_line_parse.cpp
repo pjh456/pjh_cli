@@ -1,5 +1,6 @@
-#include <pjh_cli.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli.hpp>
 #include <string>
 #include <string_view>
 
@@ -18,10 +19,12 @@ TEST_CASE("process_line invokes action on root")
 {
     App app("test", "1.0", "Action");
     int called = 0;
-    app.action([&called](ParseContext &) -> CliResult<void> {
-        ++called;
-        return CliResult<void>::Ok();
-    });
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
 
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("somearg");
@@ -34,10 +37,12 @@ TEST_CASE("process_line subcommand action invoked")
     App app("test", "1.0", "Sub action");
     int called = 0;
     auto &serve = app.add_command("serve", "Serve");
-    serve.action([&called](ParseContext &) -> CliResult<void> {
-        ++called;
-        return CliResult<void>::Ok();
-    });
+    serve.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
 
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("serve");
@@ -58,9 +63,9 @@ TEST_CASE("process_line with quoted string")
 TEST_CASE("process_line execution error propagates")
 {
     App app("test", "1.0", "Exec err");
-    app.action([](ParseContext &) -> CliResult<void> {
-        return CliResult<void>::Err(CliError("exec failed"));
-    });
+    app.action(
+        [](ParseContext &) -> CliResult<void>
+        { return CliResult<void>::Err(CliError("exec failed")); });
 
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("anything");

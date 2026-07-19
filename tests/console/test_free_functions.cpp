@@ -1,5 +1,6 @@
-#include <pjh_cli.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -41,10 +42,12 @@ TEST_CASE("const execute")
 {
     App app("test", "1.0", "Const execute");
     int called = 0;
-    app.action([&called](ParseContext &) -> CliResult<void> {
-        ++called;
-        return CliResult<void>::Ok();
-    });
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
 
     auto ctx = app.create_context();
     const App &const_app = app;

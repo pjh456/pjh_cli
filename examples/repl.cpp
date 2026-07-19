@@ -1,5 +1,5 @@
-#include <pjh_cli.hpp>
 #include <iostream>
+#include <pjh_cli.hpp>
 
 using namespace pjh::cli;
 
@@ -11,25 +11,27 @@ int main(int argc, char **argv)
     auto &add = app.add_command("add", "Add two numbers");
     add.arg<int, 0>("a", "First number").required();
     add.arg<int, 1>("b", "Second number").required();
-    add.action([](ParseContext &ctx) -> CliResult<void>
-    {
-        auto a = ctx.get<int, 0>();
-        auto b = ctx.get<int, 1>();
-        std::cout << a << " + " << b << " = " << (a + b) << "\n";
-        return CliResult<void>::Ok();
-    });
+    add.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            auto a = ctx.get<int, 0>();
+            auto b = ctx.get<int, 1>();
+            std::cout << a << " + " << b << " = " << (a + b) << "\n";
+            return CliResult<void>::Ok();
+        });
 
     // sub <a> <b>
     auto &sub = app.add_command("sub", "Subtract two numbers");
     sub.arg<int, 0>("a", "First number").required();
     sub.arg<int, 1>("b", "Second number").required();
-    sub.action([](ParseContext &ctx) -> CliResult<void>
-    {
-        auto a = ctx.get<int, 0>();
-        auto b = ctx.get<int, 1>();
-        std::cout << a << " - " << b << " = " << (a - b) << "\n";
-        return CliResult<void>::Ok();
-    });
+    sub.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            auto a = ctx.get<int, 0>();
+            auto b = ctx.get<int, 1>();
+            std::cout << a << " - " << b << " = " << (a - b) << "\n";
+            return CliResult<void>::Ok();
+        });
 
     // Batch mode: execute and exit
     if (argc > 1)

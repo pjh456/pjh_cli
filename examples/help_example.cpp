@@ -1,5 +1,5 @@
-#include <pjh_cli.hpp>
 #include <iostream>
+#include <pjh_cli.hpp>
 
 using namespace pjh::cli;
 
@@ -17,8 +17,7 @@ int main(int argc, char **argv)
     auto &search = app.add_command("search", "Search packages");
     search.arg<std::string, 0>("query", "Search query").required();
 
-    if (argc < 2 ||
-        std::string_view(argv[1]) == "--help" ||
+    if (argc < 2 || std::string_view(argv[1]) == "--help" ||
         std::string_view(argv[1]) == "-h")
     {
         std::cout << format_help(app, "pkg");

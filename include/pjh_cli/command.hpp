@@ -1,13 +1,6 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_HPP
 #define INCLUDE_PJH_CLI_COMMAND_HPP
 
-#include "arg_def.hpp"
-#include "detail/concept.hpp"
-#include "detail/string_utils.hpp"
-#include "option_def.hpp"
-#include "parse_context.hpp"
-#include "type.hpp"
-
 #include <deque>
 #include <functional>
 #include <list>
@@ -15,6 +8,13 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+
+#include "arg_def.hpp"
+#include "detail/concept.hpp"
+#include "detail/string_utils.hpp"
+#include "option_def.hpp"
+#include "parse_context.hpp"
+#include "type.hpp"
 
 namespace pjh::cli
 {
@@ -24,40 +24,32 @@ namespace pjh::cli
     /// Combine with `|`:  `set_visibility(Visibility::Cli | Visibility::Repl)`
     enum class Visibility : unsigned
     {
-        Hidden = 0, ///< Hidden from help / completion everywhere
-        Repl = 1,   ///< Visible in interactive REPL
-        Cli = 2,    ///< Visible in batch CLI
-        Both = 3,   ///< Visible everywhere (default)
+        Hidden = 0,  ///< Hidden from help / completion everywhere
+        Repl = 1,    ///< Visible in interactive REPL
+        Cli = 2,     ///< Visible in batch CLI
+        Both = 3,    ///< Visible everywhere (default)
     };
 
     /// @brief Bitwise OR for Visibility flags.
-    constexpr Visibility
-    operator|(
-        Visibility a,
-        Visibility b) noexcept
+    constexpr Visibility operator|(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
-            static_cast<unsigned>(a) |
-            static_cast<unsigned>(b));
+            static_cast<unsigned>(a) | static_cast<unsigned>(b));
     }
 
     /// @brief Bitwise AND for Visibility flags.
-    constexpr Visibility
-    operator&(
-        Visibility a,
-        Visibility b) noexcept
+    constexpr Visibility operator&(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
-            static_cast<unsigned>(a) &
-            static_cast<unsigned>(b));
+            static_cast<unsigned>(a) & static_cast<unsigned>(b));
     }
 
     /// @brief Policy for handling extra positional arguments beyond registered arg<N>.
     enum class ExtraArgsPolicy : unsigned
     {
-        Ignore, ///< Silently discard (default, POSIX convention).
-        Error,  ///< Return CliError on any extra positional argument.
-        Store,  ///< Append to ParseContext::extra_args() for runtime inspection.
+        Ignore,  ///< Silently discard (default, POSIX convention).
+        Error,   ///< Return CliError on any extra positional argument.
+        Store,   ///< Append to ParseContext::extra_args() for runtime inspection.
     };
 
     /// @brief Composite node in the command tree.
@@ -74,9 +66,7 @@ namespace pjh::cli
     public:
         /// @brief Construct a command with optional name and description.
         ///        The root command (App) typically has name set to the program name.
-        explicit Command(
-            std::string name = "",
-            std::string description = "");
+        explicit Command(std::string name = "", std::string description = "");
 
         virtual ~Command() = default;
 
@@ -94,38 +84,28 @@ namespace pjh::cli
         /// @tparam Key Compile-time identifier (fixed_string).
         template <typename T, auto Key>
             requires detail::BuiltinType<T>
-        OptionDef &
-        option(
-            std::string long_name,
-            std::string description);
+        OptionDef &option(std::string long_name, std::string description);
 
         /// @brief Register a named option with a default value (no short name).
         /// @note Returns OptionDefWithDefault — .required() is NOT available,
         ///       because default + required is a contradiction.
         template <typename T, auto Key>
             requires detail::BuiltinType<T>
-        OptionDefWithDefault
-        option(
-            std::string long_name,
-            std::string description,
-            T default_value);
+        OptionDefWithDefault option(
+            std::string long_name, std::string description, T default_value);
 
         /// @brief Register a named option with short name (no default).
         template <typename T, auto Key>
             requires detail::BuiltinType<T>
-        OptionDef &
-        option(
-            std::string long_name,
-            char short_name,
-            std::string description);
+        OptionDef &option(
+            std::string long_name, char short_name, std::string description);
 
         /// @brief Register a named option with short name and a default value.
         /// @note Returns OptionDefWithDefault — .required() is NOT available,
         ///       because default + required is a contradiction.
         template <typename T, auto Key>
             requires detail::BuiltinType<T>
-        OptionDefWithDefault
-        option(
+        OptionDefWithDefault option(
             std::string long_name,
             char short_name,
             std::string description,
@@ -136,117 +116,71 @@ namespace pjh::cli
         /// @tparam Index Positional index (0, 1, 2, ...).
         template <typename T, size_t Index>
             requires detail::BuiltinType<T>
-        ArgDef &
-        arg(
-            std::string name,
-            std::string description);
+        ArgDef &arg(std::string name, std::string description);
 
         /// @brief Add a child subcommand. Returns reference to the child.
-        Command &
-        add_command(
-            std::string name,
-            std::string description);
+        Command &add_command(std::string name, std::string description);
 
         /// @brief Set the action callback invoked when this command is matched.
-        Command &
-        action(
-            std::function<
-                CliResult<void>(ParseContext &)>
-                fn);
+        Command &action(std::function<CliResult<void>(ParseContext &)> fn);
 
         /// @brief Set the runtime enable predicate.
         ///        A disabled command is treated as non-existent during matching.
-        Command &
-        enabled(std::function<bool()> pred);
+        Command &enabled(std::function<bool()> pred);
 
         /// @brief Set visibility level (affects help / REPL matching).
-        Command &
-        set_visibility(Visibility v);
+        Command &set_visibility(Visibility v);
 
         /// @brief Set extra positional args handling policy (default: Ignore).
-        Command &
-        set_extra_args(ExtraArgsPolicy p);
+        Command &set_extra_args(ExtraArgsPolicy p);
 
         // ──────────────────────────────────────────
         //  Queries
         // ──────────────────────────────────────────
 
-        const std::string &
-        name()
-            const noexcept { return m_name; }
+        const std::string &name() const noexcept { return m_name; }
 
-        const std::string &
-        description()
-            const noexcept { return m_description; }
+        const std::string &description() const noexcept { return m_description; }
 
-        Visibility
-        visibility()
-            const noexcept { return m_visibility; }
+        Visibility visibility() const noexcept { return m_visibility; }
 
         /// @brief Evaluate the enabled predicate.
-        bool
-        is_enabled()
-            const { return m_enabled(); }
+        bool is_enabled() const { return m_enabled(); }
 
-        Command *
-        parent()
-            const noexcept { return m_parent; }
+        Command *parent() const noexcept { return m_parent; }
 
-        const std::list<Command> &
-        subcommands()
-            const noexcept { return m_subcommands; }
+        const std::list<Command> &subcommands() const noexcept { return m_subcommands; }
 
-        const std::deque<OptionDef> &
-        options()
-            const noexcept { return m_options; }
+        const std::deque<OptionDef> &options() const noexcept { return m_options; }
 
-        const std::deque<ArgDef> &
-        args()
-            const noexcept { return m_args; }
+        const std::deque<ArgDef> &args() const noexcept { return m_args; }
 
-        ExtraArgsPolicy
-        extra_args_policy()
-            const noexcept { return m_extra_args_policy; }
+        ExtraArgsPolicy extra_args_policy() const noexcept { return m_extra_args_policy; }
 
         /// @brief Find a direct child subcommand by exact name match.
-        Command *
-        find_subcommand(
-            std::string_view name) noexcept;
+        Command *find_subcommand(std::string_view name) noexcept;
 
         /// @brief Const overload.
-        const Command *
-        find_subcommand(
-            std::string_view name)
-            const noexcept;
+        const Command *find_subcommand(std::string_view name) const noexcept;
 
         /// @brief Look up an option by its long name (without -- prefix).
-        const OptionDef *
-        find_option_by_long(
-            std::string_view name)
-            const noexcept;
+        const OptionDef *find_option_by_long(std::string_view name) const noexcept;
 
         /// @brief Look up an option by its short character.
-        const OptionDef *
-        find_option_by_short(char c)
-            const noexcept;
+        const OptionDef *find_option_by_short(char c) const noexcept;
 
         // ──────────────────────────────────────────
         //  Parser helpers
         // ──────────────────────────────────────────
 
         /// @brief Create an empty ParseContext for this command.
-        ParseContext
-        create_context() const noexcept;
+        ParseContext create_context() const noexcept;
 
         /// @brief Pre-fill context with default values from registered options.
-        CliResult<void>
-        apply_defaults(
-            ParseContext &ctx)
-            const;
+        CliResult<void> apply_defaults(ParseContext &ctx) const;
 
         /// @brief Execute the registered action callback.
-        CliResult<void>
-        execute(ParseContext &ctx) const;
+        CliResult<void> execute(ParseContext &ctx) const;
 
     private:
         std::string m_name;
@@ -258,25 +192,20 @@ namespace pjh::cli
         std::list<Command> m_subcommands;
 
         std::unordered_map<
-            std::string, size_t,
+            std::string,
+            size_t,
             detail::transparent_string_hash,
             std::equal_to<void>>
             m_option_by_long;
-        std::unordered_map<
-            char,
-            size_t>
-            m_option_by_short;
+        std::unordered_map<char, size_t> m_option_by_short;
 
-        ExtraArgsPolicy m_extra_args_policy =
-            ExtraArgsPolicy::Ignore;
-        Visibility m_visibility =
-            Visibility::Both;
-        std::function<bool()> m_enabled =
-            []
-        { return true; };
-        std::function<
-            CliResult<void>(ParseContext &)>
-            m_action;
+        ExtraArgsPolicy m_extra_args_policy = ExtraArgsPolicy::Ignore;
+        Visibility m_visibility = Visibility::Both;
+        std::function<bool()> m_enabled = []
+        {
+            return true;
+        };
+        std::function<CliResult<void>(ParseContext &)> m_action;
     };
 
     // ──────────────────────────────────────────────
@@ -285,46 +214,28 @@ namespace pjh::cli
 
     template <typename T, auto Key>
         requires detail::BuiltinType<T>
-    OptionDef &
-    Command::option(
-        std::string long_name,
-        std::string description)
+    OptionDef &Command::option(std::string long_name, std::string description)
     {
-        return option<T, Key>(
-            std::move(long_name),
-            0,
-            std::move(description));
+        return option<T, Key>(std::move(long_name), 0, std::move(description));
     }
 
     template <typename T, auto Key>
         requires detail::BuiltinType<T>
-    OptionDefWithDefault
-    Command::option(
-        std::string long_name,
-        std::string description,
-        T default_value)
+    OptionDefWithDefault Command::option(
+        std::string long_name, std::string description, T default_value)
     {
-        auto &def = option<T, Key>(
-            std::move(long_name),
-            0,
-            std::move(description));
-        def.set_default_str(
-            detail::default_to_string(default_value));
+        auto &def = option<T, Key>(std::move(long_name), 0, std::move(description));
+        def.set_default_str(detail::default_to_string(default_value));
         return OptionDefWithDefault(def);
     }
 
     template <typename T, auto Key>
         requires detail::BuiltinType<T>
-    OptionDef &
-    Command::option(
-        std::string long_name,
-        char short_name,
-        std::string description)
+    OptionDef &Command::option(
+        std::string long_name, char short_name, std::string description)
     {
         // Strip leading "--" if present
-        if (long_name.size() > 2 &&
-            long_name[0] == '-' &&
-            long_name[1] == '-')
+        if (long_name.size() > 2 && long_name[0] == '-' && long_name[1] == '-')
             long_name = long_name.substr(2);
 
         constexpr size_t h = key_hash(Key);
@@ -337,39 +248,27 @@ namespace pjh::cli
         def.set_key_hash(h);
         def.set_value_tag(detail::value_tag_v<T>);
 
-        m_option_by_long[def.long_name()] =
-            m_options.size() - 1;
+        m_option_by_long[def.long_name()] = m_options.size() - 1;
         if (short_name != 0)
-            m_option_by_short[short_name] =
-                m_options.size() - 1;
+            m_option_by_short[short_name] = m_options.size() - 1;
 
         return def;
     }
 
     template <typename T, auto Key>
         requires detail::BuiltinType<T>
-    OptionDefWithDefault
-    Command::option(
-        std::string long_name,
-        char short_name,
-        std::string description,
-        T default_value)
+    OptionDefWithDefault Command::option(
+        std::string long_name, char short_name, std::string description, T default_value)
     {
-        auto &def = option<T, Key>(
-            std::move(long_name),
-            short_name,
-            std::move(description));
-        def.set_default_str(
-            detail::default_to_string(default_value));
+        auto &def =
+            option<T, Key>(std::move(long_name), short_name, std::move(description));
+        def.set_default_str(detail::default_to_string(default_value));
         return OptionDefWithDefault(def);
     }
 
     template <typename T, size_t Index>
         requires detail::BuiltinType<T>
-    ArgDef &
-    Command::arg(
-        std::string name,
-        std::string description)
+    ArgDef &Command::arg(std::string name, std::string description)
     {
         constexpr size_t h = key_hash(Index);
 
@@ -383,6 +282,6 @@ namespace pjh::cli
         return def;
     }
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
-#endif // INCLUDE_PJH_CLI_COMMAND_HPP
+#endif  // INCLUDE_PJH_CLI_COMMAND_HPP

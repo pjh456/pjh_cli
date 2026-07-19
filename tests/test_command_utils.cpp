@@ -1,6 +1,7 @@
+#include <doctest/doctest.h>
+
 #include <pjh_cli.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
-#include <doctest/doctest.h>
 #include <string>
 #include <string_view>
 

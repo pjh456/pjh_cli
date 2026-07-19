@@ -1,15 +1,14 @@
 #ifndef INCLUDE_PJH_CLI_CONVERTER_HPP
 #define INCLUDE_PJH_CLI_CONVERTER_HPP
 
-#include "error.hpp"
-#include "type.hpp"
-
-#include "detail/string_utils.hpp"
-
 #include <charconv>
 #include <concepts>
 #include <string>
 #include <string_view>
+
+#include "detail/string_utils.hpp"
+#include "error.hpp"
+#include "type.hpp"
 
 namespace pjh::cli
 {
@@ -45,7 +44,7 @@ namespace pjh::cli
                 CliError("invalid number: '" + std::string(s) + "'"));
         }
 
-    } // namespace detail
+    }  // namespace detail
 
     /// @brief Type-to-string converter with explicit specializations.
     ///
@@ -74,7 +73,8 @@ namespace pjh::cli
     }
 
     template <>
-    inline auto Converter<long long>::from_string(std::string_view s) -> CliResult<long long>
+    inline auto Converter<long long>::from_string(std::string_view s)
+        -> CliResult<long long>
     {
         return detail::from_chars_int<long long>(s);
     }
@@ -135,14 +135,14 @@ namespace pjh::cli
             detail::case_insensitive_equal(s, "no") ||
             detail::case_insensitive_equal(s, "n"))
             return CliResult<bool>::Ok(false);
-        return CliResult<bool>::Err(CliError{
-            "invalid bool: '" +
-            std::string(s) +
-            "', expected true/false/yes/no/1/0"});
+        return CliResult<bool>::Err(
+            CliError{
+                "invalid bool: '" + std::string(s) +
+                "', expected true/false/yes/no/1/0"});
     }
 
     /// @endcond
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
-#endif // INCLUDE_PJH_CLI_CONVERTER_HPP
+#endif  // INCLUDE_PJH_CLI_CONVERTER_HPP

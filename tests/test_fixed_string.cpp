@@ -1,5 +1,6 @@
-#include <pjh_cli.hpp>
 #include <doctest/doctest.h>
+
+#include <pjh_cli.hpp>
 #include <string_view>
 
 TEST_CASE("fixed_string basic properties")

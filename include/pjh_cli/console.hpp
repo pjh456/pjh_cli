@@ -1,11 +1,11 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_HPP
 
-#include "command.hpp"
-#include "type.hpp"
-
 #include <string>
 #include <vector>
+
+#include "command.hpp"
+#include "type.hpp"
 
 namespace pjh::cli
 {
@@ -15,9 +15,7 @@ namespace pjh::cli
     public:
         /// @param root  Root command (typically your App instance).
         /// @param prompt  Prompt string shown before each input.
-        explicit InteractiveConsole(
-            Command &root,
-            std::string prompt = "> ");
+        explicit InteractiveConsole(Command &root, std::string prompt = "> ");
 
         /// @brief Run the REPL loop. Blocks until exit or EOF.
         void run();
@@ -25,14 +23,11 @@ namespace pjh::cli
         /// @brief Signal the loop to exit gracefully.
         void stop();
 
-        const std::string &
-        prompt() const noexcept { return m_prompt; }
+        const std::string &prompt() const noexcept { return m_prompt; }
 
-        void
-        set_prompt(std::string p) { m_prompt = std::move(p); }
+        void set_prompt(std::string p) { m_prompt = std::move(p); }
 
-        CliResult<void> process_line(
-            const std::string &line);
+        CliResult<void> process_line(const std::string &line);
 
     private:
         Command &m_root;
@@ -42,6 +37,6 @@ namespace pjh::cli
         size_t m_history_index = 0;
     };
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
 #endif

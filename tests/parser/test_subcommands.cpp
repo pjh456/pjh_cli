@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser subcommand matching")
@@ -33,8 +34,7 @@ TEST_CASE("Parser disabled subcommand skipped")
     App app("test", "1.0", "Disabled test");
     auto &active = app.add_command("active", "Available");
     active.option<bool, fixed_string("x")>("--x", 'x', "Flag");
-    app.add_command("disabled", "Unavailable")
-        .enabled([] { return false; });
+    app.add_command("disabled", "Unavailable").enabled([] { return false; });
     Argv argv{"test", "active", "--x"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());

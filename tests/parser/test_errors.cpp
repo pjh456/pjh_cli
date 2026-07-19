@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser unknown long option")
@@ -78,7 +79,9 @@ TEST_CASE("Parser error message unknown long option")
     Argv argv{"test", "--bogus"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: unknown option: '--bogus'"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--bogus'"));
 }
 
 TEST_CASE("Parser error message unknown short option")
@@ -97,7 +100,9 @@ TEST_CASE("Parser error message missing value for long option")
     Argv argv{"test", "--port"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: option '--port' requires a value"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--port' requires a value"));
 }
 
 TEST_CASE("Parser error message missing value for short option")
@@ -107,7 +112,9 @@ TEST_CASE("Parser error message missing value for short option")
     Argv argv{"test", "-p"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: option '-p' requires a value"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '-p' requires a value"));
 }
 
 TEST_CASE("Parser error message required option missing")
@@ -117,7 +124,9 @@ TEST_CASE("Parser error message required option missing")
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: missing required option: 'port'"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: missing required option: 'port'"));
 }
 
 TEST_CASE("Parser error message required arg missing")
@@ -127,7 +136,9 @@ TEST_CASE("Parser error message required arg missing")
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: missing required argument: 'file'"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: missing required argument: 'file'"));
 }
 
 TEST_CASE("Parser error message type conversion failure")
@@ -137,7 +148,9 @@ TEST_CASE("Parser error message type conversion failure")
     Argv argv{"test", "--port", "notanumber"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: invalid integer: 'notanumber'"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: invalid integer: 'notanumber'"));
 }
 
 TEST_CASE("Parser error message disabled command")
@@ -147,5 +160,7 @@ TEST_CASE("Parser error message disabled command")
     Argv argv{"test", "oldcmd"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: command 'oldcmd' is not available"));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: command 'oldcmd' is not available"));
 }

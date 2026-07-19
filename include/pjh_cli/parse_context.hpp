@@ -1,18 +1,17 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 #define INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 
-#include "detail/concept.hpp"
-#include "error.hpp"
-#include "fixed_string.hpp"
-#include "type.hpp"
-
-#include <pjh_result.hpp>
-
 #include <filesystem>
+#include <pjh_result.hpp>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "detail/concept.hpp"
+#include "error.hpp"
+#include "fixed_string.hpp"
+#include "type.hpp"
 
 namespace pjh::cli
 {
@@ -34,38 +33,33 @@ namespace pjh::cli
         /// @throws LogicError if the key has no stored value.
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
-        T &
-        get()
+        T &get()
         {
             constexpr auto h = key_hash(Key);
             auto &map = typed_map<T>();
             auto it = map.find(h);
             if (it == map.end())
-                throw LogicError(
-                    "value not found for key");
+                throw LogicError("value not found for key");
             return it->second;
         }
 
         /// @brief Const overload of get().
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
-        const T &
-        get() const
+        const T &get() const
         {
             constexpr auto h = key_hash(Key);
             auto &map = typed_map<T>();
             auto it = map.find(h);
             if (it == map.end())
-                throw LogicError(
-                    "value not found for key");
+                throw LogicError("value not found for key");
             return it->second;
         }
 
         /// @brief Check if a value exists for the given compile-time key.
         template <auto Key>
             requires detail::OptionKey<decltype(Key)>
-        bool
-        has() const noexcept
+        bool has() const noexcept
         {
             constexpr auto h = key_hash(Key);
             return m_present.contains(h);
@@ -73,52 +67,35 @@ namespace pjh::cli
 
         /// @brief Store a value (used internally by parser).
         template <detail::BuiltinType T>
-        void
-        set_value(size_t hash, T value)
+        void set_value(size_t hash, T value)
         {
             typed_map<T>()[hash] = std::move(value);
             m_present.insert(hash);
         }
 
         /// @brief Check if a value exists by runtime hash (used internally).
-        bool
-        has_value(size_t hash) const noexcept
-        {
-            return m_present.contains(hash);
-        }
+        bool has_value(size_t hash) const noexcept { return m_present.contains(hash); }
 
         /// @brief Extra positional arguments collected when ExtraArgsPolicy::Store.
-        const std::vector<std::string> &
-        extra_args() const noexcept { return m_extra_args; }
+        const std::vector<std::string> &extra_args() const noexcept
+        {
+            return m_extra_args;
+        }
 
         /// @brief The leaf command matched during parsing.
-        const Command *
-        matched_command() const noexcept { return m_matched_cmd; }
+        const Command *matched_command() const noexcept { return m_matched_cmd; }
 
         /// @brief Path of matched commands, e.g. "serve start".
-        const std::string &
-        matched_path() const noexcept { return m_matched_path; }
+        const std::string &matched_path() const noexcept { return m_matched_path; }
 
         /// @brief Set the matched command (used internally by parser).
-        void
-        set_matched_command(const Command *cmd)
-        {
-            m_matched_cmd = cmd;
-        }
+        void set_matched_command(const Command *cmd) { m_matched_cmd = cmd; }
 
         /// @brief Set the matched command path (used internally by parser).
-        void
-        set_matched_path(std::string p)
-        {
-            m_matched_path = std::move(p);
-        }
+        void set_matched_path(std::string p) { m_matched_path = std::move(p); }
 
         /// @brief Append an extra positional arg (used internally by parser).
-        void
-        add_extra_arg(std::string s)
-        {
-            m_extra_args.push_back(std::move(s));
-        }
+        void add_extra_arg(std::string s) { m_extra_args.push_back(std::move(s)); }
 
     private:
         template <detail::BuiltinType T>
@@ -141,8 +118,7 @@ namespace pjh::cli
     // ── typed_map implementations ──
 
     template <detail::BuiltinType T>
-    auto &
-    ParseContext::typed_map() noexcept
+    auto &ParseContext::typed_map() noexcept
     {
         if constexpr (std::same_as<T, bool>)
             return m_bool;
@@ -157,8 +133,7 @@ namespace pjh::cli
     }
 
     template <detail::BuiltinType T>
-    auto const &
-    ParseContext::typed_map() const noexcept
+    auto const &ParseContext::typed_map() const noexcept
     {
         if constexpr (std::same_as<T, bool>)
             return m_bool;
@@ -172,6 +147,6 @@ namespace pjh::cli
             return m_path;
     }
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
-#endif // INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
+#endif  // INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP

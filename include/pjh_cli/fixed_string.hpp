@@ -17,28 +17,23 @@ namespace pjh::cli
         char value[N]{};
 
         /// @brief Construct from a string literal.
-        constexpr fixed_string(
-            const char (&str)[N]) noexcept
+        constexpr fixed_string(const char (&str)[N]) noexcept
         {
             std::copy_n(str, N, value);
         }
 
         /// @brief Return as string_view (excluding null terminator).
-        constexpr std::string_view
-        view() const noexcept
+        constexpr std::string_view view() const noexcept
         {
             return std::string_view(value, N - 1);
         }
 
         /// @brief String length (excluding null terminator).
-        constexpr size_t size()
-            const noexcept { return N - 1; }
+        constexpr size_t size() const noexcept { return N - 1; }
 
         /// @brief Equality comparison.
         template <size_t M>
-        constexpr bool operator==(
-            const fixed_string<M> &rhs)
-            const noexcept
+        constexpr bool operator==(const fixed_string<M> &rhs) const noexcept
         {
             return view() == rhs.view();
         }
@@ -46,22 +41,15 @@ namespace pjh::cli
 
     /// @brief CTAD deduction guide for fixed_string.
     template <size_t N>
-    fixed_string(const char (&)[N])
-        -> fixed_string<N>;
+    fixed_string(const char (&)[N]) -> fixed_string<N>;
 
     /// @brief Hash a size_t key (identity — positional arg index is its own hash).
-    consteval size_t
-    key_hash(size_t k) noexcept
-    {
-        return k;
-    }
+    consteval size_t key_hash(size_t k) noexcept { return k; }
 
     /// @brief Hash a fixed_string key (FNV-1a).
     /// @tparam N String length including null terminator.
     template <size_t N>
-    consteval size_t
-    key_hash(
-        const fixed_string<N> &s) noexcept
+    consteval size_t key_hash(const fixed_string<N> &s) noexcept
     {
         size_t h = 14695981039346656037ULL;
         for (auto c : s.view())
@@ -72,6 +60,6 @@ namespace pjh::cli
         return h;
     }
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
-#endif // INCLUDE_PJH_CLI_FIXED_STRING_HPP
+#endif  // INCLUDE_PJH_CLI_FIXED_STRING_HPP
