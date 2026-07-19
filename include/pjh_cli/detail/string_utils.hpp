@@ -3,30 +3,11 @@
 
 #include <algorithm>
 #include <cctype>
-#include <filesystem>
 #include <string>
 #include <string_view>
 
-#include "../type.hpp"
-
 namespace pjh::cli::detail
 {
-
-    /// @brief Serialize a default value to string for OptionDef storage.
-    template <BuiltinType T>
-    inline std::string default_to_string(const T &v)
-    {
-        if constexpr (std::same_as<T, bool>)
-            return v ? "true" : "false";
-        else if constexpr (std::same_as<T, int>)
-            return std::to_string(v);
-        else if constexpr (std::same_as<T, double>)
-            return std::to_string(v);
-        else if constexpr (std::same_as<T, std::string>)
-            return v;
-        else if constexpr (std::same_as<T, std::filesystem::path>)
-            return v.string();
-    }
 
     struct transparent_string_hash
     {
