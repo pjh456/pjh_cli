@@ -14,6 +14,11 @@
 #include "arg_def.hpp"
 #include "detail/concept.hpp"
 #include "detail/string_utils.hpp"
+#include "option/bool_option.hpp"
+#include "option/float_option.hpp"
+#include "option/int_option.hpp"
+#include "option/path_option.hpp"
+#include "option/str_option.hpp"
 #include "option_def.hpp"
 #include "parse_context.hpp"
 #include "type.hpp"
@@ -26,10 +31,10 @@ namespace pjh::cli
     /// Combine with `|`: `set_visibility(Visibility::Cli | Visibility::Repl)`
     enum class Visibility : unsigned
     {
-        Hidden = 0, ///< Hidden from help / completion everywhere
-        Repl = 1,   ///< Visible in interactive REPL
-        Cli = 2,    ///< Visible in batch CLI
-        Both = 3,   ///< Visible everywhere (default)
+        Hidden = 0,  ///< Hidden from help / completion everywhere
+        Repl = 1,    ///< Visible in interactive REPL
+        Cli = 2,     ///< Visible in batch CLI
+        Both = 3,    ///< Visible everywhere (default)
     };
 
     /// @brief Bitwise OR for Visibility flags.
@@ -50,9 +55,9 @@ namespace pjh::cli
     ///        arg<N>.
     enum class ExtraArgsPolicy : unsigned
     {
-        Ignore, ///< Silently discard (default, POSIX convention).
-        Error,  ///< Return CliError on any extra positional argument.
-        Store,  ///< Append to ParseContext::extra_args() for runtime inspection.
+        Ignore,  ///< Silently discard (default, POSIX convention).
+        Error,   ///< Return CliError on any extra positional argument.
+        Store,   ///< Append to ParseContext::extra_args() for runtime inspection.
     };
 
     // ──────────────────────────────────────────
@@ -68,38 +73,19 @@ namespace pjh::cli
         /// @tparam T Computed from the default value argument.
         /// @tparam Builder OptionBuilder<Key> deduced at call site.
         template <typename T, typename Builder>
+            requires detail::BuiltinType<T>
         OptionDef &dispatch_default(Builder &builder, T default_value)
         {
             if constexpr (std::same_as<T, bool>)
-            {
-                auto &opt = builder.boolean();
-                opt.set_default_str(detail::default_to_string(default_value));
-                return opt;
-            }
+                return builder.boolean().default_value(default_value);
             else if constexpr (std::same_as<T, int>)
-            {
-                auto &opt = builder.integer();
-                opt.set_default_str(detail::default_to_string(default_value));
-                return opt;
-            }
+                return builder.integer().default_value(default_value);
             else if constexpr (std::same_as<T, double>)
-            {
-                auto &opt = builder.floating();
-                opt.set_default_str(detail::default_to_string(default_value));
-                return opt;
-            }
+                return builder.floating().default_value(default_value);
             else if constexpr (std::same_as<T, std::string>)
-            {
-                auto &opt = builder.str();
-                opt.set_default_str(detail::default_to_string(default_value));
-                return opt;
-            }
+                return builder.str().default_value(default_value);
             else if constexpr (std::same_as<T, std::filesystem::path>)
-            {
-                auto &opt = builder.path();
-                opt.set_default_str(detail::default_to_string(default_value));
-                return opt;
-            }
+                return builder.path().default_value(default_value);
         }
     }  // namespace detail
 

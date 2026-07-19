@@ -1,4 +1,4 @@
-#include <pjh_cli/detail/apply_value.hpp>
+#include <pjh_cli/converter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
@@ -7,6 +7,37 @@ namespace pjh::cli
 {
     namespace
     {
+        /// @brief Dispatch a raw string value for a positional arg (no virtual dispatch).
+        CliResult<void> apply_arg_value(
+            ParseContext &ctx, size_t hash, ValueTag tag, std::string_view s)
+        {
+            switch (tag)
+            {
+            case ValueTag::Double:
+            {
+                auto r = Converter<double>::from_string(s);
+                if (r.is_err())
+                    return CliResult<void>::Err(std::move(r).unwrap_err());
+                ctx.set_value<double>(hash, r.unwrap());
+                return CliResult<void>::Ok();
+            }
+            case ValueTag::String:
+                ctx.set_value<std::string>(hash, std::string(s));
+                return CliResult<void>::Ok();
+            case ValueTag::Path:
+                ctx.set_value<std::filesystem::path>(hash, std::filesystem::path(s));
+                return CliResult<void>::Ok();
+            default:
+            {
+                auto r = Converter<int>::from_string(s);
+                if (r.is_err())
+                    return CliResult<void>::Err(std::move(r).unwrap_err());
+                ctx.set_value<int>(hash, r.unwrap());
+                return CliResult<void>::Ok();
+            }
+            }
+        }
+
         /// @brief Consume a long option token (--opt or --opt=value).
         ///
         /// Looks up the option on @p cmd. If it expects a value:
@@ -42,13 +73,11 @@ namespace pjh::cli
                 {
                     if (value.empty())
                         return CliFailure{missing_value(std::format("--{}", name))};
-                    return detail::apply_value(
-                        ctx, opt->key_hash(), opt->value_tag(), value);
+                    return opt->parse_value(ctx, value);
                 }
                 if (++i >= args.size())
                     return CliFailure{missing_value(std::format("--{}", name))};
-                return detail::apply_value(
-                    ctx, opt->key_hash(), opt->value_tag(), args[i]);
+                return opt->parse_value(ctx, args[i]);
             }
 
             ctx.set_value<bool>(opt->key_hash(), true);
@@ -94,8 +123,7 @@ namespace pjh::cli
                                 "-{} requires a value as a separate argument", c))};
                     if (++i >= args.size())
                         return CliFailure{missing_value(std::format("-{}", c))};
-                    auto r = detail::apply_value(
-                        ctx, opt->key_hash(), opt->value_tag(), args[i]);
+                    auto r = opt->parse_value(ctx, args[i]);
                     if (r.is_err())
                         return r;
                 }
@@ -222,7 +250,7 @@ namespace pjh::cli
             if (arg_pos < cmd->args().size())
             {
                 auto &arg = cmd->args()[arg_pos];
-                auto r = detail::apply_value(ctx, arg.m_key_hash, arg.m_value_tag, a);
+                auto r = apply_arg_value(ctx, arg.m_key_hash, arg.m_value_tag, a);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
             }

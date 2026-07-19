@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <pjh_cli/command.hpp>
-#include <pjh_cli/detail/apply_value.hpp>
 
 namespace pjh::cli
 {
@@ -52,11 +51,9 @@ namespace pjh::cli
     {
         for (const auto &opt_ptr : m_options)
         {
-            auto &opt = *opt_ptr;
-            if (!opt.has_default() || ctx.has_value(opt.key_hash()))
+            if (!opt_ptr->has_default() || ctx.has_value(opt_ptr->key_hash()))
                 continue;
-            auto r = detail::apply_value(
-                ctx, opt.key_hash(), opt.value_tag(), opt.default_str());
+            auto r = opt_ptr->apply_default(ctx);
             if (r.is_err())
                 return r;
         }
