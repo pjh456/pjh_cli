@@ -18,7 +18,8 @@ target_include_directories(pjh_cli
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 target_link_libraries(pjh_cli PUBLIC pjh_result)
-target_compile_features(pjh_cli PUBLIC cxx_std_20)
+set_target_properties(pjh_cli PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
+target_compile_options(pjh_cli PRIVATE -std=c++20)
 
 option(PJH_CLI_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
