@@ -45,7 +45,6 @@ namespace pjh::cli
         }
 
         std::ranges::stable_sort(results, {}, &FuzzyMatch::distance);
-
         return results;
     }
 
@@ -80,26 +79,23 @@ namespace pjh::cli
         {
             if (prefix.size() >= 2 && prefix[1] == '-')
             {
-                // Long option: --... or --
                 auto opt_prefix = prefix.substr(2);
-                for (const auto &opt : cmd.options())
-                    if (opt.long_name().starts_with(opt_prefix))
-                        candidates.push_back(std::format("--{}", opt.long_name()));
+                for (const auto &opt_ptr : cmd.options())
+                    if (opt_ptr->long_name().starts_with(opt_prefix))
+                        candidates.push_back(std::format("--{}", opt_ptr->long_name()));
             }
             else if (prefix.size() == 1)
             {
-                // Bare "-": list all short options
-                for (const auto &opt : cmd.options())
-                    if (opt.short_name() != 0)
-                        candidates.push_back(std::format("-{}", opt.short_name()));
+                for (const auto &opt_ptr : cmd.options())
+                    if (opt_ptr->short_name() != 0)
+                        candidates.push_back(std::format("-{}", opt_ptr->short_name()));
             }
             else
             {
-                // "-x" or "-xyz": match the first char
                 char c = prefix[1];
-                for (const auto &opt : cmd.options())
-                    if (opt.short_name() == c)
-                        candidates.push_back(std::format("-{}", opt.short_name()));
+                for (const auto &opt_ptr : cmd.options())
+                    if (opt_ptr->short_name() == c)
+                        candidates.push_back(std::format("-{}", opt_ptr->short_name()));
             }
         }
 
@@ -122,11 +118,9 @@ namespace pjh::cli
         else
             os << "app";
 
-        // Options summary
-        for (const auto &opt : cmd.options())
-            os << " [" << detail::option_left_label(opt, "|") << "]";
+        for (const auto &opt_ptr : cmd.options())
+            os << " [" << detail::option_left_label(*opt_ptr, "|") << "]";
 
-        // Positional args
         for (const auto &arg : cmd.args())
         {
             if (arg.m_required)
@@ -135,7 +129,6 @@ namespace pjh::cli
                 os << " [" << arg.m_name << "]";
         }
 
-        // Subcommands (only if no args left to consume)
         if (!cmd.subcommands().empty())
         {
             bool has_visible = std::any_of(
@@ -172,16 +165,17 @@ namespace pjh::cli
             os << "Options:\n";
 
             size_t max_left = 0;
-            for (const auto &opt : cmd.options())
-                max_left = std::max(max_left, detail::option_left_label(opt).size());
+            for (const auto &opt_ptr : cmd.options())
+                max_left = std::max(max_left, detail::option_left_label(*opt_ptr).size());
             size_t left_width = std::min(max_left, size_t(32));
 
-            for (const auto &opt : cmd.options())
+            for (const auto &opt_ptr : cmd.options())
             {
-                std::string right = opt.description();
-                if (opt.is_required())
+                std::string right = opt_ptr->description();
+                if (opt_ptr->is_required())
                     right += " (required)";
-                append_help_line(os, detail::option_left_label(opt), right, left_width);
+                append_help_line(
+                    os, detail::option_left_label(*opt_ptr), right, left_width);
             }
             os << "\n";
         }

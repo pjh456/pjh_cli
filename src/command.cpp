@@ -35,7 +35,7 @@ namespace pjh::cli
         auto it = m_option_by_long.find(name);
         if (it == m_option_by_long.end())
             return nullptr;
-        return &m_options[it->second];
+        return it->second;
     }
 
     const OptionDef *Command::find_option_by_short(char c) const noexcept
@@ -43,15 +43,16 @@ namespace pjh::cli
         auto it = m_option_by_short.find(c);
         if (it == m_option_by_short.end())
             return nullptr;
-        return &m_options[it->second];
+        return it->second;
     }
 
     ParseContext Command::create_context() const noexcept { return ParseContext{}; }
 
     CliResult<void> Command::apply_defaults(ParseContext &ctx) const
     {
-        for (auto &opt : m_options)
+        for (const auto &opt_ptr : m_options)
         {
+            auto &opt = *opt_ptr;
             if (!opt.has_default() || ctx.has_value(opt.key_hash()))
                 continue;
             auto r = detail::apply_value(

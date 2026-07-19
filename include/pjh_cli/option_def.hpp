@@ -2,57 +2,80 @@
 #define INCLUDE_PJH_CLI_OPTION_DEF_HPP
 
 #include <functional>
+#include <memory>
 #include <pjh_result.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "fixed_string.hpp"
 #include "type.hpp"
 
 namespace pjh::cli
 {
+    class Command;
     class ParseContext;
 
-    /// @brief Definition of a named option (flag or valued).
+    // ──────────────────────────────────────────
+    //  OptionDef — base class
+    // ──────────────────────────────────────────
+
+    /// @brief Base class for all option definitions.
     ///
-    /// Identified by compile-time fixed_string key. Bool options are flags
-    /// (no value consumed); all other types consume the next token as value.
+    /// Holds common fields (name, description, key hash, value tag, required
+    /// flag, default string, completer).  Subclasses (IntOption, BoolOption,
+    /// etc.) add type-specific chainable methods.  The parser uses the base
+    /// class interface exclusively.
     class OptionDef
     {
     public:
-        /// @brief Default constructor (initializes m_default_str to None).
+        /// @brief Default constructor; default_str is None.
         OptionDef() : m_default_str(pjh::result::Option<std::string>::None()) {}
+
+        /// @brief Virtual destructor for polymorphic storage.
+        virtual ~OptionDef() = default;
+
+        OptionDef(const OptionDef &) = delete;
+        OptionDef &operator=(const OptionDef &) = delete;
+        OptionDef(OptionDef &&) = delete;
+        OptionDef &operator=(OptionDef &&) = delete;
 
         // ── Getters ──
 
-        /// @brief Get the long option name (e.g. "verbose").
+        /// @brief Long option name (e.g. "verbose").
         const std::string &long_name() const noexcept { return m_long_name; }
 
-        /// @brief Get the short option character (0 if none).
+        /// @brief Short option character (0 if none).
         char short_name() const noexcept { return m_short_name; }
 
-        /// @brief Get the help text description.
+        /// @brief Help text description.
         const std::string &description() const noexcept { return m_description; }
 
         /// @brief Whether this option consumes a value token.
         bool has_value() const noexcept { return m_has_value; }
 
-        /// @brief Whether this option must be provided on the command line.
+        /// @brief Whether this option must appear on the command line.
         bool is_required() const noexcept { return m_required; }
 
-        /// @brief Get the compile-time hash used to index ParseContext.
+        /// @brief Compile-time hash used to index ParseContext.
         size_t key_hash() const noexcept { return m_key_hash; }
 
-        /// @brief Get the runtime type tag.
+        /// @brief Runtime type tag for value conversion.
         ValueTag value_tag() const noexcept { return m_value_tag; }
 
         /// @brief Whether a default value has been registered.
         bool has_default() const noexcept { return m_default_str.is_some(); }
 
-        /// @brief Get the default value string (empty if no default).
+        /// @brief Default value string (empty if no default).
         const std::string &default_str() const noexcept { return m_default_str.unwrap(); }
 
-        // ── Setters ──
+        /// @brief Registered completer callback (empty if none).
+        const std::function<std::vector<std::string>()> &completer_fn() const noexcept
+        {
+            return m_completer;
+        }
+
+        // ── Chainable setters ──
 
         /// @brief Set the long option name.
         OptionDef &set_long_name(const std::string &s)
@@ -117,9 +140,7 @@ namespace pjh::cli
             return *this;
         }
 
-        // ── Fluent chaining ──
-
-        /// @brief Mark this option as required (must appear on command line).
+        /// @brief Mark this option as required.
         OptionDef &required(bool r = true)
         {
             m_required = r;
@@ -133,13 +154,7 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Get the registered completer function.
-        const std::function<std::vector<std::string>()> &completer_fn() const noexcept
-        {
-            return m_completer;
-        }
-
-    private:
+    protected:
         std::string m_long_name;
         char m_short_name{};
         std::string m_description;
@@ -148,130 +163,90 @@ namespace pjh::cli
         size_t m_key_hash{};
         ValueTag m_value_tag{};
         pjh::result::Option<std::string> m_default_str;
-
         std::function<std::vector<std::string>()> m_completer;
     };
 
-    /// @brief Proxy returned by option() when a default is provided.
-    ///
-    /// Forwards all getter/setter calls to the underlying OptionDef.
-    /// Excludes .required() to prevent default + required contradiction at compile time.
-    class OptionDefWithDefault
+    // ──────────────────────────────────────────
+    //  Typed option subclasses
+    // ──────────────────────────────────────────
+
+    /// @brief Integer-valued option. Future chain: .min(), .max(), .count()
+    class IntOption : public OptionDef
     {
-        OptionDef &m_def;
+    };
+
+    /// @brief Boolean flag option. Future chain: .negatable()
+    class BoolOption : public OptionDef
+    {
+    };
+
+    /// @brief String-valued option. Future chain: .choices(), .repeatable()
+    class StrOption : public OptionDef
+    {
+    };
+
+    /// @brief Double-valued floating-point option.
+    class FloatOption : public OptionDef
+    {
+    };
+
+    /// @brief Filesystem path option.
+    class PathOption : public OptionDef
+    {
+    };
+
+    // ──────────────────────────────────────────
+    //  OptionBuilder — chainable registration API
+    //  (declaration only; definitions in command.hpp)
+    // ──────────────────────────────────────────
+
+    /// @brief Builder returned by Command::option<Key>().
+    ///
+    /// Holds common registration fields and provides type-dispatch methods
+    /// (.integer(), .boolean(), .str(), …) that create the corresponding
+    /// typed subclass and add it to the command.
+    /// @tparam Key Compile-time fixed_string identifier.
+    template <auto Key>
+        requires detail::OptionKey<decltype(Key)>
+    class OptionBuilder
+    {
+        Command &m_cmd;
+        std::string m_long_name;
+        std::string m_description;
+        char m_short_name = 0;
 
     public:
-        explicit OptionDefWithDefault(OptionDef &def) noexcept : m_def(def) {}
-
-        // ── Getters ──
-
-        /// @brief Get the long option name (delegated).
-        const std::string &long_name() const noexcept { return m_def.long_name(); }
-
-        /// @brief Get the short option character (delegated).
-        char short_name() const noexcept { return m_def.short_name(); }
-
-        /// @brief Get the help text description (delegated).
-        const std::string &description() const noexcept { return m_def.description(); }
-
-        /// @brief Whether the option consumes a value (delegated).
-        bool has_value() const noexcept { return m_def.has_value(); }
-
-        /// @brief Whether the option is required (always false for default-wrapped
-        /// options).
-        bool is_required() const noexcept { return m_def.is_required(); }
-
-        /// @brief Get the compile-time hash (delegated).
-        size_t key_hash() const noexcept { return m_def.key_hash(); }
-
-        /// @brief Get the runtime type tag (delegated).
-        ValueTag value_tag() const noexcept { return m_def.value_tag(); }
-
-        /// @brief Whether a default value exists (delegated).
-        bool has_default() const noexcept { return m_def.has_default(); }
-
-        /// @brief Get the default value string (delegated).
-        const std::string &default_str() const noexcept { return m_def.default_str(); }
-
-        // ── Setters (forward all except required()) ──
-
-        /// @brief Set the long option name (delegated).
-        OptionDefWithDefault &set_long_name(const std::string &s)
+        /// @brief Construct a builder for the given command and option name.
+        OptionBuilder(Command &cmd, std::string long_name, std::string description) :
+            m_cmd(cmd),
+            m_long_name(std::move(long_name)),
+            m_description(std::move(description))
         {
-            m_def.set_long_name(s);
-            return *this;
         }
 
-        /// @brief Set the long option name, move (delegated).
-        OptionDefWithDefault &set_long_name(std::string &&s)
-        {
-            m_def.set_long_name(std::move(s));
-            return *this;
-        }
+        /// @brief Set the short option character.
+        void set_short_name(char c) noexcept { m_short_name = c; }
 
-        /// @brief Set the short option character (delegated).
-        OptionDefWithDefault &set_short_name(char c)
-        {
-            m_def.set_short_name(c);
-            return *this;
-        }
+        /// @brief Create as an integer-valued option.
+        /// @return Reference to the newly created IntOption.
+        IntOption &integer();
 
-        /// @brief Set the help text description (delegated).
-        OptionDefWithDefault &set_description(const std::string &s)
-        {
-            m_def.set_description(s);
-            return *this;
-        }
+        /// @brief Create as a boolean flag option.
+        /// @return Reference to the newly created BoolOption.
+        BoolOption &boolean();
 
-        /// @brief Set the help text description, move (delegated).
-        OptionDefWithDefault &set_description(std::string &&s)
-        {
-            m_def.set_description(std::move(s));
-            return *this;
-        }
+        /// @brief Create as a string-valued option (default when no type is
+        ///        specified).
+        /// @return Reference to the newly created StrOption.
+        StrOption &str();
 
-        /// @brief Set whether the option consumes a value (delegated).
-        OptionDefWithDefault &set_has_value(bool v)
-        {
-            m_def.set_has_value(v);
-            return *this;
-        }
+        /// @brief Create as a double-valued floating-point option.
+        /// @return Reference to the newly created FloatOption.
+        FloatOption &floating();
 
-        /// @brief Set the compile-time hash (delegated).
-        OptionDefWithDefault &set_key_hash(size_t h)
-        {
-            m_def.set_key_hash(h);
-            return *this;
-        }
-
-        /// @brief Set the runtime type tag (delegated).
-        OptionDefWithDefault &set_value_tag(ValueTag t)
-        {
-            m_def.set_value_tag(t);
-            return *this;
-        }
-
-        /// @brief Register the default value string (delegated).
-        OptionDefWithDefault &set_default_str(std::string s)
-        {
-            m_def.set_default_str(std::move(s));
-            return *this;
-        }
-
-        // ── Fluent chaining (only completer, NOT required) ──
-
-        /// @brief Register a completer function (delegated).
-        OptionDefWithDefault &completer(std::function<std::vector<std::string>()> fn)
-        {
-            m_def.completer(std::move(fn));
-            return *this;
-        }
-
-        /// @brief Get the registered completer function (delegated).
-        const std::function<std::vector<std::string>()> &completer_fn() const noexcept
-        {
-            return m_def.completer_fn();
-        }
+        /// @brief Create as a filesystem path option.
+        /// @return Reference to the newly created PathOption.
+        PathOption &path();
     };
 
 }  // namespace pjh::cli

@@ -117,12 +117,12 @@ namespace pjh::cli
             if (dr.is_err())
                 return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
 
-            for (const auto &opt : cmd->options())
+            for (const auto &opt_ptr : cmd->options())
             {
-                if (opt.is_required() && !ctx.has_value(opt.key_hash()))
+                if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
                 {
                     return CliResult<ParseContext>::Err(
-                        missing_required_option(opt.long_name()));
+                        missing_required_option(opt_ptr->long_name()));
                 }
             }
 
