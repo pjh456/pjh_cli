@@ -107,3 +107,66 @@ TEST_CASE("BoolOption has_value false")
     CHECK(def != nullptr);
     CHECK_FALSE(def->has_value());
 }
+
+// ── negatable ──
+
+TEST_CASE("BoolOption negatable --no-xxx sets false")
+{
+    App app("test", "1.0", "Negatable");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--no-verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
+}
+
+TEST_CASE("BoolOption negatable --verbose still sets true")
+{
+    App app("test", "1.0", "Negatable explicit");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+}
+
+TEST_CASE("BoolOption negatable not negated returns error")
+{
+    App app("test", "1.0", "Not negatable");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    // .negatable() NOT called → --no-verbose should error
+    Argv argv{"test", "--no-verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("BoolOption negatable --no-verbose with extra =value ignored")
+{
+    App app("test", "1.0", "Neg eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--no-verbose=0"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
+}
+
+TEST_CASE("BoolOption negatable in subcommand")
+{
+    App app("test", "1.0", "Neg sub");
+    auto &cmd = app.add_command("cmd", "Command");
+    cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "cmd", "--no-verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.matched_path() == "cmd");
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == false);
+}

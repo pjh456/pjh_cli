@@ -82,6 +82,9 @@ namespace pjh::cli
         /// @brief Whether this option counts occurrences (-vvv → 3).
         virtual bool is_counting() const noexcept { return false; }
 
+        /// @brief Whether this option supports --no-xxx negation.
+        virtual bool is_negatable() const noexcept { return false; }
+
         /// @brief Parse a raw CLI token and store the typed value in @p ctx.
         /// @param ctx Parse context to write into.
         /// @param raw The raw string value from the command line.

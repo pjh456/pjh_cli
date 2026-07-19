@@ -65,7 +65,19 @@ namespace pjh::cli
 
             auto *opt = cmd.find_option_by_long(name);
             if (!opt)
+            {
+                // --no-xxx negation
+                if (name.size() > 3 && name.substr(0, 3) == "no-")
+                {
+                    auto *neg = cmd.find_option_by_long(name.substr(3));
+                    if (neg && neg->is_negatable())
+                    {
+                        ctx.set_value<bool>(neg->key_hash(), false);
+                        return CliResult<void>::Ok();
+                    }
+                }
                 return CliFailure{unknown_option(std::format("--{}", name))};
+            }
 
             if (opt->has_value())
             {

@@ -10,8 +10,8 @@ namespace pjh::cli
     ///
     /// Created by `OptionBuilder::boolean()`.  Flags do not consume a value
     /// token — the parser sets `true` directly when the flag is present.
-    /// Overrides `apply_default()` to support a default bool value.
-    /// Future chain methods: .negatable()
+    /// Supports optional negation via `.negatable()`: `--no-verbose` sets
+    /// the flag to `false`.
     class BoolOption : public OptionDef
     {
     public:
@@ -20,6 +20,9 @@ namespace pjh::cli
 
         /// @brief Whether a default bool value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
+
+        /// @brief Whether --no-xxx negation is enabled.
+        bool is_negatable() const noexcept override { return m_negatable; }
 
         /// @brief Apply the default bool value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
@@ -30,7 +33,6 @@ namespace pjh::cli
         }
 
         /// @brief Register a typed default value.
-        /// @param v Default bool value.
         /// @return *this for chaining.
         BoolOption &default_value(bool v)
         {
@@ -38,8 +40,18 @@ namespace pjh::cli
             return *this;
         }
 
+        /// @brief Enable `--no-xxx` negation.  When `--no-verbose` is given,
+        ///        the stored value is set to `false` instead of `true`.
+        /// @return *this for chaining.
+        BoolOption &negatable()
+        {
+            m_negatable = true;
+            return *this;
+        }
+
     private:
         pjh::result::Option<bool> m_default;
+        bool m_negatable{};
     };
 
 }  // namespace pjh::cli
