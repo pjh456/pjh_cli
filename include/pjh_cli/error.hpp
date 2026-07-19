@@ -95,6 +95,15 @@ namespace pjh::cli
         return CliError(msg);
     }
 
+    /// @brief Value is outside the allowed range [min, max].
+    inline CliError value_out_of_range(
+        std::string_view name, std::string_view value, int min, int max)
+    {
+        return CliError(
+            std::format(
+                "value '{}' for '{}' is out of range [{}, {}]", value, name, min, max));
+    }
+
     /// @brief Command exists but is currently disabled via enabled_predicate.
     inline CliError command_disabled(std::string_view name)
     {

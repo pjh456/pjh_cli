@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_OPTION_INT_OPTION_HPP
 
 #include "../converter.hpp"
+#include "../error.hpp"
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
 
@@ -11,11 +12,17 @@ namespace pjh::cli
     ///
     /// Created by `OptionBuilder::integer()`.  Overrides `parse_value()` and
     /// `apply_default()` to store values as `int` in `ParseContext`.
+    /// Supports optional range validation via .min() / .max().
     class IntOption : public OptionDef
     {
     public:
-        /// @brief Construct with no default value.
-        IntOption() : m_default(pjh::result::Option<int>::None()) {}
+        /// @brief Construct with no default, no min/max bounds.
+        IntOption() :
+            m_default(pjh::result::Option<int>::None()),
+            m_min(pjh::result::Option<int>::None()),
+            m_max(pjh::result::Option<int>::None())
+        {
+        }
 
         /// @brief Whether a default int value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
@@ -27,7 +34,16 @@ namespace pjh::cli
             auto r = Converter<int>::from_string(raw);
             if (r.is_err())
                 return CliResult<void>::Err(std::move(r).unwrap_err());
-            ctx.set_value<int>(m_key_hash, r.unwrap());
+            int v = r.unwrap();
+            if (m_min.is_some() && v < m_min.unwrap())
+                return CliFailure{value_out_of_range(
+                    m_long_name, raw, m_min.unwrap(),
+                    m_max.is_some() ? m_max.unwrap() : 2147483647)};
+            if (m_max.is_some() && v > m_max.unwrap())
+                return CliFailure{value_out_of_range(
+                    m_long_name, raw, m_min.is_some() ? m_min.unwrap() : -2147483648,
+                    m_max.unwrap())};
+            ctx.set_value<int>(m_key_hash, v);
             return CliResult<void>::Ok();
         }
 
@@ -40,7 +56,6 @@ namespace pjh::cli
         }
 
         /// @brief Register a typed default value.
-        /// @param v Default int value.
         /// @return *this for chaining.
         IntOption &default_value(int v)
         {
@@ -48,8 +63,26 @@ namespace pjh::cli
             return *this;
         }
 
+        /// @brief Set the minimum allowed value (inclusive).
+        /// @return *this for chaining.
+        IntOption &min(int v)
+        {
+            m_min = decltype(m_min)::Some(v);
+            return *this;
+        }
+
+        /// @brief Set the maximum allowed value (inclusive).
+        /// @return *this for chaining.
+        IntOption &max(int v)
+        {
+            m_max = decltype(m_max)::Some(v);
+            return *this;
+        }
+
     private:
         pjh::result::Option<int> m_default;
+        pjh::result::Option<int> m_min;
+        pjh::result::Option<int> m_max;
     };
 
 }  // namespace pjh::cli
