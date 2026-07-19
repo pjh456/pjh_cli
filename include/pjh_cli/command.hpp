@@ -15,6 +15,7 @@
 #include "detail/concept.hpp"
 #include "detail/string_utils.hpp"
 #include "option/bool_option.hpp"
+#include "option/count_option.hpp"
 #include "option/float_option.hpp"
 #include "option/int_option.hpp"
 #include "option/path_option.hpp"
@@ -343,6 +344,27 @@ namespace pjh::cli
         ptr->set_short_name(m_short_name);
         ptr->set_description(std::move(m_description));
         ptr->set_has_value(true);
+        ptr->set_value_tag(ValueTag::Int);
+        ptr->set_key_hash(key_hash(Key));
+
+        auto &ref = *ptr;
+        m_cmd.add_option(std::move(ptr));
+        return ref;
+    }
+
+    /// @brief Create the option as a counting flag and store it.
+    template <auto Key>
+        requires detail::OptionKey<decltype(Key)>
+    CountOption &OptionBuilder<Key>::count()
+    {
+        auto name = m_long_name;
+        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
+            name = name.substr(2);
+
+        auto ptr = std::make_unique<CountOption>();
+        ptr->set_long_name(std::move(name));
+        ptr->set_short_name(m_short_name);
+        ptr->set_description(std::move(m_description));
         ptr->set_value_tag(ValueTag::Int);
         ptr->set_key_hash(key_hash(Key));
 

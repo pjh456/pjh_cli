@@ -11,7 +11,6 @@ namespace pjh::cli
     ///
     /// Created by `OptionBuilder::integer()`.  Overrides `parse_value()` and
     /// `apply_default()` to store values as `int` in `ParseContext`.
-    /// Future chain methods: .min(), .max(), .count()
     class IntOption : public OptionDef
     {
     public:
@@ -22,9 +21,6 @@ namespace pjh::cli
         bool has_default() const noexcept override { return m_default.is_some(); }
 
         /// @brief Parse the raw string as an int and store in @p ctx.
-        /// @param ctx Parse context.
-        /// @param raw CLI token value to parse.
-        /// @return Ok on success, or a CliError on invalid integer format.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {

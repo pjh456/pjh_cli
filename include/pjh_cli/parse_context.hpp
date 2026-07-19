@@ -109,6 +109,20 @@ namespace pjh::cli
         /// @brief Check if a value exists by runtime hash (used internally).
         bool has_value(size_t hash) const noexcept { return m_present.contains(hash); }
 
+        /// @brief Get a value by runtime hash (used internally).
+        /// @tparam T Expected value type.
+        /// @param hash Runtime key hash.
+        /// @param default_val Fallback if not found.
+        template <detail::BuiltinType T>
+        T get_value(size_t hash, T default_val) const
+        {
+            auto &map = typed_map<T>();
+            auto it = map.find(hash);
+            if (it == map.end())
+                return default_val;
+            return it->second;
+        }
+
         /// @brief Extra positional arguments collected when ExtraArgsPolicy::Store.
         const std::vector<std::string> &extra_args() const noexcept
         {

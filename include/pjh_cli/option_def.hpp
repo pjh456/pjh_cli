@@ -19,6 +19,7 @@ namespace pjh::cli
 
     /// @cond FORWARD_DECLS
     class IntOption;
+    class CountOption;
     class BoolOption;
     class StrOption;
     class FloatOption;
@@ -58,7 +59,7 @@ namespace pjh::cli
         const std::string &description() const noexcept { return m_description; }
 
         /// @brief Whether this option consumes a value token.
-        bool has_value() const noexcept { return m_has_value; }
+        virtual bool has_value() const noexcept { return m_has_value; }
 
         /// @brief Whether this option must appear on the command line.
         bool is_required() const noexcept { return m_required; }
@@ -77,6 +78,9 @@ namespace pjh::cli
 
         /// @brief Whether a typed default value has been registered.
         virtual bool has_default() const noexcept { return false; }
+
+        /// @brief Whether this option counts occurrences (-vvv → 3).
+        virtual bool is_counting() const noexcept { return false; }
 
         /// @brief Parse a raw CLI token and store the typed value in @p ctx.
         /// @param ctx Parse context to write into.
@@ -210,6 +214,10 @@ namespace pjh::cli
         /// @brief Create the option as an integer-valued type.
         /// @return Reference to the newly created IntOption.
         IntOption &integer();
+
+        /// @brief Create the option as a counting flag (-vvv → 3).
+        /// @return Reference to the newly created CountOption.
+        CountOption &count();
 
         /// @brief Create the option as a boolean flag type.
         /// @return Reference to the newly created BoolOption.

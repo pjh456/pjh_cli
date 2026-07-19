@@ -80,7 +80,15 @@ namespace pjh::cli
                 return opt->parse_value(ctx, args[i]);
             }
 
-            ctx.set_value<bool>(opt->key_hash(), true);
+            if (opt->is_counting())
+            {
+                int cur = ctx.get_value<int>(opt->key_hash(), 0);
+                ctx.set_value<int>(opt->key_hash(), cur + 1);
+            }
+            else
+            {
+                ctx.set_value<bool>(opt->key_hash(), true);
+            }
             return CliResult<void>::Ok();
         }
 
@@ -126,6 +134,11 @@ namespace pjh::cli
                     auto r = opt->parse_value(ctx, args[i]);
                     if (r.is_err())
                         return r;
+                }
+                else if (opt->is_counting())
+                {
+                    int cur = ctx.get_value<int>(opt->key_hash(), 0);
+                    ctx.set_value<int>(opt->key_hash(), cur + 1);
                 }
                 else
                 {
