@@ -97,9 +97,9 @@ namespace pjh::cli
                         return CliFailure{missing_value(std::format("--{}", name))};
                     return opt->parse_value(ctx, value);
                 }
-                if (++i >= args.size())
+                if (i + 1 >= args.size())
                     return CliFailure{missing_value(std::format("--{}", name))};
-                return opt->parse_value(ctx, args[i]);
+                return opt->parse_value(ctx, args[++i]);
             }
 
             if (opt->is_counting())
@@ -151,9 +151,9 @@ namespace pjh::cli
                         return CliFailure{CliError(
                             std::format(
                                 "-{} requires a value as a separate argument", c))};
-                    if (++i >= args.size())
+                    if (i + 1 >= args.size())
                         return CliFailure{missing_value(std::format("-{}", c))};
-                    auto r = opt->parse_value(ctx, args[i]);
+                    auto r = opt->parse_value(ctx, args[++i]);
                     if (r.is_err())
                         return r;
                 }
