@@ -5,14 +5,14 @@ using namespace pjh::cli;
 
 int main(int argc, char **argv)
 {
-    App app("archive", "1.0.0", "Extra args and -- separator example");
+    LeafCommand app("archive", "Extra args and -- separator example");
 
     app.set_extra_args(ExtraArgsPolicy::Store);
 
     app.option<fixed_string("compress")>("--compress", 'z', "Compress archive").boolean();
     app.arg<std::string, 0>("output", "Archive file name").required();
 
-    auto r = app.parse(argc, argv);
+    auto r = parse_command(app, argc, argv);
     if (r.is_err())
     {
         std::cerr << r.unwrap_err().what() << "\n";

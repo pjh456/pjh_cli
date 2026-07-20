@@ -11,17 +11,17 @@ int main(int argc, char **argv)
     app.option<fixed_string("dryrun")>("--dry-run", "Dry run (no-op)").boolean();
 
     // server start [--port N] [--daemon]
-    auto &server = app.add_command("server", "Server management");
-    auto &server_start = server.add_command("start", "Start server");
+    auto &server = app.add_branch("server", "Server management");
+    auto &server_start = server.add_leaf("start", "Start server");
     server_start.option<fixed_string("port")>("--port", 'p', "Port", 8080);
     server_start.option<fixed_string("daemon")>("--daemon", 'd', "Run as daemon")
         .boolean();
 
-    server.add_command("stop", "Stop server");
+    server.add_leaf("stop", "Stop server");
 
     // config show [--format FMT]
-    auto &config = app.add_command("config", "Configuration commands");
-    auto &config_show = config.add_command("show", "Show configuration");
+    auto &config = app.add_branch("config", "Configuration commands");
+    auto &config_show = config.add_leaf("show", "Show configuration");
     config_show.option<fixed_string("format")>(
         "--format", 'f', "Output format", std::string("yaml"));
 
@@ -35,8 +35,6 @@ int main(int argc, char **argv)
     auto &ctx = r.unwrap();
     std::cout << "path: " << ctx.matched_path();
 
-    // Parent option — only accessible if placed before subcommand
-    // e.g. deploy --dry-run server start  →  ctx.has<"dryrun">() == true
     if (ctx.has<fixed_string("dryrun")>())
         std::cout << ", dry-run";
 

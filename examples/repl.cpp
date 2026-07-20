@@ -8,7 +8,7 @@ int main(int argc, char **argv)
     App app("calc", "1.0.0", "Calculator REPL example");
 
     // add <a> <b>
-    auto &add = app.add_command("add", "Add two numbers");
+    auto &add = app.add_leaf("add", "Add two numbers");
     add.arg<int, 0>("a", "First number").required();
     add.arg<int, 1>("b", "Second number").required();
     add.action(
@@ -21,7 +21,7 @@ int main(int argc, char **argv)
         });
 
     // sub <a> <b>
-    auto &sub = app.add_command("sub", "Subtract two numbers");
+    auto &sub = app.add_leaf("sub", "Subtract two numbers");
     sub.arg<int, 0>("a", "First number").required();
     sub.arg<int, 1>("b", "Second number").required();
     sub.action(
@@ -43,10 +43,10 @@ int main(int argc, char **argv)
             return 1;
         }
         auto &ctx = r.unwrap();
-        for (const auto &sub : app.subcommands())
-            if (ctx.matched_path() == sub.name())
+        for (const auto &sub_ptr : app.subcommands())
+            if (ctx.matched_path() == sub_ptr->name())
             {
-                auto e = sub.execute(ctx);
+                auto e = sub_ptr->execute(ctx);
                 if (e.is_err())
                     std::cerr << e.unwrap_err().what() << "\n";
                 return 0;

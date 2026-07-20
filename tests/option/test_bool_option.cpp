@@ -159,7 +159,7 @@ TEST_CASE("BoolOption negatable --no-verbose with extra =value ignored")
 TEST_CASE("BoolOption negatable in subcommand")
 {
     App app("test", "1.0", "Neg sub");
-    auto &cmd = app.add_command("cmd", "Command");
+    auto &cmd = app.add_leaf("cmd", "Command");
     cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
         .boolean()
         .negatable();

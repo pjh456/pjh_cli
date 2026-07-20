@@ -100,14 +100,14 @@ TEST_CASE("find_option_by_short")
 
 TEST_CASE("Arg registration")
 {
-    App app("test", "1.0", "Test");
+    LeafCommand cmd("test", "Test");
 
-    auto &arg1 = app.arg<std::string, 0>("source", "Source file");
+    auto &arg1 = cmd.arg<std::string, 0>("source", "Source file");
     CHECK(arg1.m_name == "source");
     CHECK(arg1.m_index == 0);
     CHECK(arg1.m_required == false);
 
-    auto &arg2 = app.arg<std::string, 1>("dest", "Destination").required();
+    auto &arg2 = cmd.arg<std::string, 1>("dest", "Destination").required();
     CHECK(arg2.m_name == "dest");
     CHECK(arg2.m_index == 1);
     CHECK(arg2.m_required == true);
@@ -117,17 +117,17 @@ TEST_CASE("Subcommand tree basic")
 {
     App app("test", "1.0", "Test");
 
-    auto &serve = app.add_command("serve", "Start the server");
+    auto &serve = app.add_branch("serve", "Start the server");
     CHECK(serve.name() == "serve");
     CHECK(serve.description() == "Start the server");
     CHECK(serve.parent() == &app);
     CHECK(serve.is_enabled());
 
-    auto &start = serve.add_command("start", "Daemon subcommand");
+    auto &start = serve.add_branch("start", "Daemon subcommand");
     CHECK(start.name() == "start");
     CHECK(start.parent() == &serve);
 
-    auto &stop = serve.add_command("stop", "Stop the server");
+    auto &stop = serve.add_branch("stop", "Stop the server");
     CHECK(stop.name() == "stop");
 
     CHECK(serve.subcommands().size() == 2);
@@ -136,9 +136,9 @@ TEST_CASE("Subcommand tree basic")
 TEST_CASE("find_subcommand")
 {
     App app("test", "1.0", "Test");
-    auto &serve = app.add_command("serve", "Start the server");
-    serve.add_command("start", "Daemon subcommand");
-    serve.add_command("stop", "Stop the server");
+    auto &serve = app.add_branch("serve", "Start the server");
+    serve.add_branch("start", "Daemon subcommand");
+    serve.add_branch("stop", "Stop the server");
 
     auto *found_cmd = app.find_subcommand("serve");
     CHECK(found_cmd != nullptr);
@@ -155,7 +155,7 @@ TEST_CASE("find_subcommand")
 TEST_CASE("subcommand visibility")
 {
     App app("test", "1.0", "Test");
-    auto &hidden_cmd = app.add_command("debug", "Debug command");
+    auto &hidden_cmd = app.add_branch("debug", "Debug command");
     hidden_cmd.set_visibility(Visibility::Hidden);
     CHECK(hidden_cmd.visibility() == Visibility::Hidden);
 }
@@ -165,7 +165,7 @@ TEST_CASE("subcommand enabled predicate")
     App app("test", "1.0", "Test");
 
     bool flag = false;
-    auto &cond_cmd = app.add_command("conditional", "Conditional");
+    auto &cond_cmd = app.add_branch("conditional", "Conditional");
     cond_cmd.enabled([&flag] { return flag; });
     CHECK(!cond_cmd.is_enabled());
     flag = true;
@@ -177,7 +177,7 @@ TEST_CASE("subcommand action callback")
     App app("test", "1.0", "Test");
 
     int action_called = 0;
-    auto &act_cmd = app.add_command("act", "Action test");
+    auto &act_cmd = app.add_leaf("act", "Action test");
     act_cmd.action(
         [&action_called](ParseContext &) -> CliResult<void>
         {
@@ -252,7 +252,7 @@ TEST_CASE("Command execute")
     CHECK(res.is_ok());
     CHECK(counter == 1);
 
-    auto &noact = app3.add_command("noact", "No action");
+    auto &noact = app3.add_leaf("noact", "No action");
     auto ctx4 = noact.create_context();
     res = noact.execute(ctx4);
     CHECK(res.is_ok());
@@ -260,20 +260,20 @@ TEST_CASE("Command execute")
 
 TEST_CASE("Command options count")
 {
-    App app("test", "1.0", "Test");
-    app.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
-    app.option<fixed_string("port")>("--port", 'p', "Port number").integer();
-    app.option<fixed_string("host")>(
+    LeafCommand cmd("test", "Test");
+    cmd.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
+    cmd.option<fixed_string("port")>("--port", 'p', "Port number").integer();
+    cmd.option<fixed_string("host")>(
         "--host", 'h', "Host address", std::string("0.0.0.0"));
-    app.option<fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
-    app.option<fixed_string("required-opt")>("--required-opt", 'r', "Required option")
+    cmd.option<fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
+    cmd.option<fixed_string("required-opt")>("--required-opt", 'r', "Required option")
         .integer()
         .required();
-    app.arg<std::string, 0>("source", "Source file");
-    app.arg<std::string, 1>("dest", "Destination").required();
+    cmd.arg<std::string, 0>("source", "Source file");
+    cmd.arg<std::string, 1>("dest", "Destination").required();
 
-    CHECK(app.options().size() == 5);
-    CHECK(app.args().size() == 2);
+    CHECK(cmd.options().size() == 5);
+    CHECK(cmd.args().size() == 2);
 }
 
 TEST_CASE("OptionDef reference stability across registrations")
@@ -297,14 +297,14 @@ TEST_CASE("OptionDef reference stability across registrations")
 
 TEST_CASE("ArgDef reference stability across registrations")
 {
-    App app("test", "1.0", "Test");
+    LeafCommand cmd("test", "Test");
 
-    auto &first = app.arg<std::string, 0>("arg0", "original");
+    auto &first = cmd.arg<std::string, 0>("arg0", "original");
     auto *addr = &first;
 
-    [&app]<size_t... Is>(std::index_sequence<Is...>)
+    [&cmd]<size_t... Is>(std::index_sequence<Is...>)
     {
-        ((void)app.arg<std::string, Is + 1>(std::format("arg{}", Is + 1), ""), ...);
+        ((void)cmd.arg<std::string, Is + 1>(std::format("arg{}", Is + 1), ""), ...);
     }(std::make_index_sequence<30>());
 
     CHECK(&first == addr);

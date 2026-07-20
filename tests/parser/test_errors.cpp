@@ -47,10 +47,10 @@ TEST_CASE("Parser required option missing")
 
 TEST_CASE("Parser required positional arg missing")
 {
-    App app("test", "1.0", "Required arg test");
-    app.arg<std::string, 0>("file", "Input file").required();
+    LeafCommand root("test", "Required arg test");
+    root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = app.parse(argv.argc(), argv.argv());
+    auto r = parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
 
@@ -65,11 +65,11 @@ TEST_CASE("Parser type conversion failure")
 
 TEST_CASE("Parser required option and required arg both missing")
 {
-    App app("test", "1.0", "Both required missing");
-    app.option<fixed_string("port")>("--port", "Port").integer().required();
-    app.arg<std::string, 0>("file", "Input file").required();
+    LeafCommand root("test", "Both required missing");
+    root.option<fixed_string("port")>("--port", "Port").integer().required();
+    root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = app.parse(argv.argc(), argv.argv());
+    auto r = parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
 
@@ -131,10 +131,10 @@ TEST_CASE("Parser error message required option missing")
 
 TEST_CASE("Parser error message required arg missing")
 {
-    App app("test", "1.0", "Err msg");
-    app.arg<std::string, 0>("file", "Input file").required();
+    LeafCommand root("test", "Err msg");
+    root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = app.parse(argv.argc(), argv.argv());
+    auto r = parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
     CHECK(
         r.unwrap_err().what() ==
@@ -156,7 +156,7 @@ TEST_CASE("Parser error message type conversion failure")
 TEST_CASE("Parser error message disabled command")
 {
     App app("test", "1.0", "Err msg");
-    app.add_command("oldcmd", "Deprecated").enabled([] { return false; });
+    app.add_branch("oldcmd", "Deprecated").enabled([] { return false; });
     Argv argv{"test", "oldcmd"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());

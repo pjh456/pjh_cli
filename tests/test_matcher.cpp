@@ -40,10 +40,10 @@ TEST_CASE("edit_distance")
 TEST_CASE("fuzzy find exact match")
 {
     App app("test", "1.0", "Fuzzy test");
-    app.add_command("server", "Start server");
-    app.add_command("config", "Configuration");
-    app.add_command("deploy", "Deploy app");
-    app.add_command("help", "Show help");
+    app.add_leaf("server", "Start server");
+    app.add_leaf("config", "Configuration");
+    app.add_leaf("deploy", "Deploy app");
+    app.add_leaf("help", "Show help");
 
     auto matches = fuzzy_find_subcommands(app, "server", 2);
     CHECK(matches.size() >= 1);
@@ -54,10 +54,10 @@ TEST_CASE("fuzzy find exact match")
 TEST_CASE("fuzzy find fuzzy match")
 {
     App app("test", "1.0", "Fuzzy test");
-    app.add_command("server", "Start server");
-    app.add_command("config", "Configuration");
-    app.add_command("deploy", "Deploy app");
-    app.add_command("help", "Show help");
+    app.add_leaf("server", "Start server");
+    app.add_leaf("config", "Configuration");
+    app.add_leaf("deploy", "Deploy app");
+    app.add_leaf("help", "Show help");
 
     auto matches = fuzzy_find_subcommands(app, "serv", 2);
     CHECK(!matches.empty());
@@ -68,10 +68,10 @@ TEST_CASE("fuzzy find fuzzy match")
 TEST_CASE("fuzzy find no match beyond threshold")
 {
     App app("test", "1.0", "Fuzzy test");
-    app.add_command("server", "Start server");
-    app.add_command("config", "Configuration");
-    app.add_command("deploy", "Deploy app");
-    app.add_command("help", "Show help");
+    app.add_leaf("server", "Start server");
+    app.add_leaf("config", "Configuration");
+    app.add_leaf("deploy", "Deploy app");
+    app.add_leaf("help", "Show help");
 
     auto matches = fuzzy_find_subcommands(app, "zzzzz", 2);
     CHECK(matches.empty());
@@ -80,8 +80,8 @@ TEST_CASE("fuzzy find no match beyond threshold")
 TEST_CASE("fuzzy find respects visibility")
 {
     App app("test", "1.0", "Visibility test");
-    app.add_command("visible", "Visible");
-    auto &hidden = app.add_command("hidden", "Hidden");
+    app.add_leaf("visible", "Visible");
+    auto &hidden = app.add_leaf("hidden", "Hidden");
     hidden.set_visibility(Visibility::Hidden);
 
     CHECK(!fuzzy_find_subcommands(app, "visible", 2).empty());
@@ -91,9 +91,9 @@ TEST_CASE("fuzzy find respects visibility")
 TEST_CASE("list_subcommands")
 {
     App app("test", "1.0", "List test");
-    app.add_command("foo", "Foo");
-    app.add_command("bar", "Bar");
-    app.add_command("baz", "Baz");
+    app.add_leaf("foo", "Foo");
+    app.add_leaf("bar", "Bar");
+    app.add_leaf("baz", "Baz");
 
     auto names = list_subcommands(app);
     CHECK(names.size() == 3);
@@ -102,8 +102,8 @@ TEST_CASE("list_subcommands")
 TEST_CASE("complete subcommand prefix")
 {
     App app("test", "1.0", "Complete test");
-    app.add_command("server", "Server");
-    app.add_command("serve", "Serve");
+    app.add_leaf("server", "Server");
+    app.add_leaf("serve", "Serve");
 
     auto candidates = complete(app, "ser");
     CHECK(!candidates.empty());
@@ -153,7 +153,7 @@ TEST_CASE("complete short option prefix")
 
 TEST_CASE("format_usage")
 {
-    App app("test", "1.0", "Test app");
+    LeafCommand app("test", "Test app");
     app.option<fixed_string("port")>("--port", 'p', "Port", 8080);
     app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     app.arg<std::string, 0>("source", "Source file").required();
@@ -167,19 +167,28 @@ TEST_CASE("format_usage")
     CHECK(usage.find("[dest]") != std::string_view::npos);
 }
 
-TEST_CASE("format_help")
+TEST_CASE("format_help with args")
 {
-    App app("test", "1.0", "Test application");
+    LeafCommand app("test", "Test application");
     app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
     app.option<fixed_string("verbose")>("--verbose", 'v', "Enable verbose").boolean();
     app.arg<std::string, 0>("file", "Input file").required();
-    app.add_command("serve", "Start the server");
 
     auto help = format_help(app, "test");
     CHECK(help.find("Usage:") != std::string_view::npos);
     CHECK(help.find("Test application") != std::string_view::npos);
     CHECK(help.find("Options:") != std::string_view::npos);
     CHECK(help.find("Arguments:") != std::string_view::npos);
+    CHECK(help.find("<file>") != std::string_view::npos);
+}
+
+TEST_CASE("format_help with subcommands")
+{
+    App app("test", "1.0", "App with subcommands");
+    app.add_leaf("serve", "Start the server");
+
+    auto help = format_help(app, "test");
+    CHECK(help.find("Usage:") != std::string_view::npos);
     CHECK(help.find("Subcommands:") != std::string_view::npos);
     CHECK(help.find("serve") != std::string_view::npos);
 }
@@ -187,7 +196,7 @@ TEST_CASE("format_help")
 TEST_CASE("parse_fuzzy exact match")
 {
     App app("test", "1.0", "Fuzzy parse");
-    auto &serve = app.add_command("server", "Server");
+    auto &serve = app.add_leaf("server", "Server");
     serve.option<fixed_string("port")>("--port", 'p', "Port", 8080);
 
     Argv argv{"test", "server", "--port", "3000"};
@@ -200,8 +209,8 @@ TEST_CASE("parse_fuzzy exact match")
 TEST_CASE("parse_fuzzy typo tolerant")
 {
     App app("test", "1.0", "Fuzzy parse typo");
-    app.add_command("server", "Server");
-    app.add_command("config", "Config");
+    app.add_leaf("server", "Server");
+    app.add_leaf("config", "Config");
 
     Argv argv{"test", "servr"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
@@ -212,8 +221,8 @@ TEST_CASE("parse_fuzzy typo tolerant")
 TEST_CASE("parse_fuzzy ambiguous")
 {
     App app("test", "1.0", "Ambiguous");
-    app.add_command("start", "Start");
-    app.add_command("stop", "Stop");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
 
     Argv argv{"test", "st"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
@@ -223,7 +232,7 @@ TEST_CASE("parse_fuzzy ambiguous")
 TEST_CASE("parse_fuzzy no match")
 {
     App app("test", "1.0", "No fuzzy match");
-    app.add_command("server", "Server");
+    app.add_leaf("server", "Server");
 
     Argv argv{"test", "zzzzz"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());

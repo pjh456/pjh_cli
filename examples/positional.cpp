@@ -5,13 +5,13 @@ using namespace pjh::cli;
 
 int main(int argc, char **argv)
 {
-    App app("copy", "1.0.0", "Positional arguments example");
+    LeafCommand app("copy", "Positional arguments example");
 
     app.arg<std::string, 0>("source", "Source file path").required();
     app.arg<std::string, 1>("dest", "Destination path").required();
     app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
 
-    auto r = app.parse(argc, argv);
+    auto r = parse_command(app, argc, argv);
     if (r.is_err())
     {
         std::cerr << r.unwrap_err().what() << "\n";

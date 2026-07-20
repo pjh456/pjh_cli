@@ -29,8 +29,8 @@ TEST_CASE("parse_command free function")
 TEST_CASE("parse_command fuzzy free function")
 {
     App app("test", "1.0", "Free function fuzzy");
-    app.add_command("server", "Server");
-    app.add_command("config", "Config");
+    app.add_leaf("server", "Server");
+    app.add_leaf("config", "Config");
 
     std::vector<std::string_view> args{"servr"};
     auto r = parse_command(app, args, 3);

@@ -36,7 +36,7 @@ TEST_CASE("process_line subcommand action invoked")
 {
     App app("test", "1.0", "Sub action");
     int called = 0;
-    auto &serve = app.add_command("serve", "Serve");
+    auto &serve = app.add_leaf("serve", "Serve");
     serve.action(
         [&called](ParseContext &) -> CliResult<void>
         {
@@ -53,10 +53,11 @@ TEST_CASE("process_line subcommand action invoked")
 TEST_CASE("process_line with quoted string")
 {
     App app("test", "1.0", "Quoted");
-    app.arg<std::string, 0>("file", "File");
+    auto &cmd = app.add_leaf("cmd", "Command");
+    cmd.arg<std::string, 0>("file", "File");
     InteractiveConsole console(app, "> ");
 
-    auto r = console.process_line(R"( "my file.txt" )");
+    auto r = console.process_line(R"(cmd "my file.txt")");
     CHECK(r.is_ok());
 }
 
@@ -76,7 +77,7 @@ TEST_CASE("process_line execution error propagates")
 TEST_CASE("process_line -- after subcommand")
 {
     App app("test", "1.0", "Dash sub");
-    auto &fmt = app.add_command("fmt", "Format");
+    auto &fmt = app.add_leaf("fmt", "Format");
     fmt.arg<std::string, 0>("file", "File");
 
     InteractiveConsole console(app, "> ");

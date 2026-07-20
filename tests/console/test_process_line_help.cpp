@@ -11,7 +11,7 @@ using namespace pjh::cli;
 TEST_CASE("process_line help")
 {
     App app("test", "1.0", "Help test");
-    app.add_command("serve", "Start the server");
+    app.add_leaf("serve", "Start the server");
     InteractiveConsole console(app, "> ");
 
     CoutCapture cap;
@@ -46,8 +46,8 @@ TEST_CASE("process_line -h")
 TEST_CASE("process_line query list all")
 {
     App app("test", "1.0", "Query all");
-    app.add_command("foo", "Foo command");
-    app.add_command("bar", "Bar command");
+    app.add_leaf("foo", "Foo command");
+    app.add_leaf("bar", "Bar command");
     InteractiveConsole console(app, "> ");
 
     CoutCapture cap;
@@ -61,8 +61,8 @@ TEST_CASE("process_line query list all")
 TEST_CASE("process_line query substring match")
 {
     App app("test", "1.0", "Query substring");
-    app.add_command("server", "Server");
-    app.add_command("config", "Config");
+    app.add_leaf("server", "Server");
+    app.add_leaf("config", "Config");
     InteractiveConsole console(app, "> ");
 
     CoutCapture cap;
@@ -75,7 +75,7 @@ TEST_CASE("process_line query substring match")
 TEST_CASE("process_line query fuzzy fallback")
 {
     App app("test", "1.0", "Query fuzzy");
-    app.add_command("server", "Server command");
+    app.add_leaf("server", "Server command");
     InteractiveConsole console(app, "> ");
 
     CoutCapture cap;
@@ -88,7 +88,7 @@ TEST_CASE("process_line query fuzzy fallback")
 TEST_CASE("process_line query no match")
 {
     App app("test", "1.0", "Query no match");
-    app.add_command("server", "Server command");
+    app.add_leaf("server", "Server command");
     InteractiveConsole console(app, "> ");
 
     CoutCapture cap;
@@ -111,8 +111,8 @@ TEST_CASE("process_line query empty subcommands")
 TEST_CASE("process_line hidden subcommand not listed in query")
 {
     App app("test", "1.0", "Hidden");
-    app.add_command("visible", "Visible");
-    app.add_command("hidden", "Hidden").set_visibility(Visibility::Hidden);
+    app.add_leaf("visible", "Visible");
+    app.add_leaf("hidden", "Hidden").set_visibility(Visibility::Hidden);
 
     CoutCapture cap;
     InteractiveConsole console(app, "> ");
@@ -125,8 +125,8 @@ TEST_CASE("process_line hidden subcommand not listed in query")
 TEST_CASE("process_line disabled subcommand not listed in query")
 {
     App app("test", "1.0", "Disabled");
-    app.add_command("active", "Active");
-    app.add_command("inactive", "Inactive").enabled([] { return false; });
+    app.add_leaf("active", "Active");
+    app.add_leaf("inactive", "Inactive").enabled([] { return false; });
 
     CoutCapture cap;
     InteractiveConsole console(app, "> ");
