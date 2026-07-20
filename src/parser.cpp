@@ -14,6 +14,22 @@ namespace pjh::cli
         {
             switch (tag)
             {
+            case ValueTag::Bool:
+            {
+                auto r = Converter<bool>::from_string(s);
+                if (r.is_err())
+                    return CliResult<void>::Err(std::move(r).unwrap_err());
+                ctx.set_value<bool>(hash, r.unwrap());
+                return CliResult<void>::Ok();
+            }
+            case ValueTag::Int:
+            {
+                auto r = Converter<int>::from_string(s);
+                if (r.is_err())
+                    return CliResult<void>::Err(std::move(r).unwrap_err());
+                ctx.set_value<int>(hash, r.unwrap());
+                return CliResult<void>::Ok();
+            }
             case ValueTag::Double:
             {
                 auto r = Converter<double>::from_string(s);
@@ -28,15 +44,8 @@ namespace pjh::cli
             case ValueTag::Path:
                 ctx.set_value<std::filesystem::path>(hash, std::filesystem::path(s));
                 return CliResult<void>::Ok();
-            default:
-            {
-                auto r = Converter<int>::from_string(s);
-                if (r.is_err())
-                    return CliResult<void>::Err(std::move(r).unwrap_err());
-                ctx.set_value<int>(hash, r.unwrap());
-                return CliResult<void>::Ok();
             }
-            }
+            return CliResult<void>::Ok();
         }
 
         /// @brief Consume a long option token (--opt or --opt=value).
