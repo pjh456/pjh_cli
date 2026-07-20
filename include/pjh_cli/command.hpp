@@ -4,7 +4,6 @@
 #include <deque>
 #include <filesystem>
 #include <functional>
-#include <list>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -227,7 +226,7 @@ namespace pjh::cli
         Command *parent() const noexcept { return m_parent; }
 
         /// @brief Direct child subcommands.
-        const std::list<Command> &subcommands() const noexcept { return m_subcommands; }
+        const std::deque<Command> &subcommands() const noexcept { return m_subcommands; }
 
         /// @brief All registered options (pointer-based, polymorphic).
         const std::deque<std::unique_ptr<OptionDef>> &options() const noexcept
@@ -286,7 +285,7 @@ namespace pjh::cli
 
         std::deque<std::unique_ptr<OptionDef>> m_options;
         std::deque<ArgDef> m_args;
-        std::list<Command> m_subcommands;
+        std::deque<Command> m_subcommands;
 
         std::unordered_map<
             std::string,
