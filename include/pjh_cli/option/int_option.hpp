@@ -43,15 +43,14 @@ namespace pjh::cli
                 return CliFailure{value_out_of_range(
                     m_long_name, raw, m_min.is_some() ? m_min.unwrap() : -2147483648,
                     m_max.unwrap())};
-            ctx.set_value<int>(m_key_hash, v);
-            return CliResult<void>::Ok();
+            return store_or_append(ctx, m_key_hash, v);
         }
 
         /// @brief Apply the default int value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
-                ctx.set_value<int>(m_key_hash, m_default.unwrap());
+                return store_or_append(ctx, m_key_hash, m_default.unwrap());
             return CliResult<void>::Ok();
         }
 

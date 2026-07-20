@@ -32,15 +32,14 @@ namespace pjh::cli
             {
                 return CliFailure{invalid_choice(m_long_name, raw, m_choices)};
             }
-            ctx.set_value<std::string>(m_key_hash, std::move(s));
-            return CliResult<void>::Ok();
+            return store_or_append(ctx, m_key_hash, std::move(s));
         }
 
         /// @brief Apply the default string value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
-                ctx.set_value<std::string>(m_key_hash, m_default.unwrap());
+                return store_or_append(ctx, m_key_hash, m_default.unwrap());
             return CliResult<void>::Ok();
         }
 

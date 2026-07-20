@@ -141,6 +141,28 @@ namespace pjh::cli
         /// @brief Set the matched command path (used internally by parser).
         void set_matched_path(std::string p) { m_matched_path = std::move(p); }
 
+        /// @brief Append a value for a repeatable option (used internally).
+        template <detail::BuiltinType T>
+        void append_value(size_t hash, T value)
+        {
+            typed_vec_map<T>()[hash].push_back(std::move(value));
+            m_present.insert(hash);
+        }
+
+        /// @brief Retrieve all values for a repeatable option.
+        /// @throws LogicError if the key has no stored values.
+        template <detail::BuiltinType T, auto Key>
+            requires detail::OptionKey<decltype(Key)>
+        const std::vector<T> &get_all() const
+        {
+            constexpr auto h = key_hash(Key);
+            auto &vec = typed_vec_map<T>();
+            auto it = vec.find(h);
+            if (it == vec.end())
+                throw LogicError("value not found for key");
+            return it->second;
+        }
+
         /// @brief Append an extra positional arg (used internally by parser).
         void add_extra_arg(std::string s) { m_extra_args.push_back(std::move(s)); }
 
@@ -149,12 +171,23 @@ namespace pjh::cli
         auto &typed_map() noexcept;
         template <detail::BuiltinType T>
         auto const &typed_map() const noexcept;
+        template <detail::BuiltinType T>
+        auto &typed_vec_map() noexcept;
+        template <detail::BuiltinType T>
+        auto const &typed_vec_map() const noexcept;
 
         std::unordered_map<size_t, bool> m_bool;
         std::unordered_map<size_t, int> m_int;
         std::unordered_map<size_t, double> m_double;
         std::unordered_map<size_t, std::string> m_string;
         std::unordered_map<size_t, std::filesystem::path> m_path;
+
+        std::unordered_map<size_t, std::vector<bool>> m_bool_vec;
+        std::unordered_map<size_t, std::vector<int>> m_int_vec;
+        std::unordered_map<size_t, std::vector<double>> m_double_vec;
+        std::unordered_map<size_t, std::vector<std::string>> m_string_vec;
+        std::unordered_map<size_t, std::vector<std::filesystem::path>> m_path_vec;
+
         std::unordered_set<size_t> m_present;
 
         const Command *m_matched_cmd = nullptr;
@@ -192,6 +225,36 @@ namespace pjh::cli
             return m_string;
         else if constexpr (std::same_as<T, std::filesystem::path>)
             return m_path;
+    }
+
+    template <detail::BuiltinType T>
+    auto &ParseContext::typed_vec_map() noexcept
+    {
+        if constexpr (std::same_as<T, bool>)
+            return m_bool_vec;
+        else if constexpr (std::same_as<T, int>)
+            return m_int_vec;
+        else if constexpr (std::same_as<T, double>)
+            return m_double_vec;
+        else if constexpr (std::same_as<T, std::string>)
+            return m_string_vec;
+        else if constexpr (std::same_as<T, std::filesystem::path>)
+            return m_path_vec;
+    }
+
+    template <detail::BuiltinType T>
+    auto const &ParseContext::typed_vec_map() const noexcept
+    {
+        if constexpr (std::same_as<T, bool>)
+            return m_bool_vec;
+        else if constexpr (std::same_as<T, int>)
+            return m_int_vec;
+        else if constexpr (std::same_as<T, double>)
+            return m_double_vec;
+        else if constexpr (std::same_as<T, std::string>)
+            return m_string_vec;
+        else if constexpr (std::same_as<T, std::filesystem::path>)
+            return m_path_vec;
     }
 
 }  // namespace pjh::cli

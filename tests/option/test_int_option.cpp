@@ -144,3 +144,30 @@ TEST_CASE("IntOption min-max error message format")
         r.unwrap_err().what() ==
         std::string_view("Parse Error: value '0' for 'port' is out of range [1, 65535]"));
 }
+
+// ── repeatable ──
+
+TEST_CASE("IntOption repeatable appends multiple values")
+{
+    App app("test", "1.0", "Repeat int");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer().min(1).max(65535).repeatable();
+    Argv argv{"test", "-p", "8080", "-p", "9090"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<int, fixed_string("port")>();
+    REQUIRE(all.size() == 2);
+    CHECK(all[0] == 8080);
+    CHECK(all[1] == 9090);
+}
+
+TEST_CASE("IntOption repeatable validates each value with min")
+{
+    App app("test", "1.0", "Repeat min");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer().min(100).repeatable();
+    Argv argv{"test", "-p", "200", "-p", "50"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    Argv argv2{"test", "-p", "200", "-p", "300"};
+    CHECK(app.parse(argv2.argc(), argv2.argv()).is_ok());
+}
+

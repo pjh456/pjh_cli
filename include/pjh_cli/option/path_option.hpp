@@ -29,15 +29,14 @@ namespace pjh::cli
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {
-            ctx.set_value<std::filesystem::path>(m_key_hash, std::filesystem::path(raw));
-            return CliResult<void>::Ok();
+            return store_or_append(ctx, m_key_hash, std::filesystem::path(raw));
         }
 
         /// @brief Apply the default path value if @p ctx has none.
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(m_key_hash))
-                ctx.set_value<std::filesystem::path>(m_key_hash, m_default.unwrap());
+                return store_or_append(ctx, m_key_hash, m_default.unwrap());
             return CliResult<void>::Ok();
         }
 

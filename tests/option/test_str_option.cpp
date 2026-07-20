@@ -117,3 +117,45 @@ TEST_CASE("StrOption choices without choices still accepts anything")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
 }
+
+// ── repeatable ──
+
+TEST_CASE("StrOption repeatable appends multiple values")
+{
+    App app("test", "1.0", "Repeat str");
+    app.option<fixed_string("inc")>("--include", 'I', "Include").str().repeatable();
+    Argv argv{"test", "-I", "/a", "-I", "/b", "-I", "/c"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<std::string, fixed_string("inc")>();
+    REQUIRE(all.size() == 3);
+    CHECK(all[0] == "/a");
+    CHECK(all[1] == "/b");
+    CHECK(all[2] == "/c");
+}
+
+TEST_CASE("StrOption repeatable single value still works")
+{
+    App app("test", "1.0", "Repeat str one");
+    app.option<fixed_string("inc")>("--include", 'I', "Include").str().repeatable();
+    Argv argv{"test", "-I", "/a"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<std::string, fixed_string("inc")>();
+    REQUIRE(all.size() == 1);
+    CHECK(all[0] == "/a");
+}
+
+TEST_CASE("StrOption repeatable with choices validates each value")
+{
+    App app("test", "1.0", "Repeat choices");
+    app.option<fixed_string("fmt")>("--format", 'f', "Format")
+        .str()
+        .choices({"json", "yaml"})
+        .repeatable();
+    Argv argv{"test", "-f", "json", "-f", "yaml"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    Argv argv2{"test", "-f", "json", "-f", "xml"};
+    CHECK(app.parse(argv2.argc(), argv2.argv()).is_err());
+}
