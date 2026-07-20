@@ -1,5 +1,9 @@
 #include <iostream>
-#include <pjh_cli.hpp>
+#include <string_view>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/matcher.hpp"
 
 using namespace pjh::cli;
 

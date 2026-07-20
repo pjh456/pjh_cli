@@ -1,7 +1,9 @@
 #include <doctest/doctest.h>
 
-#include <pjh_cli.hpp>
+#include <string>
 #include <string_view>
+
+#include "pjh_cli/converter.hpp"
 
 TEST_CASE("Converter int")
 {

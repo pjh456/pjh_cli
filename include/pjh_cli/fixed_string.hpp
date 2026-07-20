@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_FIXED_STRING_HPP
 
 #include <algorithm>
+#include <cstddef>
 #include <string_view>
 
 namespace pjh::cli

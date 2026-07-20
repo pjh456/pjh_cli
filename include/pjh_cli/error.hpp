@@ -1,10 +1,12 @@
 #ifndef INCLUDE_PJH_CLI_ERROR_HPP
 #define INCLUDE_PJH_CLI_ERROR_HPP
 
+#include <cstddef>
 #include <format>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace pjh::cli

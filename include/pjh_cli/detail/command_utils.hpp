@@ -1,6 +1,9 @@
 #ifndef INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
 #define INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
 
+#include <string>
+#include <string_view>
+#include <format>
 #include "../command/base_command.hpp"
 #include "../option_def.hpp"
 #include "string_utils.hpp"

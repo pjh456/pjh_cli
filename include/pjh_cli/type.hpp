@@ -2,9 +2,11 @@
 #define INCLUDE_PJH_CLI_TYPE_HPP
 
 #include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <pjh_result.hpp>
-#include <type_traits>
+#include <string>
 
 #include "error.hpp"
 

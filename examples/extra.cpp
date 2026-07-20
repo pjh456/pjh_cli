@@ -1,5 +1,9 @@
 #include <iostream>
-#include <pjh_cli.hpp>
+
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/command/leaf_command.hpp"
+#include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/parser.hpp"
 
 using namespace pjh::cli;
 

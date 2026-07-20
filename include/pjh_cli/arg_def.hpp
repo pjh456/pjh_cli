@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_ARG_DEF_HPP
 #define INCLUDE_PJH_CLI_ARG_DEF_HPP
 
+#include <cstddef>
 #include <string>
-#include <string_view>
 
 #include "type.hpp"
 

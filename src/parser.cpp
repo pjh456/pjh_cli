@@ -1,10 +1,22 @@
 #include <cstdlib>
+#include <filesystem>
+#include <format>
+#include <memory>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/converter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/error.hpp"
+#include "pjh_cli/parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

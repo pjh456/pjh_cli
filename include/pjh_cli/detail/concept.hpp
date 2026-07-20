@@ -2,10 +2,10 @@
 #define INCLUDE_PJH_CLI_DETAIL_CONCEPT_HPP
 
 #include <concepts>
+#include <cstddef>
 #include <type_traits>
 
 #include "../fixed_string.hpp"
-#include "../type.hpp"
 
 namespace pjh::cli::detail
 {

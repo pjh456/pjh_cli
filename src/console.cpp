@@ -1,8 +1,16 @@
+#include <cstddef>
 #include <iostream>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
-#include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/command/branch_command.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

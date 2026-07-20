@@ -2,7 +2,6 @@
 #define INCLUDE_PJH_CLI_TOKEN_HPP
 
 #include <string>
-#include <vector>
 
 namespace pjh::cli
 {

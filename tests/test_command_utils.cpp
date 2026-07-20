@@ -1,9 +1,12 @@
 #include <doctest/doctest.h>
 
-#include <pjh_cli.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
 #include <string>
 #include <string_view>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/option_def.hpp"
 
 using namespace pjh::cli;
 using namespace pjh::cli::detail;

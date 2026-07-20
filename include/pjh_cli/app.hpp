@@ -1,7 +1,10 @@
 #ifndef INCLUDE_PJH_CLI_APP_HPP
 #define INCLUDE_PJH_CLI_APP_HPP
 
+#include <string>
 #include "command/branch_command.hpp"
+#include "pjh_cli/type.hpp"
+#include "pjh_cli/parse_context.hpp"
 
 namespace pjh::cli
 {

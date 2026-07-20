@@ -5,6 +5,7 @@
 #include <concepts>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "detail/string_utils.hpp"
 #include "error.hpp"

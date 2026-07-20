@@ -1,8 +1,17 @@
 #include <doctest/doctest.h>
 
-#include <pjh_cli.hpp>
+#include <cstddef>
+#include <format>
 #include <string>
 #include <string_view>
+#include <utility>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/command/leaf_command.hpp"
+#include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 using namespace pjh::cli;
 

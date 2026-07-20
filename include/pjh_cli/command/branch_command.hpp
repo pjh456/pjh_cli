@@ -2,11 +2,10 @@
 #define INCLUDE_PJH_CLI_COMMAND_BRANCH_COMMAND_HPP
 
 #include "base_command.hpp"
+#include "leaf_command.hpp"
 
 namespace pjh::cli
 {
-
-    class LeafCommand;
 
     class BranchCommand : public BaseCommand
     {

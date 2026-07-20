@@ -1,8 +1,19 @@
 #include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "pjh_cli/option_def.hpp"
+#include "pjh_cli/parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

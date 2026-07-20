@@ -13,7 +13,8 @@ namespace pjh::cli
     class InteractiveConsole
     {
     public:
-        /// @param root  Root command (typically your App instance, must be a BranchCommand).
+        /// @param root  Root command (typically your App instance, must be a
+        /// BranchCommand).
         /// @param prompt  Prompt string shown before each input.
         explicit InteractiveConsole(BranchCommand &root, std::string prompt = "> ");
 

@@ -1,9 +1,13 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_COUNT_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_COUNT_OPTION_HPP
 
+#include <string_view>
+
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
 #include "int_option.hpp"
+#include "pjh_cli/error.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

@@ -1,8 +1,11 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_BOOL_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_BOOL_OPTION_HPP
 
+#include <pjh_result.hpp>
+
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

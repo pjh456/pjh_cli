@@ -1,9 +1,12 @@
 #include <doctest/doctest.h>
 
-#include <pjh_cli.hpp>
+#include <initializer_list>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/fixed_string.hpp"
 
 using namespace pjh::cli;
 
@@ -150,7 +153,11 @@ TEST_CASE("IntOption min-max error message format")
 TEST_CASE("IntOption repeatable appends multiple values")
 {
     App app("test", "1.0", "Repeat int");
-    app.option<fixed_string("port")>("--port", 'p', "Port").integer().min(1).max(65535).repeatable();
+    app.option<fixed_string("port")>("--port", 'p', "Port")
+        .integer()
+        .min(1)
+        .max(65535)
+        .repeatable();
     Argv argv{"test", "-p", "8080", "-p", "9090"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -163,11 +170,13 @@ TEST_CASE("IntOption repeatable appends multiple values")
 TEST_CASE("IntOption repeatable validates each value with min")
 {
     App app("test", "1.0", "Repeat min");
-    app.option<fixed_string("port")>("--port", 'p', "Port").integer().min(100).repeatable();
+    app.option<fixed_string("port")>("--port", 'p', "Port")
+        .integer()
+        .min(100)
+        .repeatable();
     Argv argv{"test", "-p", "200", "-p", "50"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
     Argv argv2{"test", "-p", "200", "-p", "300"};
     CHECK(app.parse(argv2.argc(), argv2.argv()).is_ok());
 }
-

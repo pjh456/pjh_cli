@@ -1,5 +1,11 @@
 #include <doctest/doctest.h>
 
+#include <string_view>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/command/leaf_command.hpp"
+#include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/parser.hpp"
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser unknown long option")

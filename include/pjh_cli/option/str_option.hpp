@@ -2,10 +2,16 @@
 #define INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 
 #include <algorithm>
+#include <pjh_result.hpp>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "../error.hpp"
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

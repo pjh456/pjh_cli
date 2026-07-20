@@ -2,9 +2,13 @@
 #define INCLUDE_PJH_CLI_OPTION_PATH_OPTION_HPP
 
 #include <filesystem>
+#include <pjh_result.hpp>
+#include <string_view>
+#include <utility>
 
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
+#include "pjh_cli/type.hpp"
 
 namespace pjh::cli
 {

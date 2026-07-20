@@ -1,5 +1,13 @@
 #include <doctest/doctest.h>
 
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+#include "pjh_cli/app.hpp"
+#include "pjh_cli/command/base_command.hpp"
+#include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/type.hpp"
 #include "test_helpers.hpp"
 
 struct LocalArgv
