@@ -28,6 +28,7 @@ set(PJH_CLI_TEST_SOURCES
     test_error.cpp
     test_string_utils.cpp
     test_command_utils.cpp
+    test_hint.cpp
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
