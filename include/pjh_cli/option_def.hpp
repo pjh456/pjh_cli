@@ -141,6 +141,16 @@ namespace pjh::cli
             return *this;
         }
 
+        /// @brief Set the environment variable name for fallback.
+        OptionDef &env(std::string var)
+        {
+            m_env_var = std::move(var);
+            return *this;
+        }
+
+        /// @brief Environment variable name (empty if none).
+        const std::string &env_var() const noexcept { return m_env_var; }
+
         /// @brief Set the compile-time hash for ParseContext indexing.
         OptionDef &set_key_hash(size_t h)
         {
@@ -171,6 +181,7 @@ namespace pjh::cli
 
     protected:
         std::string m_long_name;
+        std::string m_env_var;
         char m_short_name{};
         std::string m_description;
         bool m_has_value{};

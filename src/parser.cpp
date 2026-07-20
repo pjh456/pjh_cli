@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <pjh_cli/converter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
@@ -169,6 +170,22 @@ namespace pjh::cli
             auto dr = cmd->apply_defaults(ctx);
             if (dr.is_err())
                 return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
+
+            // Environment variable fallback
+            for (const auto &opt_ptr : cmd->options())
+            {
+                if (ctx.has_value(opt_ptr->key_hash()))
+                    continue;
+                auto &var = opt_ptr->env_var();
+                if (var.empty())
+                    continue;
+                const char *env_val = std::getenv(var.c_str());
+                if (!env_val)
+                    continue;
+                auto r = opt_ptr->parse_value(ctx, env_val);
+                if (r.is_err())
+                    return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
+            }
 
             for (const auto &opt_ptr : cmd->options())
             {

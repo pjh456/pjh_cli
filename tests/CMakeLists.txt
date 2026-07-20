@@ -10,6 +10,7 @@ set(PJH_CLI_TEST_SOURCES
     test_parse_context.cpp
     option/test_bool_option.cpp
     option/test_count_option.cpp
+    option/test_env_option.cpp
     option/test_float_option.cpp
     option/test_int_option.cpp
     option/test_path_option.cpp
