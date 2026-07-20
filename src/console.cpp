@@ -74,6 +74,9 @@ namespace pjh::cli
 
     CliResult<void> InteractiveConsole::process_line(const std::string &line)
     {
+        if (line.empty())
+            return CliResult<void>::Ok();
+
         // "?" or "?query" → search / list
         if (line[0] == '?')
         {
