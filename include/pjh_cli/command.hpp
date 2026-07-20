@@ -226,6 +226,7 @@ namespace pjh::cli
         Command *parent() const noexcept { return m_parent; }
 
         /// @brief Direct child subcommands.
+        std::deque<Command> &subcommands() noexcept { return m_subcommands; }
         const std::deque<Command> &subcommands() const noexcept { return m_subcommands; }
 
         /// @brief All registered options (pointer-based, polymorphic).

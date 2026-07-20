@@ -159,16 +159,18 @@ namespace pjh::cli
         }
 
         /// @brief The leaf command matched during parsing.
+        Command *matched_command() noexcept { return m_matched_cmd; }
         const Command *matched_command() const noexcept { return m_matched_cmd; }
 
-        /// @brief Path of matched commands, e.g. "serve start".
-        const std::string &matched_path() const noexcept { return m_matched_path; }
+        /// @brief Matched subcommand chain (root excluded), built from Command::parent().
+        std::vector<Command *> matched_commands();
+        std::vector<const Command *> matched_commands() const;
+
+        /// @brief Full matched path, e.g. "server start".
+        std::string matched_path() const;
 
         /// @brief Set the matched command (used internally by parser).
-        void set_matched_command(const Command *cmd) { m_matched_cmd = cmd; }
-
-        /// @brief Set the matched command path (used internally by parser).
-        void set_matched_path(std::string p) { m_matched_path = std::move(p); }
+        void set_matched_command(Command *cmd) { m_matched_cmd = cmd; }
 
         /// @brief Append a value for a repeatable option (used internally).
         template <detail::BuiltinType T>
@@ -243,9 +245,8 @@ namespace pjh::cli
 
         std::shared_ptr<ParseContext> m_parent;
 
-        const Command *m_matched_cmd = nullptr;
+        Command *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
-        std::string m_matched_path;
     };
 
 }  // namespace pjh::cli

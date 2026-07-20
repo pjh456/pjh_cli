@@ -40,7 +40,7 @@ TEST_CASE("Parser deep subcommand nesting")
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
     CHECK(ctx.get<std::string, fixed_string("name")>() == "v2");
-    CHECK(ctx.matched_path() == "migrate");
+    CHECK(ctx.matched_path() == "db migrate");
 }
 
 TEST_CASE("Parser disabled subcommand skipped")

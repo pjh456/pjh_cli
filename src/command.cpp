@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <pjh_cli/command.hpp>
+#include <sstream>
 
 namespace pjh::cli
 {
@@ -89,6 +90,41 @@ namespace pjh::cli
     {
         m_extra_args_policy = p;
         return *this;
+    }
+
+    std::vector<Command *> ParseContext::matched_commands()
+    {
+        if (!m_matched_cmd) return {};
+        std::vector<Command *> result;
+        for (auto *c = m_matched_cmd; c; c = c->parent())
+            result.push_back(c);
+        std::reverse(result.begin(), result.end());
+        if (result.size() > 1)
+            result.erase(result.begin());
+        return result;
+    }
+
+    std::vector<const Command *> ParseContext::matched_commands() const
+    {
+        if (!m_matched_cmd) return {};
+        std::vector<const Command *> result;
+        for (auto *c = m_matched_cmd; c; c = c->parent())
+            result.push_back(c);
+        std::reverse(result.begin(), result.end());
+        if (result.size() > 1)
+            result.erase(result.begin());
+        return result;
+    }
+
+    std::string ParseContext::matched_path() const
+    {
+        auto cmds = matched_commands();
+        if (cmds.empty()) return {};
+        std::ostringstream os;
+        os << cmds[0]->name();
+        for (size_t i = 1; i < cmds.size(); ++i)
+            os << ' ' << cmds[i]->name();
+        return os.str();
     }
 
 }  // namespace pjh::cli

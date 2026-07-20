@@ -31,11 +31,11 @@ namespace pjh::cli
     }
 
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
-        const Command &parent, std::string_view input, int max_distance, Visibility mode)
+        Command &parent, std::string_view input, int max_distance, Visibility mode)
     {
         std::vector<FuzzyMatch> results;
 
-        for (const auto &sub : parent.subcommands())
+        for (auto &sub : parent.subcommands())
         {
             if (!detail::is_visible_and_enabled(sub, mode))
                 continue;

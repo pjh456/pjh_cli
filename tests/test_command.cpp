@@ -20,8 +20,8 @@ TEST_CASE("Command construction")
 TEST_CASE("Option bool flag no short no default")
 {
     App app("test", "1.0", "Test");
-    auto &opt =
-        app.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
+    auto &opt = app.option<fixed_string("verbose")>("--verbose", "Enable verbose output")
+                    .boolean();
     CHECK(opt.long_name() == "verbose");
     CHECK(opt.short_name() == 0);
     CHECK(opt.has_value() == false);
@@ -42,8 +42,7 @@ TEST_CASE("Option int with short no default")
 TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
-    auto &opt =
-        app.option<fixed_string("host")>("--host", 'h', "Host address").str();
+    auto &opt = app.option<fixed_string("host")>("--host", 'h', "Host address").str();
     CHECK(opt.long_name() == "host");
     CHECK(opt.short_name() == 'h');
     CHECK(opt.has_value() == true);
@@ -61,9 +60,10 @@ TEST_CASE("Option int no short")
 TEST_CASE("Option required chain")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<fixed_string("required-opt")>(
-                       "--required-opt", 'r', "Required option").integer()
-                    .required();
+    auto &opt =
+        app.option<fixed_string("required-opt")>("--required-opt", 'r', "Required option")
+            .integer()
+            .required();
     CHECK(opt.is_required() == true);
 }
 
@@ -212,8 +212,8 @@ TEST_CASE("ParseContext")
     CHECK(ctx.has_value(key_hash(fixed_string("port"))));
     CHECK(!ctx.has_value(key_hash(fixed_string("missing"))));
 
-    ctx.set_matched_path("serve start");
-    CHECK(ctx.matched_path() == "serve start");
+    ctx.set_matched_command(&app);
+    CHECK(ctx.matched_path() == "test");
 
     auto cmd_ctx = app.create_context();
     CHECK(!cmd_ctx.has<fixed_string("port")>());
@@ -266,8 +266,8 @@ TEST_CASE("Command options count")
     app.option<fixed_string("host")>(
         "--host", 'h', "Host address", std::string("0.0.0.0"));
     app.option<fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
-    app.option<fixed_string("required-opt")>(
-           "--required-opt", 'r', "Required option").integer()
+    app.option<fixed_string("required-opt")>("--required-opt", 'r', "Required option")
+        .integer()
         .required();
     app.arg<std::string, 0>("source", "Source file");
     app.arg<std::string, 1>("dest", "Destination").required();

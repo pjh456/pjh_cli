@@ -170,11 +170,9 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        CliResult<ParseContext> finish_parse(
-            const Command *cmd, ParseContext ctx, std::string matched_path)
+        CliResult<ParseContext> finish_parse(Command *cmd, ParseContext ctx)
         {
             ctx.set_matched_command(cmd);
-            ctx.set_matched_path(std::move(matched_path));
 
             auto dr = cmd->apply_defaults(ctx);
             if (dr.is_err())
@@ -216,8 +214,8 @@ namespace pjh::cli
         ///        Checks exact match first, then fuzzy if @p max_fuzzy > 0.
         /// @return Match result or nullptr.
         ///         On disabled exact match, *out_disabled is set to true.
-        const Command *find_subcommand_match(
-            const Command &cmd,
+        Command *find_subcommand_match(
+            Command &cmd,
             std::string_view name,
             int max_fuzzy_distance,
             bool &out_disabled)
@@ -245,11 +243,9 @@ namespace pjh::cli
     }  // namespace
 
     CliResult<ParseContext> parse_command(
-        const Command &root,
-        std::span<const std::string_view> args,
-        int max_fuzzy_distance)
+        Command &root, std::span<const std::string_view> args, int max_fuzzy_distance)
     {
-        const Command *cmd = &root;
+        Command *cmd = &root;
         ParseContext ctx;
         size_t arg_pos = 0;
         bool double_dash = false;
@@ -319,7 +315,7 @@ namespace pjh::cli
             arg_pos++;
         }
 
-        return finish_parse(cmd, std::move(ctx), cmd->name());
+        return finish_parse(cmd, std::move(ctx));
     }
 
 }  // namespace pjh::cli

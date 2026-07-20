@@ -15,13 +15,13 @@ namespace pjh::cli
     /// @brief A fuzzy match result.
     struct FuzzyMatch
     {
-        const Command *command;
+        Command *command;
         int distance;
     };
 
     /// @brief Find subcommands whose name fuzzily matches input.
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
-        const Command &parent,
+        Command &parent,
         std::string_view input,
         int max_distance = 3,
         Visibility mode = Visibility::Both);
