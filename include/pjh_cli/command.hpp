@@ -330,135 +330,69 @@ namespace pjh::cli
     //  (defined here so Command::add_option is visible)
     // ──────────────────────────────────────────────
 
-    /// @brief Create the option as an integer-valued type and store it.
+    /// @brief Common factory: strip leading --, create typed option, register on command.
+    template <auto Key>
+        requires detail::OptionKey<decltype(Key)>
+    template <typename Opt, ValueTag Tag>
+    Opt &OptionBuilder<Key>::make_option(bool has_val)
+    {
+        auto name = m_long_name;
+        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
+            name = name.substr(2);
+
+        auto ptr = std::make_unique<Opt>();
+        ptr->set_long_name(std::move(name));
+        ptr->set_short_name(m_short_name);
+        ptr->set_description(std::move(m_description));
+        ptr->set_has_value(has_val);
+        ptr->set_value_tag(Tag);
+        ptr->set_key_hash(key_hash(Key));
+
+        auto &ref = *ptr;
+        m_cmd.add_option(std::move(ptr));
+        return ref;
+    }
+
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     IntOption &OptionBuilder<Key>::integer()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<IntOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(true);
-        ptr->set_value_tag(ValueTag::Int);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<IntOption, ValueTag::Int>(true);
     }
 
-    /// @brief Create the option as a counting flag and store it.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     CountOption &OptionBuilder<Key>::count()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<CountOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_value_tag(ValueTag::Int);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<CountOption, ValueTag::Int>(false);
     }
 
-    /// @brief Create the option as a boolean flag and store it.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     BoolOption &OptionBuilder<Key>::boolean()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<BoolOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(false);
-        ptr->set_value_tag(ValueTag::Bool);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<BoolOption, ValueTag::Bool>(false);
     }
 
-    /// @brief Create the option as a string-valued type and store it.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     StrOption &OptionBuilder<Key>::str()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<StrOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(true);
-        ptr->set_value_tag(ValueTag::String);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<StrOption, ValueTag::String>(true);
     }
 
-    /// @brief Create the option as a double-valued type and store it.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     FloatOption &OptionBuilder<Key>::floating()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<FloatOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(true);
-        ptr->set_value_tag(ValueTag::Double);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<FloatOption, ValueTag::Double>(true);
     }
 
-    /// @brief Create the option as a filesystem path type and store it.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     PathOption &OptionBuilder<Key>::path()
     {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<PathOption>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(true);
-        ptr->set_value_tag(ValueTag::Path);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
+        return make_option<PathOption, ValueTag::Path>(true);
     }
 
 }  // namespace pjh::cli

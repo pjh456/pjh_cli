@@ -271,6 +271,10 @@ namespace pjh::cli
         /// @brief Create the option as a filesystem path type.
         /// @return Reference to the newly created PathOption.
         PathOption &path();
+
+    private:
+        template <typename Opt, ValueTag Tag>
+        Opt &make_option(bool has_val);
     };
 
     // ── Virtual method default implementations ──
