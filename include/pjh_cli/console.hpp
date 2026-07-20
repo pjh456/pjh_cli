@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "command.hpp"
+#include "command/branch_command.hpp"
 #include "type.hpp"
 
 namespace pjh::cli
@@ -13,9 +13,9 @@ namespace pjh::cli
     class InteractiveConsole
     {
     public:
-        /// @param root  Root command (typically your App instance).
+        /// @param root  Root command (typically your App instance, must be a BranchCommand).
         /// @param prompt  Prompt string shown before each input.
-        explicit InteractiveConsole(Command &root, std::string prompt = "> ");
+        explicit InteractiveConsole(BranchCommand &root, std::string prompt = "> ");
 
         /// @brief Run the REPL loop. Blocks until exit or EOF.
         void run();
@@ -30,7 +30,7 @@ namespace pjh::cli
         CliResult<void> process_line(const std::string &line);
 
     private:
-        Command &m_root;
+        BranchCommand &m_root;
         std::string m_prompt;
         bool m_running = false;
         std::vector<std::string> m_history;

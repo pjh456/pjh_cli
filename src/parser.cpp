@@ -1,4 +1,6 @@
 #include <cstdlib>
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/converter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/matcher.hpp>
@@ -8,7 +10,6 @@ namespace pjh::cli
 {
     namespace
     {
-        /// @brief Dispatch a raw string value for a positional arg (no virtual dispatch).
         CliResult<void> apply_arg_value(
             ParseContext &ctx, size_t hash, ValueTag tag, std::string_view s)
         {
@@ -48,24 +49,8 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        /// @brief Consume a long option token (--opt or --opt=value).
-        ///
-        /// Looks up the option on @p cmd. If it expects a value:
-        ///   - --opt=val: extracts value from the same token
-        ///   - --opt val : advances @p i to consume the next token as value
-        /// If it is a flag (bool): sets true in @p ctx.
-        /// @param cmd   Current command whose options are consulted.
-        /// @param ctx   Parse context to write into.
-        /// @param arg   The raw token (e.g. "--port=8080").
-        /// @param i     Current index into @p args; advanced when a separate
-        ///              value token is consumed.  The caller must still
-        ///              increment @p i after the call to skip past the
-        ///              option (and its value if consumed).
-        /// @param args  Full argument list.
-        /// @return Ok on success, or a CliError (unknown option, missing
-        ///         value, type conversion failure).
         CliResult<void> consume_long(
-            const Command &cmd,
+            const BaseCommand &cmd,
             ParseContext &ctx,
             std::string_view arg,
             size_t &i,
@@ -76,7 +61,6 @@ namespace pjh::cli
             auto *opt = cmd.find_option_by_long(name);
             if (!opt)
             {
-                // --no-xxx negation
                 if (name.size() > 3 && name.substr(0, 3) == "no-")
                 {
                     auto *neg = cmd.find_option_by_long(name.substr(3));
@@ -114,25 +98,8 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        /// @brief Consume a short option token (-x, -abc, or -p value).
-        ///
-        /// Iterates over each character in the token:
-        ///   - Bool flags are set to true directly.
-        ///   - Valued options must appear as a standalone token (-p value);
-        ///     grouped forms like -pvalue or -abp value are rejected.
-        ///   When a valued option is found, @p i is advanced to consume the
-        ///   next token as its value. The caller must still increment @p i
-        ///   after the call.
-        /// @param cmd   Current command whose options are consulted.
-        /// @param ctx   Parse context to write into.
-        /// @param arg   The raw token (e.g. "-abc" or "-p").
-        /// @param i     Current index into @p args; advanced when a separate
-        ///              value token is consumed.
-        /// @param args  Full argument list.
-        /// @return Ok on success, or a CliError (unknown option, grouped
-        ///         valued option, missing value, type conversion failure).
         CliResult<void> consume_short(
-            const Command &cmd,
+            const BaseCommand &cmd,
             ParseContext &ctx,
             std::string_view arg,
             size_t &i,
@@ -170,7 +137,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        CliResult<ParseContext> finish_parse(Command *cmd, ParseContext ctx)
+        CliResult<ParseContext> finish_parse(BaseCommand *cmd, ParseContext ctx)
         {
             ctx.set_matched_command(cmd);
 
@@ -180,7 +147,6 @@ namespace pjh::cli
 
             for (const auto &opt_ptr : cmd->options())
             {
-                // Env var fallback
                 if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
                 {
                     const char *env_val = std::getenv(opt_ptr->env_var().c_str());
@@ -193,29 +159,26 @@ namespace pjh::cli
                     }
                 }
 
-                // Required check
                 if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
                     return CliResult<ParseContext>::Err(
                         missing_required_option(opt_ptr->long_name()));
             }
 
-            for (const auto &arg : cmd->args())
+            if (auto *leaf = cmd->as_leaf())
             {
-                if (arg.m_required && !ctx.has_value(arg.m_key_hash))
+                for (const auto &arg : leaf->args())
                 {
-                    return CliResult<ParseContext>::Err(missing_required_arg(arg.m_name));
+                    if (arg.m_required && !ctx.has_value(arg.m_key_hash))
+                        return CliResult<ParseContext>::Err(
+                            missing_required_arg(arg.m_name));
                 }
             }
 
             return CliResult<ParseContext>::Ok(std::move(ctx));
         }
 
-        /// @brief Try to find a subcommand matching @p name on @p cmd.
-        ///        Checks exact match first, then fuzzy if @p max_fuzzy > 0.
-        /// @return Match result or nullptr.
-        ///         On disabled exact match, *out_disabled is set to true.
-        Command *find_subcommand_match(
-            Command &cmd,
+        BaseCommand *find_subcommand_match(
+            BranchCommand &cmd,
             std::string_view name,
             int max_fuzzy_distance,
             bool &out_disabled)
@@ -243,9 +206,9 @@ namespace pjh::cli
     }  // namespace
 
     CliResult<ParseContext> parse_command(
-        Command &root, std::span<const std::string_view> args, int max_fuzzy_distance)
+        BaseCommand &root, std::span<const std::string_view> args, int max_fuzzy_distance)
     {
-        Command *cmd = &root;
+        BaseCommand *cmd = &root;
         ParseContext ctx;
         size_t arg_pos = 0;
         bool double_dash = false;
@@ -254,14 +217,12 @@ namespace pjh::cli
         {
             auto a = args[i];
 
-            // Handle -- separator
             if (!double_dash && a == "--")
             {
                 double_dash = true;
                 continue;
             }
 
-            // Handle options for current command
             if (!double_dash && a.size() > 1 && a[0] == '-')
             {
                 CliResult<void> r = (a[1] == '-') ? consume_long(*cmd, ctx, a, i, args)
@@ -271,11 +232,12 @@ namespace pjh::cli
                 continue;
             }
 
-            // Check for subcommand (only before --)
-            if (!double_dash)
+            if (!double_dash && cmd->is_branch())
             {
+                auto *branch = cmd->as_branch();
                 bool disabled = false;
-                auto *sub = find_subcommand_match(*cmd, a, max_fuzzy_distance, disabled);
+                auto *sub =
+                    find_subcommand_match(*branch, a, max_fuzzy_distance, disabled);
 
                 if (disabled)
                     return CliResult<ParseContext>::Err(command_disabled(a));
@@ -291,10 +253,9 @@ namespace pjh::cli
                 }
             }
 
-            // Positional/extra arg for current command
-            if (arg_pos < cmd->args().size())
+            if (auto *leaf = cmd->as_leaf(); leaf && arg_pos < leaf->args().size())
             {
-                auto &arg = cmd->args()[arg_pos];
+                auto &arg = leaf->args()[arg_pos];
                 auto r = apply_arg_value(ctx, arg.m_key_hash, arg.m_value_tag, a);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());

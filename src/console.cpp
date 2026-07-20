@@ -6,7 +6,7 @@
 
 namespace pjh::cli
 {
-    InteractiveConsole::InteractiveConsole(Command &root, std::string prompt) :
+    InteractiveConsole::InteractiveConsole(BranchCommand &root, std::string prompt) :
         m_root(root), m_prompt(std::move(prompt))
     {
     }
@@ -98,20 +98,20 @@ namespace pjh::cli
 
             // Search by substring
             bool found = false;
-            for (const auto &sub : m_root.subcommands())
+            for (const auto &sub_ptr : m_root.subcommands())
             {
-                if (!sub.is_enabled())
+                if (!sub_ptr->is_enabled())
                     continue;
-                if (sub.visibility() == Visibility::Hidden)
+                if (sub_ptr->visibility() == Visibility::Hidden)
                     continue;
-                if (sub.name().find(query) != std::string_view::npos)
+                if (sub_ptr->name().find(query) != std::string_view::npos)
                 {
                     if (!found)
                     {
                         std::cout << "Matching subcommands:";
                         found = true;
                     }
-                    std::cout << " " << sub.name();
+                    std::cout << " " << sub_ptr->name();
                 }
             }
             if (!found)

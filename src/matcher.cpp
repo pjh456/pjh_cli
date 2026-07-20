@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <sstream>
@@ -31,47 +33,51 @@ namespace pjh::cli
     }
 
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
-        Command &parent, std::string_view input, int max_distance, Visibility mode)
+        BranchCommand &parent, std::string_view input, int max_distance, Visibility mode)
     {
         std::vector<FuzzyMatch> results;
 
-        for (auto &sub : parent.subcommands())
+        for (auto &sub_ptr : parent.subcommands())
         {
-            if (!detail::is_visible_and_enabled(sub, mode))
+            if (!detail::is_visible_and_enabled(*sub_ptr, mode))
                 continue;
-            int d = edit_distance(input, sub.name());
+            int d = edit_distance(input, sub_ptr->name());
             if (d <= max_distance)
-                results.push_back({&sub, d});
+                results.push_back({sub_ptr.get(), d});
         }
 
         std::ranges::stable_sort(results, {}, &FuzzyMatch::distance);
         return results;
     }
 
-    std::vector<std::string> list_subcommands(const Command &cmd, Visibility mode)
+    std::vector<std::string> list_subcommands(const BranchCommand &cmd, Visibility mode)
     {
         std::vector<std::string> names;
-        for (const auto &sub : cmd.subcommands())
+        for (const auto &sub_ptr : cmd.subcommands())
         {
-            if (!detail::is_visible_and_enabled(sub, mode))
+            if (!detail::is_visible_and_enabled(*sub_ptr, mode))
                 continue;
-            names.push_back(sub.name());
+            names.push_back(sub_ptr->name());
         }
         return names;
     }
 
     std::vector<std::string> complete(
-        const Command &cmd, std::string_view prefix, Visibility mode)
+        const BaseCommand &cmd, std::string_view prefix, Visibility mode)
     {
         std::vector<std::string> candidates;
 
-        // Subcommand name completion
-        for (const auto &sub : cmd.subcommands())
+        // Subcommand name completion (branch only)
+        if (!cmd.is_leaf())
         {
-            if (!detail::is_visible_and_enabled(sub, mode))
-                continue;
-            if (sub.name().starts_with(prefix))
-                candidates.push_back(sub.name());
+            auto &branch = static_cast<const BranchCommand &>(cmd);
+            for (const auto &sub_ptr : branch.subcommands())
+            {
+                if (!detail::is_visible_and_enabled(*sub_ptr, mode))
+                    continue;
+                if (sub_ptr->name().starts_with(prefix))
+                    candidates.push_back(sub_ptr->name());
+            }
         }
 
         // Option completion (prefix starts with '-')
@@ -106,7 +112,7 @@ namespace pjh::cli
         return candidates;
     }
 
-    std::string format_usage(const Command &cmd, std::string_view program_name)
+    std::string format_usage(const BaseCommand &cmd, std::string_view program_name)
     {
         std::ostringstream os;
         os << "Usage: ";
@@ -121,19 +127,26 @@ namespace pjh::cli
         for (const auto &opt_ptr : cmd.options())
             os << " [" << detail::option_left_label(*opt_ptr, "|") << "]";
 
-        for (const auto &arg : cmd.args())
+        // Positional args (leaf only)
+        if (auto *leaf = cmd.as_leaf())
         {
-            if (arg.m_required)
-                os << " <" << arg.m_name << ">";
-            else
-                os << " [" << arg.m_name << "]";
+            for (const auto &arg : leaf->args())
+            {
+                if (arg.m_required)
+                    os << " <" << arg.m_name << ">";
+                else
+                    os << " [" << arg.m_name << "]";
+            }
         }
 
-        if (!cmd.subcommands().empty())
+        // Subcommands (branch only)
+        if (!cmd.is_leaf())
         {
+            auto &branch = static_cast<const BranchCommand &>(cmd);
+            auto &subcommands = branch.subcommands();
             bool has_visible = std::any_of(
-                cmd.subcommands().begin(), cmd.subcommands().end(), [](const Command &sub)
-                { return detail::is_visible_and_enabled(sub, Visibility::Both); });
+                subcommands.begin(), subcommands.end(), [](const auto &sub_ptr)
+                { return detail::is_visible_and_enabled(*sub_ptr, Visibility::Both); });
             if (has_visible)
                 os << " <command>";
         }
@@ -150,7 +163,7 @@ namespace pjh::cli
         os << "  " << right << "\n";
     }
 
-    std::string format_help(const Command &cmd, std::string_view program_name)
+    std::string format_help(const BaseCommand &cmd, std::string_view program_name)
     {
         std::ostringstream os;
 
@@ -180,16 +193,16 @@ namespace pjh::cli
             os << "\n";
         }
 
-        // Positional args
-        if (!cmd.args().empty())
+        // Positional args (leaf only)
+        if (auto *leaf = cmd.as_leaf(); leaf && !leaf->args().empty())
         {
             os << "Arguments:\n";
             size_t max_left = 0;
-            for (const auto &arg : cmd.args())
+            for (const auto &arg : leaf->args())
                 max_left = std::max(max_left, arg.m_name.size());
             size_t left_width = std::min(max_left, size_t(28));
 
-            for (const auto &arg : cmd.args())
+            for (const auto &arg : leaf->args())
             {
                 std::string right = arg.m_description;
                 if (arg.m_required)
@@ -199,26 +212,33 @@ namespace pjh::cli
             os << "\n";
         }
 
-        // Subcommands
-        size_t max_left = 0;
-        size_t visible_count = 0;
-        for (const auto &sub : cmd.subcommands())
+        // Subcommands (branch only)
+        if (!cmd.is_leaf())
         {
-            if (!detail::is_visible_and_enabled(sub, Visibility::Both))
-                continue;
-            visible_count++;
-            max_left = std::max(max_left, sub.name().size());
-        }
+            auto &branch = static_cast<const BranchCommand &>(cmd);
+            auto &subcommands = branch.subcommands();
 
-        if (visible_count > 0)
-        {
-            os << "Subcommands:\n";
-            size_t left_width = std::min(max_left, size_t(28));
-            for (const auto &sub : cmd.subcommands())
+            size_t max_left = 0;
+            size_t visible_count = 0;
+            for (const auto &sub_ptr : subcommands)
             {
-                if (!detail::is_visible_and_enabled(sub, Visibility::Both))
+                if (!detail::is_visible_and_enabled(*sub_ptr, Visibility::Both))
                     continue;
-                append_help_line(os, sub.name(), sub.description(), left_width);
+                visible_count++;
+                max_left = std::max(max_left, sub_ptr->name().size());
+            }
+
+            if (visible_count > 0)
+            {
+                os << "Subcommands:\n";
+                size_t left_width = std::min(max_left, size_t(28));
+                for (const auto &sub_ptr : subcommands)
+                {
+                    if (!detail::is_visible_and_enabled(*sub_ptr, Visibility::Both))
+                        continue;
+                    append_help_line(
+                        os, sub_ptr->name(), sub_ptr->description(), left_width);
+                }
             }
         }
 

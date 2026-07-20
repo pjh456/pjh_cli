@@ -4,7 +4,8 @@
 namespace pjh::cli
 {
     App::App(std::string name, std::string version, std::string description) :
-        Command(std::move(name), std::move(description)), m_version(std::move(version))
+        BranchCommand(std::move(name), std::move(description)),
+        m_version(std::move(version))
     {
     }
 

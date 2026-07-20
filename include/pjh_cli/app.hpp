@@ -1,14 +1,14 @@
 #ifndef INCLUDE_PJH_CLI_APP_HPP
 #define INCLUDE_PJH_CLI_APP_HPP
 
-#include "command.hpp"
+#include "command/branch_command.hpp"
 
 namespace pjh::cli
 {
-    /// @brief Application entry point — the root command.
+    /// @brief Application entry point — the root branch command.
     ///
-    /// Inherits Command and adds version metadata, parse(), and run_interactive().
-    class App final : public Command
+    /// Inherits BranchCommand and adds version metadata, and parse().
+    class App final : public BranchCommand
     {
     public:
         /// @brief Construct an application root.

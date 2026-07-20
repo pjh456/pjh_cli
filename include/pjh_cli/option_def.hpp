@@ -14,6 +14,7 @@
 namespace pjh::cli
 {
     class ParseContext;
+    class BaseCommand;
 
     // ── Forward declarations for typed subclasses ──
 
@@ -35,7 +36,7 @@ namespace pjh::cli
     /// Holds common fields (name, description, key hash, required flag, etc.)
     /// and provides virtual `parse_value()` and `apply_default()` that each
     /// typed subclass overrides.  Options are stored polymorphically in
-    /// `Command::m_options` as `unique_ptr<OptionDef>`.
+    /// \`BaseCommand::m_options\` as \`unique_ptr<OptionDef>\`.
     class OptionDef
     {
     public:
@@ -216,18 +217,18 @@ namespace pjh::cli
 
     // ── OptionBuilder (declaration; definitions in command.hpp) ──
 
-    /// @brief Builder returned by Command::option<Key>().
+    /// @brief Builder returned by BaseCommand::option<Key>().
     ///
     /// Holds common registration fields and provides type-dispatch methods
     /// (.integer(), .boolean(), .str(), …) that create the corresponding
     /// typed subclass and add it to the command.  The methods are defined in
-    /// `command.hpp` so that Command::add_option() is visible.
+    /// `base_command.hpp` so that BaseCommand::add_option() is visible.
     /// @tparam Key Compile-time fixed_string identifier.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     class OptionBuilder
     {
-        Command &m_cmd;
+        BaseCommand &m_cmd;
         std::string m_long_name;
         std::string m_description;
         char m_short_name = 0;
@@ -237,7 +238,7 @@ namespace pjh::cli
         /// @param cmd        Target command to register the option on.
         /// @param long_name  Long option name (with or without "--" prefix).
         /// @param description Help text description.
-        OptionBuilder(Command &cmd, std::string long_name, std::string description) :
+        OptionBuilder(BaseCommand &cmd, std::string long_name, std::string description) :
             m_cmd(cmd),
             m_long_name(std::move(long_name)),
             m_description(std::move(description))
