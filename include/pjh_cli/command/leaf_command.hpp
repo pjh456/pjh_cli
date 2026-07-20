@@ -7,6 +7,11 @@
 namespace pjh::cli
 {
 
+    /// @brief Leaf node in the command tree.
+    ///
+    /// A LeafCommand holds positional arguments (arg<T, Index>()) and has
+    /// no subcommands.  It is the terminal node used for actions that take
+    /// typed positional inputs.
     class LeafCommand : public BaseCommand
     {
     public:
@@ -16,6 +21,9 @@ namespace pjh::cli
         LeafCommand *as_leaf() noexcept override { return this; }
         const LeafCommand *as_leaf() const noexcept override { return this; }
 
+        /// @brief Register a positional argument identified by compile-time Index.
+        /// @tparam T Value type.
+        /// @tparam Index Positional index (0, 1, 2, ...).
         template <typename T, size_t Index>
             requires detail::BuiltinType<T>
         ArgDef &arg(std::string name, std::string description)
@@ -32,6 +40,7 @@ namespace pjh::cli
             return def;
         }
 
+        /// @brief Registered positional arguments.
         const std::deque<ArgDef> &args() const noexcept { return m_args; }
 
     private:

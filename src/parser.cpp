@@ -22,6 +22,7 @@ namespace pjh::cli
 {
     namespace
     {
+        /// @brief Dispatch a raw string value for a positional arg (no virtual dispatch).
         CliResult<void> apply_arg_value(
             ParseContext &ctx, size_t hash, ValueTag tag, std::string_view s)
         {
@@ -61,6 +62,22 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Consume a long option token (--opt or --opt=value).
+        ///
+        /// Looks up the option on @p cmd. If it expects a value:
+        ///   - --opt=val: extracts value from the same token
+        ///   - --opt val : advances @p i to consume the next token as value
+        /// If it is a flag (bool): sets true in @p ctx.
+        /// @param cmd   Current command whose options are consulted.
+        /// @param ctx   Parse context to write into.
+        /// @param arg   The raw token (e.g. "--port=8080").
+        /// @param i     Current index into @p args; advanced when a separate
+        ///              value token is consumed.  The caller must still
+        ///              increment @p i after the call to skip past the
+        ///              option (and its value if consumed).
+        /// @param args  Full argument list.
+        /// @return Ok on success, or a CliError (unknown option, missing
+        ///         value, type conversion failure).
         CliResult<void> consume_long(
             const BaseCommand &cmd,
             ParseContext &ctx,
@@ -110,6 +127,23 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Consume a short option token (-x, -abc, or -p value).
+        ///
+        /// Iterates over each character in the token:
+        ///   - Bool flags are set to true directly.
+        ///   - Valued options must appear as a standalone token (-p value);
+        ///     grouped forms like -pvalue or -abp value are rejected.
+        ///   When a valued option is found, @p i is advanced to consume the
+        ///   next token as its value. The caller must still increment @p i
+        ///   after the call.
+        /// @param cmd   Current command whose options are consulted.
+        /// @param ctx   Parse context to write into.
+        /// @param arg   The raw token (e.g. "-abc" or "-p").
+        /// @param i     Current index into @p args; advanced when a separate
+        ///              value token is consumed.
+        /// @param args  Full argument list.
+        /// @return Ok on success, or a CliError (unknown option, grouped
+        ///         valued option, missing value, type conversion failure).
         CliResult<void> consume_short(
             const BaseCommand &cmd,
             ParseContext &ctx,
@@ -149,6 +183,10 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        /// @brief Complete parsing: apply defaults, env vars, and check required args.
+        /// @param cmd  Current command to finalise.
+        /// @param ctx  Mutable parse context.
+        /// @return Ok with context, or error on missing required option/arg.
         CliResult<ParseContext> finish_parse(BaseCommand *cmd, ParseContext ctx)
         {
             ctx.set_matched_command(cmd);
@@ -189,6 +227,10 @@ namespace pjh::cli
             return CliResult<ParseContext>::Ok(std::move(ctx));
         }
 
+        /// @brief Try to find a subcommand matching @p name on @p cmd.
+        ///        Checks exact match first, then fuzzy if @p max_fuzzy > 0.
+        /// @return Match result or nullptr.
+        ///         On disabled exact match, *out_disabled is set to true.
         BaseCommand *find_subcommand_match(
             BranchCommand &cmd,
             std::string_view name,
@@ -217,6 +259,10 @@ namespace pjh::cli
 
     }  // namespace
 
+    /// @brief Parse args against a command tree.
+    /// @param root               Root of the command tree.
+    /// @param args               Tokenised CLI arguments.
+    /// @param max_fuzzy_distance  0 = exact only, >0 = also try fuzzy (Levenshtein).
     CliResult<ParseContext> parse_command(
         BaseCommand &root, std::span<const std::string_view> args, int max_fuzzy_distance)
     {

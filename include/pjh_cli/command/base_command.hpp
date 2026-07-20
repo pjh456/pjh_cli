@@ -29,35 +29,48 @@ namespace pjh::cli
     class BranchCommand;
     class LeafCommand;
 
+    /// @brief Bitmask flags controlling where a Command appears.
+    ///
+    /// Combine with `|`: `set_visibility(Visibility::Cli | Visibility::Repl)`
     enum class Visibility : unsigned
     {
-        Hidden = 0,
-        Repl = 1,
-        Cli = 2,
-        Both = 3,
+        Hidden = 0,  ///< Hidden from help / completion everywhere
+        Repl = 1,    ///< Visible in interactive REPL
+        Cli = 2,     ///< Visible in batch CLI
+        Both = 3,    ///< Visible everywhere (default)
     };
 
+    /// @brief Bitwise OR for Visibility flags.
     constexpr Visibility operator|(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
             static_cast<unsigned>(a) | static_cast<unsigned>(b));
     }
 
+    /// @brief Bitwise AND for Visibility flags.
     constexpr Visibility operator&(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
             static_cast<unsigned>(a) & static_cast<unsigned>(b));
     }
 
+    /// @brief Policy for handling extra positional arguments beyond registered
+    ///        arg<N>.
     enum class ExtraArgsPolicy : unsigned
     {
-        Ignore,
-        Error,
-        Store,
+        Ignore,  ///< Silently discard (default, POSIX convention).
+        Error,   ///< Return CliError on any extra positional argument.
+        Store,   ///< Append to ParseContext::extra_args() for runtime inspection.
     };
 
     namespace detail
     {
+        /// @brief Dispatch an OptionBuilder to the correct typed subclass and
+        ///        set a default value.
+        ///
+        /// Used by the option<Key>(name, desc, T) auto-dispatch overloads.
+        /// @tparam T Computed from the default value argument.
+        /// @tparam Builder OptionBuilder<Key> deduced at call site.
         template <typename T, typename Builder>
             requires detail::BuiltinType<T>
         OptionDef &dispatch_default(Builder &builder, T default_value)
@@ -75,9 +88,18 @@ namespace pjh::cli
         }
     }  // namespace detail
 
+    /// @brief Base node in the command tree.
+    ///
+    /// Every command can hold:
+    ///   - Named options (--flag -o) via option<Key>() / option<T, Key>()
+    ///
+    /// BranchCommand and LeafCommand inherit from this base.
+    /// Branch commands have subcommands (add_branch / add_leaf).
+    /// Leaf commands have positional arguments (arg<T, Index>()).
     class BaseCommand
     {
     public:
+        /// @brief Construct a command with optional name and description.
         explicit BaseCommand(std::string name = "", std::string description = "");
         virtual ~BaseCommand() = default;
 
@@ -88,31 +110,62 @@ namespace pjh::cli
 
         // ── Queries ──
 
+        /// @brief Command name (e.g. "serve").
         const std::string &name() const noexcept { return m_name; }
+
+        /// @brief Help description.
         const std::string &description() const noexcept { return m_description; }
+
+        /// @brief Current visibility flags.
         Visibility visibility() const noexcept { return m_visibility; }
+
+        /// @brief Evaluate the enabled predicate.
         bool is_enabled() const { return m_enabled(); }
+
+        /// @brief Parent command (nullptr for root).
         BaseCommand *parent() const noexcept { return m_parent; }
+
+        /// @brief Current extra args policy.
         ExtraArgsPolicy extra_args_policy() const noexcept { return m_extra_args_policy; }
+
+        /// @brief All registered options (pointer-based, polymorphic).
         const std::deque<std::unique_ptr<OptionDef>> &options() const noexcept
         {
             return m_options;
         }
 
+        /// @brief Look up an option by its long name (without -- prefix).
         const OptionDef *find_option_by_long(std::string_view name) const noexcept;
+
+        /// @brief Look up an option by its short character.
         const OptionDef *find_option_by_short(char c) const noexcept;
 
         // ── Type queries ──
 
+        /// @brief Downcast to BranchCommand (nullptr if this is a leaf).
         virtual BranchCommand *as_branch() noexcept { return nullptr; }
+
+        /// @brief Const overload of as_branch().
         virtual const BranchCommand *as_branch() const noexcept { return nullptr; }
+
+        /// @brief Downcast to LeafCommand (nullptr if this is a branch).
         virtual LeafCommand *as_leaf() noexcept { return nullptr; }
+
+        /// @brief Const overload of as_leaf().
         virtual const LeafCommand *as_leaf() const noexcept { return nullptr; }
+
+        /// @brief True if this is a BranchCommand.
         bool is_branch() const noexcept { return as_branch() != nullptr; }
+
+        /// @brief True if this is a LeafCommand.
         bool is_leaf() const noexcept { return as_leaf() != nullptr; }
 
         // ── Option registration ──
 
+        /// @brief Register an option. Chain .integer()/.boolean()/… to set type.
+        /// @tparam Key Compile-time identifier (fixed_string).
+        /// @return OptionBuilder for attaching a type dispatch and further
+        ///         chain calls.
         template <auto Key>
             requires detail::OptionKey<decltype(Key)>
         OptionBuilder<Key> option(std::string long_name, std::string description)
@@ -121,6 +174,9 @@ namespace pjh::cli
                 *this, std::move(long_name), std::move(description));
         }
 
+        /// @brief Register an option with a short name.
+        /// @tparam Key Compile-time identifier (fixed_string).
+        /// @param short_name Single-character short form (e.g. 'v').
         template <auto Key>
             requires detail::OptionKey<decltype(Key)>
         OptionBuilder<Key> option(
@@ -132,6 +188,13 @@ namespace pjh::cli
             return builder;
         }
 
+        /// @brief Register an option with a default value.
+        ///
+        /// Dispatches to the correct typed subclass based on the type of
+        /// @p default_value (int -> IntOption, bool -> BoolOption, etc.).
+        /// @tparam Key  Compile-time identifier.
+        /// @tparam T    Auto-deduced from default_value.
+        /// @return Reference to the created typed option (as OptionDef&).
         template <auto Key, typename T>
             requires detail::BuiltinType<T>
         OptionDef &option(std::string long_name, std::string description, T default_value)
@@ -141,6 +204,8 @@ namespace pjh::cli
             return detail::dispatch_default<T>(builder, std::move(default_value));
         }
 
+        /// @brief Register an option with short name + default value.
+        /// @copydetails option(Key, auto, string, string, T)
         template <auto Key, typename T>
             requires detail::BuiltinType<T>
         OptionDef &option(
@@ -157,20 +222,33 @@ namespace pjh::cli
 
         // ── Setters ──
 
+        /// @brief Set visibility level (affects help / REPL matching).
         BaseCommand &set_visibility(Visibility v);
+
+        /// @brief Set the runtime enable predicate.
+        ///        A disabled command is treated as non-existent during matching.
         BaseCommand &enabled(std::function<bool()> pred);
+
+        /// @brief Set the action callback invoked when this command is matched.
         BaseCommand &action(std::function<CliResult<void>(ParseContext &)> fn);
+
+        /// @brief Set extra positional args handling policy (default: Ignore).
         BaseCommand &set_extra_args(ExtraArgsPolicy p);
 
         // ── Lifecycle ──
 
+        /// @brief Create an empty ParseContext for this command.
         ParseContext create_context() const noexcept;
+
+        /// @brief Pre-fill context with default values from registered options.
         CliResult<void> apply_defaults(ParseContext &ctx) const;
+
+        /// @brief Execute the registered action callback.
         CliResult<void> execute(ParseContext &ctx) const;
 
     public:
         /// @brief Internal — register an option definition.
-        /// @note Public because OptionBuilder and derived command types need access.
+        /// @note Public because OptionBuilder and derived types need access.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             m_option_by_long[opt->long_name()] = opt.get();
@@ -206,6 +284,7 @@ namespace pjh::cli
 
     // ── OptionBuilder method definitions ──
 
+    /// @brief Common factory: strip leading --, create typed option, register on command.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     template <typename Opt, ValueTag Tag>
