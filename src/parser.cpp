@@ -180,29 +180,25 @@ namespace pjh::cli
             if (dr.is_err())
                 return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
 
-            // Environment variable fallback
             for (const auto &opt_ptr : cmd->options())
             {
-                if (ctx.has_value(opt_ptr->key_hash()))
-                    continue;
-                auto &var = opt_ptr->env_var();
-                if (var.empty())
-                    continue;
-                const char *env_val = std::getenv(var.c_str());
-                if (!env_val)
-                    continue;
-                auto r = opt_ptr->parse_value(ctx, env_val);
-                if (r.is_err())
-                    return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
-            }
-
-            for (const auto &opt_ptr : cmd->options())
-            {
-                if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
+                // Env var fallback
+                if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
                 {
+                    const char *env_val = std::getenv(opt_ptr->env_var().c_str());
+                    if (env_val)
+                    {
+                        auto r = opt_ptr->parse_value(ctx, env_val);
+                        if (r.is_err())
+                            return CliResult<ParseContext>::Err(
+                                std::move(r).unwrap_err());
+                    }
+                }
+
+                // Required check
+                if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
                     return CliResult<ParseContext>::Err(
                         missing_required_option(opt_ptr->long_name()));
-                }
             }
 
             for (const auto &arg : cmd->args())
@@ -292,8 +288,7 @@ namespace pjh::cli
                 {
                     cmd = sub;
                     ParseContext child_ctx;
-                    child_ctx.set_parent(
-                        std::make_shared<ParseContext>(std::move(ctx)));
+                    child_ctx.set_parent(std::make_shared<ParseContext>(std::move(ctx)));
                     ctx = std::move(child_ctx);
                     arg_pos = 0;
                     continue;
