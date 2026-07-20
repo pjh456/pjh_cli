@@ -24,6 +24,12 @@ namespace pjh::cli
         /// @brief Whether a default bool value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Human-readable default value for help output.
+        std::string default_value_str() const override
+        {
+            return m_default.is_some() ? (m_default.unwrap() ? "true" : "false") : "";
+        }
+
         /// @brief Whether --no-xxx negation is enabled.
         bool is_negatable() const noexcept override { return m_negatable; }
 

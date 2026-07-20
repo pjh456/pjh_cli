@@ -144,11 +144,49 @@ namespace pjh::cli
         if (tokens.empty())
             return CliResult<void>::Ok();
 
-        // "help" → show formatted help
-        if (tokens.size() == 1 &&
-            (tokens[0] == "help" || tokens[0] == "--help" || tokens[0] == "-h"))
+        // "help" or "help <subcommand>" → show formatted help
+        if (tokens[0] == "help" || tokens[0] == "--help" || tokens[0] == "-h")
         {
-            std::cout << format_help(m_root, m_root.name());
+            if (tokens.size() == 1)
+            {
+                std::cout << format_help(m_root, m_root.name());
+            }
+            else
+            {
+                BaseCommand *target = &m_root;
+                bool found = true;
+                for (size_t i = 1; i < tokens.size(); i++)
+                {
+                    if (!target->is_branch())
+                    {
+                        std::cout << "'" << target->name() << "' has no subcommands.\n";
+                        found = false;
+                        break;
+                    }
+                    auto *branch = target->as_branch();
+                    auto *sub = branch->find_subcommand(tokens[i]);
+                    if (!sub)
+                    {
+                        auto fuzzy = fuzzy_find_subcommands(*branch, tokens[i], 3);
+                        if (!fuzzy.empty())
+                        {
+                            std::cout << "Unknown subcommand '" << tokens[i]
+                                      << "'. Did you mean:";
+                            for (auto &f : fuzzy) std::cout << " " << f.command->name();
+                            std::cout << "\n";
+                        }
+                        else
+                        {
+                            std::cout << "Unknown subcommand '" << tokens[i] << "'.\n";
+                        }
+                        found = false;
+                        break;
+                    }
+                    target = sub;
+                }
+                if (found)
+                    std::cout << format_help(*target, target->name());
+            }
             return CliResult<void>::Ok();
         }
 

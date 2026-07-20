@@ -32,6 +32,12 @@ namespace pjh::cli
         /// @brief Whether a default int value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Human-readable default value for help output.
+        std::string default_value_str() const override
+        {
+            return m_default.is_some() ? std::to_string(m_default.unwrap()) : "";
+        }
+
         /// @brief Parse the raw string as an int and store in @p ctx.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override

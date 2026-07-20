@@ -82,6 +82,10 @@ namespace pjh::cli
         /// @brief Whether a typed default value has been registered.
         virtual bool has_default() const noexcept { return false; }
 
+        /// @brief Human-readable default value string for help output.
+        ///        Returns empty string if there is no default.
+        virtual std::string default_value_str() const { return ""; }
+
         /// @brief Whether this option counts occurrences (-vvv → 3).
         virtual bool is_counting() const noexcept { return false; }
 

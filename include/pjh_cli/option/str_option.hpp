@@ -29,6 +29,12 @@ namespace pjh::cli
         /// @brief Whether a default string value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Human-readable default value for help output.
+        std::string default_value_str() const override
+        {
+            return m_default.is_some() ? m_default.unwrap() : "";
+        }
+
         /// @brief Store the raw string, then validate against choices if set.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override

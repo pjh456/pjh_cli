@@ -26,6 +26,12 @@ namespace pjh::cli
         /// @brief Whether a default path value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Human-readable default value for help output.
+        std::string default_value_str() const override
+        {
+            return m_default.is_some() ? m_default.unwrap().string() : "";
+        }
+
         /// @brief Convert the raw string to a filesystem path and store.
         /// @param ctx Parse context.
         /// @param raw CLI token value (path string).
