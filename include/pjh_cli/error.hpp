@@ -95,6 +95,19 @@ namespace pjh::cli
         return CliError(msg);
     }
 
+    /// @brief Value is not one of the allowed choices.
+    inline CliError invalid_choice(
+        std::string_view name,
+        std::string_view value,
+        const std::vector<std::string> &choices)
+    {
+        std::string msg = std::format(
+            "invalid value '{}' for '{}': expected one of: {}", value, name, choices[0]);
+        for (size_t i = 1; i < choices.size(); i++)
+            msg = std::format("{}, {}", std::move(msg), choices[i]);
+        return CliError(msg);
+    }
+
     /// @brief Value is outside the allowed range [min, max].
     inline CliError value_out_of_range(
         std::string_view name, std::string_view value, int min, int max)

@@ -57,3 +57,63 @@ TEST_CASE("StrOption has_default reflects default_value")
     CHECK(def != nullptr);
     CHECK(def->has_default());
 }
+
+// ── choices ──
+
+TEST_CASE("StrOption choices accepts valid value")
+{
+    App app("test", "1.0", "Choices ok");
+    app.option<fixed_string("fmt")>("--format", 'f', "Format")
+        .str()
+        .choices({"json", "yaml", "toml"});
+    Argv argv{"test", "--format", "json"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("fmt")>() == "json");
+}
+
+TEST_CASE("StrOption choices rejects invalid value")
+{
+    App app("test", "1.0", "Choices reject");
+    app.option<fixed_string("fmt")>("--format", 'f', "Format")
+        .str()
+        .choices({"json", "yaml"});
+    Argv argv{"test", "--format", "toml"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("StrOption choices case-sensitive")
+{
+    App app("test", "1.0", "Choices case");
+    app.option<fixed_string("fmt")>("--format", 'f', "Format")
+        .str()
+        .choices({"json", "yaml"});
+    Argv argv{"test", "--format", "JSON"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("StrOption choices error message")
+{
+    App app("test", "1.0", "Choices msg");
+    app.option<fixed_string("fmt")>("--format", 'f', "Format")
+        .str()
+        .choices({"json", "yaml", "toml"});
+    Argv argv{"test", "--format", "xml"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() == std::string_view(
+                                     "Parse Error: invalid value 'xml' for 'format': "
+                                     "expected one of: json, yaml, toml"));
+}
+
+TEST_CASE("StrOption choices without choices still accepts anything")
+{
+    App app("test", "1.0", "Choices none");
+    app.option<fixed_string("name")>("--name", "Name").str();
+    Argv argv{"test", "--name", "anything"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}

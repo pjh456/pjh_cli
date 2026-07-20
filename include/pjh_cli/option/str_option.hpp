@@ -1,6 +1,9 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 
+#include <algorithm>
+
+#include "../error.hpp"
 #include "../option_def.hpp"
 #include "../parse_context.hpp"
 
@@ -10,7 +13,7 @@ namespace pjh::cli
     ///
     /// Created by `OptionBuilder::str()`.  Overrides `parse_value()` and
     /// `apply_default()` to store values as `std::string` in `ParseContext`.
-    /// Future chain methods: .choices(), .repeatable()
+    /// Supports optional value-set validation via `.choices()`.
     class StrOption : public OptionDef
     {
     public:
@@ -20,14 +23,16 @@ namespace pjh::cli
         /// @brief Whether a default string value has been set.
         bool has_default() const noexcept override { return m_default.is_some(); }
 
-        /// @brief Store the raw string directly (passthrough).
-        /// @param ctx Parse context.
-        /// @param raw CLI token value (stored as-is).
-        /// @return Always Ok.
+        /// @brief Store the raw string, then validate against choices if set.
         CliResult<void> parse_value(
             ParseContext &ctx, std::string_view raw) const override
         {
-            ctx.set_value<std::string>(m_key_hash, std::string(raw));
+            auto s = std::string(raw);
+            if (!m_choices.empty() && std::ranges::find(m_choices, s) == m_choices.end())
+            {
+                return CliFailure{invalid_choice(m_long_name, raw, m_choices)};
+            }
+            ctx.set_value<std::string>(m_key_hash, std::move(s));
             return CliResult<void>::Ok();
         }
 
@@ -40,7 +45,6 @@ namespace pjh::cli
         }
 
         /// @brief Register a typed default value.
-        /// @param v Default string value.
         /// @return *this for chaining.
         StrOption &default_value(std::string v)
         {
@@ -48,8 +52,18 @@ namespace pjh::cli
             return *this;
         }
 
+        /// @brief Restrict values to an explicit set.
+        /// @param vals Allowed values (e.g. {"json", "yaml"}).
+        /// @return *this for chaining.
+        StrOption &choices(std::vector<std::string> vals)
+        {
+            m_choices = std::move(vals);
+            return *this;
+        }
+
     private:
         pjh::result::Option<std::string> m_default;
+        std::vector<std::string> m_choices;
     };
 
 }  // namespace pjh::cli
