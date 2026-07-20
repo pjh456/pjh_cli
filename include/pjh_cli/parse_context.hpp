@@ -5,8 +5,10 @@
 #include <pjh_result.hpp>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "detail/concept.hpp"
 #include "error.hpp"
@@ -20,12 +22,17 @@ namespace pjh::cli
     /// @brief Container for parsed option and argument values.
     ///
     /// Values are stored by compile-time key hash and retrieved via get<T, Key>().
-    /// Storage uses per-type unordered_map, one for each builtin type.
+    /// Storage uses per-type unordered_map stored in a tuple, one for each builtin type.
     /// - For named options:  get<int, fixed_string("port")>()
     /// - For positional args: get<std::string, 0>()
     /// @tparam T Must satisfy detail::BuiltinType<T>.
     class ParseContext
     {
+        template <typename T>
+        using IdMap = std::unordered_map<size_t, T>;
+        template <typename T>
+        using IdVecMap = IdMap<std::vector<T>>;
+
     public:
         /// @brief Retrieve a value by its compile-time key.
         /// @tparam T Expected value type (must match the registered option/arg type).
@@ -36,7 +43,7 @@ namespace pjh::cli
         T &get()
         {
             constexpr auto h = key_hash(Key);
-            auto &map = typed_map<T>();
+            auto &map = scalar_map<T>();
             auto it = map.find(h);
             if (it == map.end())
                 throw LogicError("value not found for key");
@@ -49,7 +56,7 @@ namespace pjh::cli
         const T &get() const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = typed_map<T>();
+            auto &map = scalar_map<T>();
             auto it = map.find(h);
             if (it == map.end())
                 throw LogicError("value not found for key");
@@ -74,7 +81,7 @@ namespace pjh::cli
         pjh::result::Option<T> try_get() const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = typed_map<T>();
+            auto &map = scalar_map<T>();
             auto it = map.find(h);
             if (it == map.end())
                 return pjh::result::Option<T>::None();
@@ -91,7 +98,7 @@ namespace pjh::cli
         T get_or(T fallback) const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = typed_map<T>();
+            auto &map = scalar_map<T>();
             auto it = map.find(h);
             if (it == map.end())
                 return fallback;
@@ -102,7 +109,7 @@ namespace pjh::cli
         template <detail::BuiltinType T>
         void set_value(size_t hash, T value)
         {
-            typed_map<T>()[hash] = std::move(value);
+            scalar_map<T>()[hash] = std::move(value);
             m_present.insert(hash);
         }
 
@@ -116,7 +123,7 @@ namespace pjh::cli
         template <detail::BuiltinType T>
         T get_value(size_t hash, T default_val) const
         {
-            auto &map = typed_map<T>();
+            auto &map = scalar_map<T>();
             auto it = map.find(hash);
             if (it == map.end())
                 return default_val;
@@ -145,7 +152,7 @@ namespace pjh::cli
         template <detail::BuiltinType T>
         void append_value(size_t hash, T value)
         {
-            typed_vec_map<T>()[hash].push_back(std::move(value));
+            vector_map<T>()[hash].push_back(std::move(value));
             m_present.insert(hash);
         }
 
@@ -156,7 +163,7 @@ namespace pjh::cli
         const std::vector<T> &get_all() const
         {
             constexpr auto h = key_hash(Key);
-            auto &vec = typed_vec_map<T>();
+            auto &vec = vector_map<T>();
             auto it = vec.find(h);
             if (it == vec.end())
                 throw LogicError("value not found for key");
@@ -167,95 +174,49 @@ namespace pjh::cli
         void add_extra_arg(std::string s) { m_extra_args.push_back(std::move(s)); }
 
     private:
-        template <detail::BuiltinType T>
-        auto &typed_map() noexcept;
-        template <detail::BuiltinType T>
-        auto const &typed_map() const noexcept;
-        template <detail::BuiltinType T>
-        auto &typed_vec_map() noexcept;
-        template <detail::BuiltinType T>
-        auto const &typed_vec_map() const noexcept;
+        using ScalarMaps = std::tuple<
+            IdMap<bool>,
+            IdMap<int>,
+            IdMap<double>,
+            IdMap<std::string>,
+            IdMap<std::filesystem::path>>;
 
-        std::unordered_map<size_t, bool> m_bool;
-        std::unordered_map<size_t, int> m_int;
-        std::unordered_map<size_t, double> m_double;
-        std::unordered_map<size_t, std::string> m_string;
-        std::unordered_map<size_t, std::filesystem::path> m_path;
+        using VecMaps = std::tuple<
+            IdVecMap<bool>,
+            IdVecMap<int>,
+            IdVecMap<double>,
+            IdVecMap<std::string>,
+            IdVecMap<std::filesystem::path>>;
 
-        std::unordered_map<size_t, std::vector<bool>> m_bool_vec;
-        std::unordered_map<size_t, std::vector<int>> m_int_vec;
-        std::unordered_map<size_t, std::vector<double>> m_double_vec;
-        std::unordered_map<size_t, std::vector<std::string>> m_string_vec;
-        std::unordered_map<size_t, std::vector<std::filesystem::path>> m_path_vec;
+        template <detail::BuiltinType T>
+        auto &scalar_map() noexcept
+        {
+            return std::get<detail::type_index_v<T>>(m_scalars);
+        }
+        template <detail::BuiltinType T>
+        auto const &scalar_map() const noexcept
+        {
+            return std::get<detail::type_index_v<T>>(m_scalars);
+        }
+        template <detail::BuiltinType T>
+        auto &vector_map() noexcept
+        {
+            return std::get<detail::type_index_v<T>>(m_vectors);
+        }
+        template <detail::BuiltinType T>
+        auto const &vector_map() const noexcept
+        {
+            return std::get<detail::type_index_v<T>>(m_vectors);
+        }
 
+        ScalarMaps m_scalars;
+        VecMaps m_vectors;
         std::unordered_set<size_t> m_present;
 
         const Command *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
         std::string m_matched_path;
     };
-
-    // ── typed_map implementations ──
-
-    template <detail::BuiltinType T>
-    auto &ParseContext::typed_map() noexcept
-    {
-        if constexpr (std::same_as<T, bool>)
-            return m_bool;
-        else if constexpr (std::same_as<T, int>)
-            return m_int;
-        else if constexpr (std::same_as<T, double>)
-            return m_double;
-        else if constexpr (std::same_as<T, std::string>)
-            return m_string;
-        else if constexpr (std::same_as<T, std::filesystem::path>)
-            return m_path;
-    }
-
-    template <detail::BuiltinType T>
-    auto const &ParseContext::typed_map() const noexcept
-    {
-        if constexpr (std::same_as<T, bool>)
-            return m_bool;
-        else if constexpr (std::same_as<T, int>)
-            return m_int;
-        else if constexpr (std::same_as<T, double>)
-            return m_double;
-        else if constexpr (std::same_as<T, std::string>)
-            return m_string;
-        else if constexpr (std::same_as<T, std::filesystem::path>)
-            return m_path;
-    }
-
-    template <detail::BuiltinType T>
-    auto &ParseContext::typed_vec_map() noexcept
-    {
-        if constexpr (std::same_as<T, bool>)
-            return m_bool_vec;
-        else if constexpr (std::same_as<T, int>)
-            return m_int_vec;
-        else if constexpr (std::same_as<T, double>)
-            return m_double_vec;
-        else if constexpr (std::same_as<T, std::string>)
-            return m_string_vec;
-        else if constexpr (std::same_as<T, std::filesystem::path>)
-            return m_path_vec;
-    }
-
-    template <detail::BuiltinType T>
-    auto const &ParseContext::typed_vec_map() const noexcept
-    {
-        if constexpr (std::same_as<T, bool>)
-            return m_bool_vec;
-        else if constexpr (std::same_as<T, int>)
-            return m_int_vec;
-        else if constexpr (std::same_as<T, double>)
-            return m_double_vec;
-        else if constexpr (std::same_as<T, std::string>)
-            return m_string_vec;
-        else if constexpr (std::same_as<T, std::filesystem::path>)
-            return m_path_vec;
-    }
 
 }  // namespace pjh::cli
 

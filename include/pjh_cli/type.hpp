@@ -49,6 +49,17 @@ namespace pjh::cli
             : std::same_as<T, std::string>           ? ValueTag::String
             : std::same_as<T, std::filesystem::path> ? ValueTag::Path
                                                      : ValueTag::Bool;
+
+        /// @brief Compile-time 0..4 index for each BuiltinType, used with tuple
+        /// std::get<N>.
+        template <BuiltinType T>
+        inline constexpr size_t type_index_v =
+            std::same_as<T, bool>                    ? 0
+            : std::same_as<T, int>                   ? 1
+            : std::same_as<T, double>                ? 2
+            : std::same_as<T, std::string>           ? 3
+            : std::same_as<T, std::filesystem::path> ? 4
+                                                     : 0;
     }
 
 }  // namespace pjh::cli
