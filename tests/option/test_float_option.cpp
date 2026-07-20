@@ -47,3 +47,41 @@ TEST_CASE("FloatOption has_default reflects default_value")
     CHECK(def != nullptr);
     CHECK(def->has_default());
 }
+
+TEST_CASE("FloatOption min-max within range ok")
+{
+    App app("test", "1.0", "Float range");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().min(0.0).max(1.0);
+    Argv argv{"test", "--rate", "0.5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<double, fixed_string("rate")>() == doctest::Approx(0.5));
+}
+
+TEST_CASE("FloatOption below min fails")
+{
+    App app("test", "1.0", "Float below");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().min(0.0);
+    Argv argv{"test", "--rate", "-0.1"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("FloatOption above max fails")
+{
+    App app("test", "1.0", "Float above");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().max(1.0);
+    Argv argv{"test", "--rate", "1.5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("FloatOption min inclusive at boundary")
+{
+    App app("test", "1.0", "Float boundary");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().min(0.0).max(1.0);
+    Argv a0{"test", "--rate", "0.0"};
+    CHECK(app.parse(a0.argc(), a0.argv()).is_ok());
+    Argv a1{"test", "--rate", "1.0"};
+    CHECK(app.parse(a1.argc(), a1.argv()).is_ok());
+}
