@@ -291,7 +291,10 @@ namespace pjh::cli
                 if (sub)
                 {
                     cmd = sub;
-                    ctx = ParseContext{};
+                    ParseContext child_ctx;
+                    child_ctx.set_parent(
+                        std::make_shared<ParseContext>(std::move(ctx)));
+                    ctx = std::move(child_ctx);
                     arg_pos = 0;
                     continue;
                 }

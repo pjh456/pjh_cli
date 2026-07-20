@@ -83,6 +83,148 @@ TEST_CASE("Parser parse_fuzzy with store extra args")
 }
 
 // ──────────────────────────────────────────
+//  Parent chain — subcommand reads parent values
+// ──────────────────────────────────────────
+
+TEST_CASE("Parent chain subcommand can read parent boolean flag")
+{
+    App app("test", "1.0", "Parent chain bool");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &son = app.add_command("son", "Son Command");
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.has<fixed_string("verbose")>());
+            CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "-v", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain subcommand can read parent int option")
+{
+    App app("test", "1.0", "Parent chain int");
+    app.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+    auto &son = app.add_command("son", "Son Command");
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.has<fixed_string("port")>());
+            CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain subcommand can read parent string option from CLI")
+{
+    App app("test", "1.0", "Parent chain string");
+    app.option<fixed_string("name")>("--name", "Name").str();
+    auto &son = app.add_command("son", "Son Command");
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.has<fixed_string("name")>());
+            CHECK(ctx.get<std::string, fixed_string("name")>() == "alice");
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "--name", "alice", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain subcommand can read parent bool with --no-xxx negation")
+{
+    App app("test", "1.0", "Parent chain negate");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    auto &son = app.add_command("son", "Son Command");
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.has<fixed_string("verbose")>());
+            CHECK(ctx.get<bool, fixed_string("verbose")>() == false);
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "--no-verbose", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain child has() returns false when parent option not given")
+{
+    App app("test", "1.0", "Parent chain absent");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &son = app.add_command("son", "Son Command");
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK_FALSE(ctx.has<fixed_string("verbose")>());
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain deep nesting reads root option from leaf")
+{
+    App app("test", "1.0", "Deep chain");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &mid = app.add_command("mid", "Middle");
+    auto &leaf = mid.add_command("leaf", "Leaf");
+    leaf.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.has<fixed_string("verbose")>());
+            CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "-v", "mid", "leaf"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain child type fallback does not interfere with parent type")
+{
+    App app("test", "1.0", "Type isolation");
+    app.option<fixed_string("port")>("--port", "Port", 8080);
+    auto &son = app.add_command("son", "Son");
+    son.option<fixed_string("host")>("--host", "Host", std::string("localhost"));
+    son.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+            CHECK(ctx.get<std::string, fixed_string("host")>() == "localhost");
+            return CliResult<void>::Ok();
+        });
+    LocalArgv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain child get<T,Key>() after parse returns parent value")
+{
+    App app("test", "1.0", "Parent chain after parse");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &son = app.add_command("son", "Son");
+    son.option<fixed_string("flag")>("--flag", 'f', "Flag").boolean();
+    LocalArgv argv{"test", "-v", "son", "-f"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    // Child can still read parent's --verbose after parse returns
+    CHECK(ctx.has<fixed_string("verbose")>());
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<bool, fixed_string("flag")>() == true);
+}
+
+// ──────────────────────────────────────────
 //  Parent args before subcommand
 // ──────────────────────────────────────────
 

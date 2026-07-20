@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_PARSE_CONTEXT_HPP
 
 #include <filesystem>
+#include <memory>
 #include <pjh_result.hpp>
 #include <string>
 #include <string_view>
@@ -45,9 +46,11 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto &map = scalar_map<T>();
             auto it = map.find(h);
-            if (it == map.end())
-                throw LogicError("value not found for key");
-            return it->second;
+            if (it != map.end())
+                return it->second;
+            if (m_parent)
+                return m_parent->template get<T, Key>();
+            throw LogicError("value not found for key");
         }
 
         /// @brief Const overload of get().
@@ -58,9 +61,11 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto &map = scalar_map<T>();
             auto it = map.find(h);
-            if (it == map.end())
-                throw LogicError("value not found for key");
-            return it->second;
+            if (it != map.end())
+                return it->second;
+            if (m_parent)
+                return m_parent->template get<T, Key>();
+            throw LogicError("value not found for key");
         }
 
         /// @brief Check if a value exists for the given compile-time key.
@@ -69,7 +74,11 @@ namespace pjh::cli
         bool has() const noexcept
         {
             constexpr auto h = key_hash(Key);
-            return m_present.contains(h);
+            if (m_present.contains(h))
+                return true;
+            if (m_parent)
+                return m_parent->template has<Key>();
+            return false;
         }
 
         /// @brief Try to retrieve a value; returns None if absent (no throw).
@@ -83,9 +92,11 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto &map = scalar_map<T>();
             auto it = map.find(h);
-            if (it == map.end())
-                return pjh::result::Option<T>::None();
-            return pjh::result::Option<T>::Some(it->second);
+            if (it != map.end())
+                return pjh::result::Option<T>::Some(it->second);
+            if (m_parent)
+                return m_parent->template try_get<T, Key>();
+            return pjh::result::Option<T>::None();
         }
 
         /// @brief Retrieve a value or return @p fallback if absent (no throw).
@@ -100,9 +111,11 @@ namespace pjh::cli
             constexpr auto h = key_hash(Key);
             auto &map = scalar_map<T>();
             auto it = map.find(h);
-            if (it == map.end())
-                return fallback;
-            return it->second;
+            if (it != map.end())
+                return it->second;
+            if (m_parent)
+                return m_parent->template get_or<T, Key>(fallback);
+            return fallback;
         }
 
         /// @brief Store a value (used internally by parser).
@@ -114,7 +127,14 @@ namespace pjh::cli
         }
 
         /// @brief Check if a value exists by runtime hash (used internally).
-        bool has_value(size_t hash) const noexcept { return m_present.contains(hash); }
+        bool has_value(size_t hash) const noexcept
+        {
+            if (m_present.contains(hash))
+                return true;
+            if (m_parent)
+                return m_parent->has_value(hash);
+            return false;
+        }
 
         /// @brief Get a value by runtime hash (used internally).
         /// @tparam T Expected value type.
@@ -125,9 +145,11 @@ namespace pjh::cli
         {
             auto &map = scalar_map<T>();
             auto it = map.find(hash);
-            if (it == map.end())
-                return default_val;
-            return it->second;
+            if (it != map.end())
+                return it->second;
+            if (m_parent)
+                return m_parent->template get_value<T>(hash, default_val);
+            return default_val;
         }
 
         /// @brief Extra positional arguments collected when ExtraArgsPolicy::Store.
@@ -173,6 +195,12 @@ namespace pjh::cli
         /// @brief Append an extra positional arg (used internally by parser).
         void add_extra_arg(std::string s) { m_extra_args.push_back(std::move(s)); }
 
+        /// @brief Set the parent context for chained lookup.
+        void set_parent(std::shared_ptr<ParseContext> parent) noexcept
+        {
+            m_parent = std::move(parent);
+        }
+
     private:
         using ScalarMaps = std::tuple<
             IdMap<bool>,
@@ -212,6 +240,8 @@ namespace pjh::cli
         ScalarMaps m_scalars;
         VecMaps m_vectors;
         std::unordered_set<size_t> m_present;
+
+        std::shared_ptr<ParseContext> m_parent;
 
         const Command *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
