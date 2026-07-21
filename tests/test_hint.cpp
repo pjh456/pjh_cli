@@ -12,7 +12,7 @@ TEST_CASE("format_hint empty input on leaf")
     root.arg<std::string, 0>("src", "Source").required();
     root.arg<std::string, 1>("dst", "Destination").required();
 
-    CHECK(format_hint(root, "") == "<src> <dst>");
+    CHECK(HintBuilder::format(root, "") == "<src> <dst>");
 }
 
 TEST_CASE("format_hint empty input on branch")
@@ -20,7 +20,7 @@ TEST_CASE("format_hint empty input on branch")
     App app("test", "1.0", "Test");
     app.add_leaf("serve", "Serve");
 
-    CHECK(format_hint(app, "").empty());
+    CHECK(HintBuilder::format(app, "").empty());
 }
 
 TEST_CASE("format_hint shows options and args")
@@ -34,7 +34,7 @@ TEST_CASE("format_hint shows options and args")
     root.arg<std::string, 0>("src", "Source").required();
     root.arg<std::string, 1>("dst", "Destination");
 
-    auto hint = format_hint(root, "");
+    auto hint = HintBuilder::format(root, "");
     CHECK(hint.find("[INT:port]") != std::string_view::npos);
     CHECK(hint.find("[BOOL:verbose]") != std::string_view::npos);
     CHECK(hint.find("INT:timeout") != std::string_view::npos);
@@ -51,7 +51,7 @@ TEST_CASE("format_hint options always shown regardless of input")
 
     // Options are always shown (order-independent); only positional
     // args are tracked for "remaining".
-    auto hint = format_hint(root, "-v --port data.txt");
+    auto hint = HintBuilder::format(root, "-v --port data.txt");
     CHECK(hint.find("[INT:port]") != std::string_view::npos);
     CHECK(hint.find("[BOOL:verbose]") != std::string_view::npos);
     CHECK(hint.find("<src>") == std::string_view::npos);  // consumed
@@ -64,7 +64,7 @@ TEST_CASE("format_hint descends into subcommand")
     leaf.option<fixed_string("port")>("--port", 'p', "Port", 8080);
     leaf.arg<std::string, 0>("file", "File").required();
 
-    auto hint = format_hint(app, "serve");
+    auto hint = HintBuilder::format(app, "serve");
     CHECK(hint.find("[INT:port]") != std::string_view::npos);
     CHECK(hint.find("<file>") != std::string_view::npos);
 }
@@ -76,7 +76,7 @@ TEST_CASE("format_hint descends with options before subcommand")
     auto &leaf = app.add_leaf("serve", "Serve");
     leaf.option<fixed_string("port")>("--port", 'p', "Port", 8080);
 
-    auto hint = format_hint(app, "-v serve");
+    auto hint = HintBuilder::format(app, "-v serve");
     // Descend to serve, show serve's option
     CHECK(hint == "[INT:port]");
 }
@@ -87,7 +87,7 @@ TEST_CASE("format_hint with consumed positional args")
     root.arg<std::string, 0>("src", "Source").required();
     root.arg<std::string, 1>("dst", "Destination").required();
 
-    auto hint = format_hint(root, "fileA.txt");
+    auto hint = HintBuilder::format(root, "fileA.txt");
     CHECK(hint == "<dst>");
 }
 
@@ -97,7 +97,7 @@ TEST_CASE("format_hint with all positional args consumed")
     root.arg<std::string, 0>("src", "Source").required();
     root.arg<std::string, 1>("dst", "Destination").required();
 
-    auto hint = format_hint(root, "fileA.txt fileB.txt");
+    auto hint = HintBuilder::format(root, "fileA.txt fileB.txt");
     CHECK(hint.empty());
 }
 
@@ -109,7 +109,7 @@ TEST_CASE("format_hint option_mode Required")
         .integer()
         .required();
 
-    auto hint = format_hint(root, "", HintConfig{HintOptionMode::Required});
+    auto hint = HintBuilder::format(root, "", HintConfig{HintOptionMode::Required});
     // port is optional → hidden, timeout is required → shown
     CHECK(hint.find("[INT:port]") == std::string_view::npos);
     CHECK(hint.find("INT:timeout") != std::string_view::npos);
@@ -124,7 +124,7 @@ TEST_CASE("format_hint option_mode None")
         .required();
     root.arg<std::string, 0>("src", "Source").required();
 
-    auto hint = format_hint(root, "", HintConfig{HintOptionMode::None});
+    auto hint = HintBuilder::format(root, "", HintConfig{HintOptionMode::None});
     CHECK(hint.find("INT") == std::string_view::npos);
     CHECK(hint.find("BOOL") == std::string_view::npos);
     CHECK(hint == "<src>");
@@ -137,7 +137,7 @@ TEST_CASE("format_hint subcommand with consumed positional arg")
     leaf.arg<std::string, 0>("file", "File").required();
     leaf.arg<std::string, 1>("extra", "Extra");
 
-    auto hint = format_hint(app, "cmd data.txt");
+    auto hint = HintBuilder::format(app, "cmd data.txt");
     CHECK(hint == "<extra>");
 }
 
@@ -148,6 +148,6 @@ TEST_CASE("format_hint multi-level subcommand")
     auto &leaf = mid.add_leaf("leaf", "Leaf");
     leaf.arg<std::string, 0>("file", "File").required();
 
-    auto hint = format_hint(app, "mid leaf");
+    auto hint = HintBuilder::format(app, "mid leaf");
     CHECK(hint == "<file>");
 }

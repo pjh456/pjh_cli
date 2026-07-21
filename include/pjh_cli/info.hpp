@@ -84,7 +84,7 @@ namespace pjh::cli
 
     /// @brief Structured context from walking a partial input through the command tree.
     ///
-    /// Built by build_hint_context() and consumed by format_hint(HintContext).
+    /// Built by HintBuilder::build_context() and consumed by HintBuilder::format().
     struct HintContext
     {
         const BaseCommand *reached_command = nullptr;

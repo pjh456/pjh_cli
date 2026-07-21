@@ -10,29 +10,37 @@
 namespace pjh::cli
 {
 
-    std::string option_type_name(const OptionDef &opt)
+    namespace
     {
-        if (opt.is_counting())
-            return "INT";
-        switch (opt.value_tag())
+        std::string type_name(ValueTag tag, bool is_counting)
         {
-        case ValueTag::Int:
-            return "INT";
-        case ValueTag::Bool:
-            return "BOOL";
-        case ValueTag::String:
+            if (is_counting)
+                return "INT";
+            switch (tag)
+            {
+            case ValueTag::Int:
+                return "INT";
+            case ValueTag::Bool:
+                return "BOOL";
+            case ValueTag::String:
+                return "STR";
+            case ValueTag::Double:
+                return "FLOAT";
+            case ValueTag::Path:
+                return "PATH";
+            }
             return "STR";
-        case ValueTag::Double:
-            return "FLOAT";
-        case ValueTag::Path:
-            return "PATH";
         }
-        return "STR";
+    }
+
+    std::string HintBuilder::option_type_name(const OptionDef &opt)
+    {
+        return type_name(opt.value_tag(), opt.is_counting());
     }
 
     // ── Data collection ──
 
-    HintContext build_hint_context(
+    HintContext HintBuilder::build_context(
         const BaseCommand &root, std::string_view input)
     {
         auto tokens = detail::tokenize_input(input);
@@ -65,8 +73,7 @@ namespace pjh::cli
         ctx.consumed_positional_args = arg_pos;
 
         ctx.options.reserve(cmd->options().size());
-        for (const auto &opt_ptr : cmd->options())
-            ctx.options.emplace_back(*opt_ptr);
+        for (const auto &opt_ptr : cmd->options()) ctx.options.emplace_back(*opt_ptr);
 
         if (auto *leaf = cmd->as_leaf())
         {
@@ -83,39 +90,32 @@ namespace pjh::cli
 
     namespace
     {
-        std::string type_name_for_tag(ValueTag tag, bool is_counting)
+        std::string option_label(
+            ValueTag tag, bool is_counting, std::string_view long_name, char short_name)
         {
-            if (is_counting)
-                return "INT";
-            switch (tag)
-            {
-            case ValueTag::Int:
-                return "INT";
-            case ValueTag::Bool:
-                return "BOOL";
-            case ValueTag::String:
-                return "STR";
-            case ValueTag::Double:
-                return "FLOAT";
-            case ValueTag::Path:
-                return "PATH";
-            }
-            return "STR";
+            auto label = type_name(tag, is_counting) + ":";
+            if (!long_name.empty())
+                label += long_name;
+            else if (short_name != 0)
+                label += short_name;
+            return label;
         }
-    }  // namespace
 
-    std::string format_hint(const HintContext &ctx)
+        void trim_trailing_space(std::string &s)
+        {
+            if (!s.empty() && s.back() == ' ')
+                s.pop_back();
+        }
+    }
+
+    std::string HintBuilder::format(const HintContext &ctx)
     {
         std::ostringstream os;
 
         for (const auto &opt : ctx.options)
         {
-            std::string label =
-                type_name_for_tag(opt.value_tag, opt.is_counting) + ":";
-            if (!opt.long_name.empty())
-                label += opt.long_name;
-            else if (opt.short_name != 0)
-                label += opt.short_name;
+            auto label = option_label(
+                opt.value_tag, opt.is_counting, opt.long_name, opt.short_name);
 
             if (opt.is_required)
                 os << label << " ";
@@ -123,24 +123,22 @@ namespace pjh::cli
                 os << "[" << label << "] ";
         }
 
-        for (const auto &arg : ctx.remaining_args)
-            os << "<" << arg.name << "> ";
+        for (const auto &arg : ctx.remaining_args) os << "<" << arg.name << "> ";
 
         auto result = os.str();
-        if (!result.empty() && result.back() == ' ')
-            result.pop_back();
+        trim_trailing_space(result);
         return result;
     }
 
     // ── Backward-compatible wrapper ──
 
-    std::string format_hint(
+    std::string HintBuilder::format(
         const BaseCommand &root, std::string_view input, HintConfig config)
     {
-        auto ctx = build_hint_context(root, input);
+        auto ctx = build_context(root, input);
 
         if (config.option_mode == HintOptionMode::All)
-            return format_hint(ctx);
+            return format(ctx);
 
         std::ostringstream os;
 
@@ -148,16 +146,15 @@ namespace pjh::cli
         {
             for (const auto &opt_ptr : ctx.reached_command->options())
             {
-                bool show = (config.option_mode == HintOptionMode::Required &&
-                             opt_ptr->is_required());
+                bool show =
+                    (config.option_mode == HintOptionMode::Required &&
+                     opt_ptr->is_required());
                 if (!show)
                     continue;
 
-                std::string label = option_type_name(*opt_ptr) + ":";
-                if (!opt_ptr->long_name().empty())
-                    label += opt_ptr->long_name();
-                else if (opt_ptr->short_name() != 0)
-                    label += opt_ptr->short_name();
+                auto label = option_label(
+                    opt_ptr->value_tag(), opt_ptr->is_counting(), opt_ptr->long_name(),
+                    opt_ptr->short_name());
 
                 if (opt_ptr->is_required())
                     os << label << " ";
@@ -166,12 +163,10 @@ namespace pjh::cli
             }
         }
 
-        for (const auto &arg : ctx.remaining_args)
-            os << "<" << arg.name << "> ";
+        for (const auto &arg : ctx.remaining_args) os << "<" << arg.name << "> ";
 
         auto result = os.str();
-        if (!result.empty() && result.back() == ' ')
-            result.pop_back();
+        trim_trailing_space(result);
         return result;
     }
 
