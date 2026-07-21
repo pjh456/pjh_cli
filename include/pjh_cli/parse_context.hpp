@@ -119,6 +119,15 @@ namespace pjh::cli
         BaseCommand *matched_command() noexcept { return m_matched_cmd; }
         const BaseCommand *matched_command() const noexcept { return m_matched_cmd; }
 
+        /// @brief True if --help/-h was encountered during parsing.
+        bool help_requested() const noexcept { return !m_help_text.empty(); }
+
+        /// @brief Formatted help text (non-empty when help_requested() is true).
+        const std::string &help_text() const noexcept { return m_help_text; }
+
+        /// @brief Set the help text (used internally by parser).
+        void set_help_text(std::string text) { m_help_text = std::move(text); }
+
         /// @brief Matched subcommand chain (root excluded), built from
         /// BaseCommand::parent().
         std::vector<BaseCommand *> matched_commands();
@@ -239,6 +248,7 @@ namespace pjh::cli
 
         BaseCommand *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
+        std::string m_help_text;
     };
 
 }  // namespace pjh::cli

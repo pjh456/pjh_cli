@@ -294,6 +294,14 @@ namespace pjh::cli
                 continue;
             }
 
+            // --help / -h handler: no side effects, returns formatted help
+            if (!double_dash && (a == "--help" || a == "-h"))
+            {
+                ctx.set_help_text(format_help(*cmd, cmd->name()));
+                ctx.set_matched_command(cmd);
+                return CliResult<ParseContext>::Ok(std::move(ctx));
+            }
+
             if (!double_dash && a.size() > 1 && a[0] == '-')
             {
                 CliResult<void> r = (a[1] == '-') ? consume_long(*cmd, ctx, a, i, args)

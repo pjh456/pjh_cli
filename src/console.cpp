@@ -165,6 +165,12 @@ namespace pjh::cli
 
         auto &ctx = r.unwrap();
 
+        if (ctx.help_requested())
+        {
+            std::cout << ctx.help_text() << "\n";
+            return CliResult<void>::Ok();
+        }
+
         return ctx.matched_command()->execute(ctx);
     }
 
