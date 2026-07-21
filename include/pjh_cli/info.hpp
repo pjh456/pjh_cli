@@ -82,14 +82,16 @@ namespace pjh::cli
         std::vector<SubcommandInfo> subcommands;
     };
 
-    /// @brief Collect structured help data from a command.
-    HelpInfo collect_help(
-        const BaseCommand &cmd,
-        std::string_view program_name = "",
-        Visibility visibility = Visibility::Both);
-
-    /// @brief Format HelpInfo as a human-readable help string.
-    std::string format_help(const HelpInfo &info);
+    /// @brief Structured context from walking a partial input through the command tree.
+    ///
+    /// Built by build_hint_context() and consumed by format_hint(HintContext).
+    struct HintContext
+    {
+        const BaseCommand *reached_command = nullptr;
+        size_t consumed_positional_args = 0;
+        std::vector<OptionInfo> options;
+        std::vector<ArgInfo> remaining_args;
+    };
 
 }  // namespace pjh::cli
 

@@ -1,10 +1,13 @@
 #ifndef INCLUDE_PJH_CLI_HINT_HPP
 #define INCLUDE_PJH_CLI_HINT_HPP
 
+#include <cstddef>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "command/base_command.hpp"
+#include "info.hpp"
 
 namespace pjh::cli
 {
@@ -26,15 +29,16 @@ namespace pjh::cli
     /// @brief Human-readable type name for an option (e.g. "INT", "STR").
     std::string option_type_name(const OptionDef &opt);
 
+    /// @brief Walk a partial input string to determine the current command position.
+    HintContext build_hint_context(const BaseCommand &root, std::string_view input);
+
+    /// @brief Render HintContext as a hint string showing all available options and args.
+    std::string format_hint(const HintContext &ctx);
+
     /// @brief Format an interactive hint for the command reached by parsing @p input.
     ///
-    /// The input string is tokenised and walked through the command tree:
-    ///   - Tokens starting with `-` are treated as already-consumed options (skipped).
-    ///   - Remaining tokens: if they match a subcommand name → descend; otherwise
-    ///     they are treated as positional arg values (consumed from the front).
-    ///
-    /// The output looks like:
-    ///   `INT:port [BOOL:verbose] <source> <dest>`
+    /// Internally calls build_hint_context() and renders the result.
+    /// For direct access to the structured data, use build_hint_context() directly.
     ///
     /// @param root   Root of the command tree.
     /// @param input  Partial command line string.
