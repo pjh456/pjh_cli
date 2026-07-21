@@ -1,9 +1,10 @@
 #ifndef INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
 #define INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
 
+#include <format>
 #include <string>
 #include <string_view>
-#include <format>
+
 #include "../command/base_command.hpp"
 #include "../option_def.hpp"
 #include "string_utils.hpp"
@@ -34,7 +35,7 @@ namespace pjh::cli::detail
         {
             auto label = opt.long_name().empty() ? std::string(1, opt.short_name())
                                                  : opt.long_name();
-            left += " " + to_upper_copy(label);
+            left += " " + StringUtils::to_upper_copy(label);
         }
         return left;
     }

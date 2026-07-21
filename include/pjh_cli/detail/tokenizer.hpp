@@ -72,7 +72,7 @@ namespace pjh::cli::detail
                 arg = arg.substr(2);
 
             // Split on first '='
-            auto sv = split_name_value(arg);
+            auto sv = StringUtils::split_name_value(arg);
 
             // Check negation
             LongOption result;

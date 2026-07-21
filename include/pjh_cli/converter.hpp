@@ -85,15 +85,15 @@ namespace pjh::cli
     {
         static auto from_string(std::string_view s) -> CliResult<bool>
         {
-            if (detail::case_insensitive_equal(s, "true") ||
-                detail::case_insensitive_equal(s, "1") ||
-                detail::case_insensitive_equal(s, "yes") ||
-                detail::case_insensitive_equal(s, "y"))
+            if (detail::StringUtils::case_insensitive_equal(s, "true") ||
+                detail::StringUtils::case_insensitive_equal(s, "1") ||
+                detail::StringUtils::case_insensitive_equal(s, "yes") ||
+                detail::StringUtils::case_insensitive_equal(s, "y"))
                 return CliResult<bool>::Ok(true);
-            if (detail::case_insensitive_equal(s, "false") ||
-                detail::case_insensitive_equal(s, "0") ||
-                detail::case_insensitive_equal(s, "no") ||
-                detail::case_insensitive_equal(s, "n"))
+            if (detail::StringUtils::case_insensitive_equal(s, "false") ||
+                detail::StringUtils::case_insensitive_equal(s, "0") ||
+                detail::StringUtils::case_insensitive_equal(s, "no") ||
+                detail::StringUtils::case_insensitive_equal(s, "n"))
                 return CliResult<bool>::Ok(false);
             return CliResult<bool>::Err(
                 CliError{
