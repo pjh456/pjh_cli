@@ -36,6 +36,13 @@ namespace pjh::cli
         bool m_running = false;
         std::vector<std::string> m_history;
         size_t m_history_index = 0;
+
+        CliResult<void> handle_query(const std::string &query);
+
+        CliResult<void> handle_help(const std::vector<std::string> &tokens);
+
+        static std::string format_fuzzy_suggestions(
+            BranchCommand &branch, std::string_view input);
     };
 
 }  // namespace pjh::cli
