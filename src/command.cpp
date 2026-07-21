@@ -99,6 +99,7 @@ namespace pjh::cli
         child->m_visibility = m_visibility;
         child->m_enabled = m_enabled;
         auto &ref = *child;
+        m_subcommand_by_name[ref.name()] = &ref;
         m_subcommands.push_back(std::move(child));
         return ref;
     }
@@ -112,25 +113,22 @@ namespace pjh::cli
         child->m_visibility = m_visibility;
         child->m_enabled = m_enabled;
         auto &ref = *child;
+        m_subcommand_by_name[ref.name()] = &ref;
         m_subcommands.push_back(std::move(child));
         return ref;
     }
 
     BaseCommand *BranchCommand::find_subcommand(std::string_view name) noexcept
     {
-        auto it = std::ranges::find(
-            m_subcommands, name,
-            [](const auto &ptr) -> const std::string & { return ptr->m_name; });
-        return it != m_subcommands.end() ? it->get() : nullptr;
+        auto it = m_subcommand_by_name.find(name);
+        return it != m_subcommand_by_name.end() ? it->second : nullptr;
     }
 
     const BaseCommand *BranchCommand::find_subcommand(
         std::string_view name) const noexcept
     {
-        auto it = std::ranges::find(
-            m_subcommands, name,
-            [](const auto &ptr) -> const std::string & { return ptr->m_name; });
-        return it != m_subcommands.end() ? it->get() : nullptr;
+        auto it = m_subcommand_by_name.find(name);
+        return it != m_subcommand_by_name.end() ? it->second : nullptr;
     }
 
     // ── ParseContext ──

@@ -1,6 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_BRANCH_COMMAND_HPP
 #define INCLUDE_PJH_CLI_COMMAND_BRANCH_COMMAND_HPP
 
+#include <unordered_map>
+
 #include "base_command.hpp"
 #include "leaf_command.hpp"
 
@@ -51,6 +53,12 @@ namespace pjh::cli
 
     private:
         std::deque<std::unique_ptr<BaseCommand>> m_subcommands;
+        std::unordered_map<
+            std::string,
+            BaseCommand *,
+            detail::transparent_string_hash,
+            std::equal_to<void>>
+            m_subcommand_by_name;
     };
 
 }  // namespace pjh::cli
