@@ -56,7 +56,7 @@ TEST_CASE("Parser required positional arg missing")
     LeafCommand root("test", "Required arg test");
     root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = parse_command(root, argv.argc(), argv.argv());
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
 
@@ -75,7 +75,7 @@ TEST_CASE("Parser required option and required arg both missing")
     root.option<fixed_string("port")>("--port", "Port").integer().required();
     root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = parse_command(root, argv.argc(), argv.argv());
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
 
@@ -140,7 +140,7 @@ TEST_CASE("Parser error message required arg missing")
     LeafCommand root("test", "Err msg");
     root.arg<std::string, 0>("file", "Input file").required();
     Argv argv{"test"};
-    auto r = parse_command(root, argv.argc(), argv.argv());
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
     CHECK(
         r.unwrap_err().what() ==

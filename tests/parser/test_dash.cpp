@@ -13,7 +13,7 @@ TEST_CASE("Parser double dash separator")
     root.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     root.arg<std::string, 0>("file", "Input file");
     Argv argv{"test", "--verbose", "--", "--file=foo"};
-    auto r = parse_command(root, argv.argc(), argv.argv());
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
     CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
@@ -36,6 +36,6 @@ TEST_CASE("Parser double dash with ExtraArgsPolicy::Error")
     root.set_extra_args(ExtraArgsPolicy::Error);
     root.arg<std::string, 0>("file", "Input file");
     Argv argv{"test", "--", "a.txt", "b.txt"};
-    auto r = parse_command(root, argv.argc(), argv.argv());
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }

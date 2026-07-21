@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     app.option<fixed_string("compress")>("--compress", 'z', "Compress archive").boolean();
     app.arg<std::string, 0>("output", "Archive file name").required();
 
-    auto r = parse_command(app, argc, argv);
+    auto r = Parser::parse_command(app, argc, argv);
     if (r.is_err())
     {
         std::cerr << r.unwrap_err().what() << "\n";

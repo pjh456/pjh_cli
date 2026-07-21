@@ -26,7 +26,7 @@ TEST_CASE("parse_command free function")
     app.option<fixed_string("port")>("--port", 'p', "Port").integer();
 
     std::vector<std::string_view> args{"--port", "9090"};
-    auto r = parse_command(app, args);
+    auto r = Parser::parse_command(app, args);
     CHECK(r.is_ok());
     auto val = r.unwrap().get<int, fixed_string("port")>();
     CHECK(val == 9090);
@@ -39,7 +39,7 @@ TEST_CASE("parse_command fuzzy free function")
     app.add_leaf("config", "Config");
 
     std::vector<std::string_view> args{"servr"};
-    auto r = parse_command(app, args, 3);
+    auto r = Parser::parse_command(app, args, 3);
     CHECK(r.is_ok());
     CHECK(r.unwrap().matched_path() == "server");
 }

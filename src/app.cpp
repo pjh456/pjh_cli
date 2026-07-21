@@ -18,12 +18,12 @@ namespace pjh::cli
 
     CliResult<ParseContext> App::parse(int argc, char **argv)
     {
-        return parse_command(*this, argc, argv);
+        return Parser::parse_command(*this, argc, argv);
     }
 
     CliResult<ParseContext> App::parse_fuzzy(int argc, char **argv)
     {
-        return parse_command(*this, argc, argv, 3);
+        return Parser::parse_command(*this, argc, argv, 3);
     }
 
 }  // namespace pjh::cli
