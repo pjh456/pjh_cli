@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -107,7 +108,8 @@ namespace pjh::cli
                 if (parsed.has_equals)
                 {
                     if (parsed.value.empty())
-                        return CliFailure{missing_value(std::format("--{}", parsed.name))};
+                        return CliFailure{
+                            missing_value(std::format("--{}", parsed.name))};
                     return opt->parse_value(ctx, parsed.value);
                 }
                 if (i + 1 >= args.size())
@@ -184,36 +186,47 @@ namespace pjh::cli
         }
 
         /// @brief Complete parsing: apply defaults, env vars, and check required args.
-        /// @param cmd  Current command to finalise.
-        /// @param ctx  Mutable parse context.
+        ///        Walks the full command chain from root to matched command.
+        /// @param cmd  Matched (deepest) command.
+        /// @param ctx  Parse context (child ctx, parent chain already linked).
         /// @return Ok with context, or error on missing required option/arg.
         CliResult<ParseContext> finish_parse(BaseCommand *cmd, ParseContext ctx)
         {
             ctx.set_matched_command(cmd);
 
-            auto dr = cmd->apply_defaults(ctx);
-            if (dr.is_err())
-                return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
+            // Chain from root down to matched command
+            std::vector<BaseCommand *> chain;
+            for (auto *c = cmd; c; c = c->parent()) chain.push_back(c);
+            std::reverse(chain.begin(), chain.end());
 
-            for (const auto &opt_ptr : cmd->options())
+            for (auto *c : chain)
             {
-                if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
-                {
-                    const char *env_val = std::getenv(opt_ptr->env_var().c_str());
-                    if (env_val)
-                    {
-                        auto r = opt_ptr->parse_value(ctx, env_val);
-                        if (r.is_err())
-                            return CliResult<ParseContext>::Err(
-                                std::move(r).unwrap_err());
-                    }
-                }
+                auto dr = c->apply_defaults(ctx);
+                if (dr.is_err())
+                    return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
 
-                if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
-                    return CliResult<ParseContext>::Err(
-                        missing_required_option(opt_ptr->long_name()));
+                for (const auto &opt_ptr : c->options())
+                {
+                    if (!ctx.has_value(opt_ptr->key_hash()) &&
+                        !opt_ptr->env_var().empty())
+                    {
+                        const char *env_val = std::getenv(opt_ptr->env_var().c_str());
+                        if (env_val)
+                        {
+                            auto r = opt_ptr->parse_value(ctx, env_val);
+                            if (r.is_err())
+                                return CliResult<ParseContext>::Err(
+                                    std::move(r).unwrap_err());
+                        }
+                    }
+
+                    if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
+                        return CliResult<ParseContext>::Err(
+                            missing_required_option(opt_ptr->long_name()));
+                }
             }
 
+            // Positional args — only on the matched command
             if (auto *leaf = cmd->as_leaf())
             {
                 for (const auto &arg : leaf->args())
