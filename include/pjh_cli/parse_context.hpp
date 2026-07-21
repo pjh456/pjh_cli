@@ -37,35 +37,25 @@ namespace pjh::cli
 
     public:
         /// @brief Retrieve a value by its compile-time key.
-        /// @tparam T Expected value type (must match the registered option/arg type).
-        /// @tparam Key Compile-time key (fixed_string for options, size_t for args).
         /// @throws LogicError if the key has no stored value.
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
         T &get()
         {
             constexpr auto h = key_hash(Key);
-            auto &map = scalar_map<T>();
-            auto it = map.find(h);
-            if (it != map.end())
-                return it->second;
-            if (m_parent)
-                return m_parent->template get<T, Key>();
+            if (auto *p = find_scalar<T>(h))
+                return *p;
             throw LogicError("value not found for key");
         }
 
-        /// @brief Const overload of get().
+        /// @brief Const overload.
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
         const T &get() const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = scalar_map<T>();
-            auto it = map.find(h);
-            if (it != map.end())
-                return it->second;
-            if (m_parent)
-                return m_parent->template get<T, Key>();
+            if (auto *p = find_scalar<T>(h))
+                return *p;
             throw LogicError("value not found for key");
         }
 
@@ -74,48 +64,28 @@ namespace pjh::cli
             requires detail::OptionKey<decltype(Key)>
         bool has() const noexcept
         {
-            constexpr auto h = key_hash(Key);
-            if (m_present.contains(h))
-                return true;
-            if (m_parent)
-                return m_parent->template has<Key>();
-            return false;
+            return has_in_chain(key_hash(Key));
         }
 
         /// @brief Try to retrieve a value; returns None if absent (no throw).
-        /// @tparam T Expected value type.
-        /// @tparam Key Compile-time key.
-        /// @return `Option<T>` — `Some(value)` if present, `None()` if absent.
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
         pjh::result::Option<T> try_get() const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = scalar_map<T>();
-            auto it = map.find(h);
-            if (it != map.end())
-                return pjh::result::Option<T>::Some(it->second);
-            if (m_parent)
-                return m_parent->template try_get<T, Key>();
+            if (auto *p = find_scalar<T>(h))
+                return pjh::result::Option<T>::Some(*p);
             return pjh::result::Option<T>::None();
         }
 
         /// @brief Retrieve a value or return @p fallback if absent (no throw).
-        /// @tparam T Expected value type.
-        /// @tparam Key Compile-time key.
-        /// @param fallback Default to use if the key has no stored value.
-        /// @return The stored value, or @p fallback.
         template <detail::BuiltinType T, auto Key>
             requires detail::OptionKey<decltype(Key)>
         T get_or(T fallback) const
         {
             constexpr auto h = key_hash(Key);
-            auto &map = scalar_map<T>();
-            auto it = map.find(h);
-            if (it != map.end())
-                return it->second;
-            if (m_parent)
-                return m_parent->template get_or<T, Key>(fallback);
+            if (auto *p = find_scalar<T>(h))
+                return *p;
             return fallback;
         }
 
@@ -128,28 +98,14 @@ namespace pjh::cli
         }
 
         /// @brief Check if a value exists by runtime hash (used internally).
-        bool has_value(size_t hash) const noexcept
-        {
-            if (m_present.contains(hash))
-                return true;
-            if (m_parent)
-                return m_parent->has_value(hash);
-            return false;
-        }
+        bool has_value(size_t hash) const noexcept { return has_in_chain(hash); }
 
         /// @brief Get a value by runtime hash (used internally).
-        /// @tparam T Expected value type.
-        /// @param hash Runtime key hash.
-        /// @param default_val Fallback if not found.
         template <detail::BuiltinType T>
         T get_value(size_t hash, T default_val) const
         {
-            auto &map = scalar_map<T>();
-            auto it = map.find(hash);
-            if (it != map.end())
-                return it->second;
-            if (m_parent)
-                return m_parent->template get_value<T>(hash, default_val);
+            if (auto *p = find_scalar<T>(hash))
+                return *p;
             return default_val;
         }
 
@@ -189,11 +145,9 @@ namespace pjh::cli
         const std::vector<T> &get_all() const
         {
             constexpr auto h = key_hash(Key);
-            auto &vec = vector_map<T>();
-            auto it = vec.find(h);
-            if (it == vec.end())
-                throw LogicError("value not found for key");
-            return it->second;
+            if (auto *p = find_vector<T>(h))
+                return *p;
+            throw LogicError("value not found for key");
         }
 
         /// @brief Append an extra positional arg (used internally by parser).
@@ -239,6 +193,42 @@ namespace pjh::cli
         auto const &vector_map() const noexcept
         {
             return std::get<detail::type_index_v<T>>(m_vectors);
+        }
+
+        // ── Chain lookup helpers ──
+
+        template <detail::BuiltinType T>
+        T *find_scalar(size_t hash) noexcept
+        {
+            auto it = scalar_map<T>().find(hash);
+            if (it != scalar_map<T>().end())
+                return &it->second;
+            return m_parent ? m_parent->template find_scalar<T>(hash) : nullptr;
+        }
+
+        template <detail::BuiltinType T>
+        const T *find_scalar(size_t hash) const noexcept
+        {
+            auto it = scalar_map<T>().find(hash);
+            if (it != scalar_map<T>().end())
+                return &it->second;
+            return m_parent ? m_parent->template find_scalar<T>(hash) : nullptr;
+        }
+
+        template <detail::BuiltinType T>
+        const std::vector<T> *find_vector(size_t hash) const noexcept
+        {
+            auto it = vector_map<T>().find(hash);
+            if (it != vector_map<T>().end())
+                return &it->second;
+            return m_parent ? m_parent->template find_vector<T>(hash) : nullptr;
+        }
+
+        bool has_in_chain(size_t hash) const noexcept
+        {
+            if (m_present.contains(hash))
+                return true;
+            return m_parent ? m_parent->has_in_chain(hash) : false;
         }
 
         ScalarMaps m_scalars;
