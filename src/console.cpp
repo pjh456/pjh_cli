@@ -90,7 +90,7 @@ namespace pjh::cli
             }
             if (!found)
             {
-                auto fuzzy = fuzzy_find_subcommands(m_root, query, 3);
+                auto fuzzy = fuzzy_find_subcommands(m_root, query, 3, Visibility::Repl);
                 if (!fuzzy.empty())
                 {
                     std::cout << "Did you mean:";
@@ -133,7 +133,8 @@ namespace pjh::cli
                     auto *sub = branch->find_subcommand(tokens[i]);
                     if (!sub)
                     {
-                        auto fuzzy = fuzzy_find_subcommands(*branch, tokens[i], 3);
+                        auto fuzzy = fuzzy_find_subcommands(
+                            *branch, tokens[i], 3, Visibility::Repl);
                         if (!fuzzy.empty())
                         {
                             std::cout << "Unknown subcommand '" << tokens[i]
