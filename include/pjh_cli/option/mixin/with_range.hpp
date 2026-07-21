@@ -42,10 +42,11 @@ namespace pjh::cli::detail
 namespace pjh::cli
 {
 
-    /// @brief Mixin: adds min/max range validation to an OptionDef-derived class.
-    /// @tparam T       Numeric type (int, double).
-    /// @tparam Derived Concrete class (CRTP).
-    /// @tparam Base    Base class to extend (required).
+    /// @brief Mixin: adds numeric range validation (min / max).
+    ///
+    /// Overrides `convert_value` (using Converter<T>) and `validate_value`
+    /// (checking min/max bounds).  Calls Base::validate_value to chain
+    /// downstream validation (e.g. WithChoices).
     template <typename T, typename Derived, typename Base>
         requires detail::NumericOptionType<T> && std::derived_from<Base, OptionDef>
     class WithRange : public Base
@@ -55,13 +56,26 @@ namespace pjh::cli
         pjh::result::Option<T> m_max = pjh::result::Option<T>::None();
 
     public:
-        CliResult<void> parse_value(
-            ParseContext &ctx, std::string_view raw) const override
+        Derived &min(T v)
         {
-            auto r = Converter<T>::from_string(raw);
-            if (r.is_err())
-                return CliResult<void>::Err(std::move(r).unwrap_err());
-            T v = r.unwrap();
+            m_min = pjh::result::Option<T>::Some(std::move(v));
+            return static_cast<Derived &>(*this);
+        }
+
+        Derived &max(T v)
+        {
+            m_max = pjh::result::Option<T>::Some(std::move(v));
+            return static_cast<Derived &>(*this);
+        }
+
+    protected:
+        CliResult<T> convert_value(std::string_view raw) const override
+        {
+            return Converter<T>::from_string(raw);
+        }
+
+        CliResult<void> validate_value(const T &v, std::string_view raw) const override
+        {
             if (this->m_min.is_some() && v < this->m_min.unwrap())
                 return CliFailure{value_out_of_range(
                     this->m_long_name, raw, this->m_min.unwrap(),
@@ -73,19 +87,7 @@ namespace pjh::cli
                     this->m_min.is_some() ? this->m_min.unwrap()
                                           : detail::range_lower<T>(v),
                     this->m_max.unwrap())};
-            return this->store_or_append(ctx, this->m_key_hash, v);
-        }
-
-        Derived &min(T v)
-        {
-            m_min = pjh::result::Option<T>::Some(std::move(v));
-            return static_cast<Derived &>(*this);
-        }
-
-        Derived &max(T v)
-        {
-            m_max = pjh::result::Option<T>::Some(std::move(v));
-            return static_cast<Derived &>(*this);
+            return Base::validate_value(v, raw);
         }
     };
 

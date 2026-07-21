@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <pjh_result.hpp>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "pjh_cli/option_def.hpp"
@@ -45,16 +46,19 @@ namespace pjh::cli::detail
     {
         return v.string();
     }
-
 }  // namespace pjh::cli::detail
 
 namespace pjh::cli
 {
 
-    /// @brief Mixin: adds default value support to an OptionDef-derived class.
-    /// @tparam T       Stored value type (must satisfy BuiltinType).
-    /// @tparam Derived Concrete class (CRTP).
-    /// @tparam Base    Base class to extend (defaults to OptionDef).
+    /// @brief Mixin: adds default value support + parse-value pipeline.
+    ///
+    /// Defines the `parse_value` pipeline as a non-overridable final method that
+    /// delegates to two virtual hooks:
+    ///   - `convert_value(raw)`  — string → T conversion
+    ///   - `validate_value(v, raw)` — post-conversion validation (chained)
+    ///
+    /// Subclasses and downstream mixins override the hooks instead of `parse_value`.
     template <typename T, typename Derived, typename Base = OptionDef>
         requires detail::BuiltinType<T> && std::derived_from<Base, OptionDef>
     class WithDefault : public Base
@@ -72,6 +76,19 @@ namespace pjh::cli
             return "";
         }
 
+        /// @brief Parse pipeline:  convert → validate → store.  Not overridable.
+        CliResult<void> parse_value(
+            ParseContext &ctx, std::string_view raw) const final override
+        {
+            auto r = convert_value(raw);
+            if (r.is_err())
+                return CliResult<void>::Err(std::move(r).unwrap_err());
+            auto vr = validate_value(r.unwrap(), raw);
+            if (vr.is_err())
+                return vr;
+            return this->store_or_append(ctx, this->m_key_hash, std::move(r.unwrap()));
+        }
+
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
             if (m_default.is_some() && !ctx.has_value(this->m_key_hash))
@@ -83,6 +100,19 @@ namespace pjh::cli
         {
             m_default = pjh::result::Option<T>::Some(std::move(v));
             return static_cast<Derived &>(*this);
+        }
+
+    protected:
+        /// @brief Convert raw string → typed value. Override in value-owning mixins.
+        virtual CliResult<T> convert_value(std::string_view) const
+        {
+            return CliFailure{CliError("option does not accept a value")};
+        }
+
+        /// @brief Validate a parsed typed value. Chain by calling Base::validate_value.
+        virtual CliResult<void> validate_value(const T &, std::string_view) const
+        {
+            return CliResult<void>::Ok();
         }
     };
 
