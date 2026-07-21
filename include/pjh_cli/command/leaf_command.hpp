@@ -33,7 +33,6 @@ namespace pjh::cli
             auto &def = m_args.emplace_back();
             def.m_name = std::move(name);
             def.m_description = std::move(description);
-            def.m_index = Index;
             def.m_key_hash = h;
             def.m_value_tag = detail::value_tag_v<T>;
 

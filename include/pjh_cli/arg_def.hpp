@@ -15,7 +15,6 @@ namespace pjh::cli
     {
         std::string m_name;         ///< Display name for help / error messages
         std::string m_description;  ///< Help text
-        size_t m_index{};           ///< Positional index
         bool m_required{};          ///< Fail parse if not provided
         size_t m_key_hash{};        ///< Runtime hash (== compile-time key_hash(index))
         ValueTag m_value_tag{};     ///< Type tag for runtime dispatch

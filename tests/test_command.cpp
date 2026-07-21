@@ -113,12 +113,12 @@ TEST_CASE("Arg registration")
 
     auto &arg1 = cmd.arg<std::string, 0>("source", "Source file");
     CHECK(arg1.m_name == "source");
-    CHECK(arg1.m_index == 0);
+    CHECK(arg1.m_key_hash == 0);
     CHECK(arg1.m_required == false);
 
     auto &arg2 = cmd.arg<std::string, 1>("dest", "Destination").required();
     CHECK(arg2.m_name == "dest");
-    CHECK(arg2.m_index == 1);
+    CHECK(arg2.m_key_hash == 1);
     CHECK(arg2.m_required == true);
 }
 
@@ -318,7 +318,7 @@ TEST_CASE("ArgDef reference stability across registrations")
 
     CHECK(&first == addr);
     CHECK(first.m_name == "arg0");
-    CHECK(first.m_index == 0);
+    CHECK(first.m_key_hash == 0);
     first.m_name = "modified";
     CHECK(first.m_name == "modified");
 }
