@@ -86,7 +86,7 @@ namespace pjh::cli
             size_t &i,
             std::span<const std::string_view> args)
         {
-            auto parsed = detail::parse_long_option(arg);
+            auto parsed = detail::Tokenizer::parse_long_option(arg);
 
             auto *opt = cmd.find_option_by_long(parsed.name);
             if (!opt)

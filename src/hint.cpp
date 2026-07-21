@@ -43,7 +43,7 @@ namespace pjh::cli
     HintContext HintBuilder::build_context(
         const BaseCommand &root, std::string_view input)
     {
-        auto tokens = detail::tokenize_input(input);
+        auto tokens = detail::Tokenizer::tokenize(input);
         const BaseCommand *cmd = &root;
         size_t arg_pos = 0;
 

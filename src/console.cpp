@@ -106,7 +106,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        auto tokens = detail::tokenize_input(line);
+        auto tokens = detail::Tokenizer::tokenize(line);
         if (tokens.empty())
             return CliResult<void>::Ok();
 
