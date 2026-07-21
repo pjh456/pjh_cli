@@ -5,7 +5,7 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/converter.hpp>
-#include <pjh_cli/detail/string_utils.hpp>
+#include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
 #include <span>
@@ -85,33 +85,33 @@ namespace pjh::cli
             size_t &i,
             std::span<const std::string_view> args)
         {
-            auto [name, value, has_eq] = detail::split_name_value(arg.substr(2));
+            auto parsed = detail::parse_long_option(arg);
 
-            auto *opt = cmd.find_option_by_long(name);
+            auto *opt = cmd.find_option_by_long(parsed.name);
             if (!opt)
             {
-                if (name.size() > 3 && name.substr(0, 3) == "no-")
+                if (parsed.is_negation)
                 {
-                    auto *neg = cmd.find_option_by_long(name.substr(3));
+                    auto *neg = cmd.find_option_by_long(parsed.negated_name);
                     if (neg && neg->is_negatable())
                     {
                         ctx.set_value<bool>(neg->key_hash(), false);
                         return CliResult<void>::Ok();
                     }
                 }
-                return CliFailure{unknown_option(std::format("--{}", name))};
+                return CliFailure{unknown_option(std::format("--{}", parsed.name))};
             }
 
             if (opt->has_value())
             {
-                if (has_eq)
+                if (parsed.has_equals)
                 {
-                    if (value.empty())
-                        return CliFailure{missing_value(std::format("--{}", name))};
-                    return opt->parse_value(ctx, value);
+                    if (parsed.value.empty())
+                        return CliFailure{missing_value(std::format("--{}", parsed.name))};
+                    return opt->parse_value(ctx, parsed.value);
                 }
                 if (i + 1 >= args.size())
-                    return CliFailure{missing_value(std::format("--{}", name))};
+                    return CliFailure{missing_value(std::format("--{}", parsed.name))};
                 return opt->parse_value(ctx, args[++i]);
             }
 

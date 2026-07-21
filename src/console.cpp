@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <iostream>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
 #include <string>
@@ -44,41 +45,6 @@ namespace pjh::cli
     }
 
     void InteractiveConsole::stop() { m_running = false; }
-
-    namespace
-    {
-        std::vector<std::string> tokenize_line(const std::string &line)
-        {
-            std::vector<std::string> tokens;
-            std::string tok;
-            bool in_quote = false;
-
-            for (size_t i = 0; i < line.size(); i++)
-            {
-                char c = line[i];
-                if (c == '"')
-                {
-                    in_quote = !in_quote;
-                    continue;
-                }
-                if (c == ' ' && !in_quote)
-                {
-                    if (!tok.empty())
-                    {
-                        tokens.push_back(std::move(tok));
-                        tok.clear();
-                    }
-                    continue;
-                }
-                tok += c;
-            }
-            if (!tok.empty())
-                tokens.push_back(std::move(tok));
-
-            return tokens;
-        }
-
-    }  // namespace
 
     CliResult<void> InteractiveConsole::process_line(const std::string &line)
     {
@@ -140,7 +106,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        auto tokens = tokenize_line(line);
+        auto tokens = detail::tokenize_input(line);
         if (tokens.empty())
             return CliResult<void>::Ok();
 

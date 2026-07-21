@@ -1,5 +1,6 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/hint.hpp>
 #include <sstream>
 #include <string>
@@ -28,36 +29,10 @@ namespace pjh::cli
         return "STR";
     }
 
-    namespace
-    {
-        std::vector<std::string> tokenize(std::string_view input)
-        {
-            std::vector<std::string> tokens;
-            std::string tok;
-            for (size_t i = 0; i < input.size(); i++)
-            {
-                char c = input[i];
-                if (c == ' ')
-                {
-                    if (!tok.empty())
-                    {
-                        tokens.push_back(std::move(tok));
-                        tok.clear();
-                    }
-                    continue;
-                }
-                tok += c;
-            }
-            if (!tok.empty())
-                tokens.push_back(std::move(tok));
-            return tokens;
-        }
-    }  // namespace
-
     std::string format_hint(
         const BaseCommand &root, std::string_view input, HintConfig config)
     {
-        auto tokens = tokenize(input);
+        auto tokens = detail::tokenize_input(input);
         const BaseCommand *cmd = &root;
         size_t arg_pos = 0;
 
