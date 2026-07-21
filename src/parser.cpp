@@ -29,35 +29,15 @@ namespace pjh::cli
         switch (tag)
         {
         case ValueTag::Bool:
-        {
-            auto r = Converter<bool>::from_string(s);
-            if (r.is_err())
-                return CliResult<void>::Err(std::move(r).unwrap_err());
-            ctx.set_value<bool>(hash, r.unwrap());
-            return CliResult<void>::Ok();
-        }
+            return convert_and_set<bool>(ctx, hash, s);
         case ValueTag::Int:
-        {
-            auto r = Converter<int>::from_string(s);
-            if (r.is_err())
-                return CliResult<void>::Err(std::move(r).unwrap_err());
-            ctx.set_value<int>(hash, r.unwrap());
-            return CliResult<void>::Ok();
-        }
+            return convert_and_set<int>(ctx, hash, s);
         case ValueTag::Double:
-        {
-            auto r = Converter<double>::from_string(s);
-            if (r.is_err())
-                return CliResult<void>::Err(std::move(r).unwrap_err());
-            ctx.set_value<double>(hash, r.unwrap());
-            return CliResult<void>::Ok();
-        }
+            return convert_and_set<double>(ctx, hash, s);
         case ValueTag::String:
-            ctx.set_value<std::string>(hash, std::string(s));
-            return CliResult<void>::Ok();
+            return convert_and_set<std::string>(ctx, hash, s);
         case ValueTag::Path:
-            ctx.set_value<std::filesystem::path>(hash, std::filesystem::path(s));
-            return CliResult<void>::Ok();
+            return convert_and_set<std::filesystem::path>(ctx, hash, s);
         }
         return CliResult<void>::Ok();
     }
@@ -225,8 +205,7 @@ namespace pjh::cli
         return nullptr;
     }
     pjh::result::Option<ParseContext> Parser::try_handle_help(
-        BaseCommand *cmd, ParseContext &&ctx,
-        std::string_view a, bool double_dash)
+        BaseCommand *cmd, ParseContext &&ctx, std::string_view a, bool double_dash)
     {
         if (double_dash || (a != "--help" && a != "-h"))
             return pjh::result::Option<ParseContext>::None();

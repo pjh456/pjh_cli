@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "command/branch_command.hpp"
+#include "converter.hpp"
 #include "parse_context.hpp"
 #include "type.hpp"
 
@@ -149,6 +150,38 @@ namespace pjh::cli
         /// @param opt  The matched option definition (must be non-null).
         /// @param ctx  Parse context to write into.
         static void apply_flag(const OptionDef *opt, ParseContext &ctx);
+
+        /// @brief Convert a raw string to type T and store it in @p ctx.
+        ///
+        /// For bool/int/double the conversion uses Converter<T>::from_string;
+        /// for string/path the value is constructed directly.  On conversion
+        /// failure the CliError is propagated.
+        /// @tparam T Target type (must satisfy BuiltinType).
+        /// @param ctx  Parse context to write into.
+        /// @param hash Key hash from the ArgDef.
+        /// @param s    Raw input string.
+        /// @return Ok or Err with a type-conversion error.
+        template <detail::BuiltinType T>
+        static CliResult<void> convert_and_set(
+            ParseContext &ctx, size_t hash, std::string_view s)
+        {
+            if constexpr (std::same_as<T, std::string>)
+            {
+                ctx.set_value<std::string>(hash, std::string(s));
+            }
+            else if constexpr (std::same_as<T, std::filesystem::path>)
+            {
+                ctx.set_value<std::filesystem::path>(hash, std::filesystem::path(s));
+            }
+            else
+            {
+                auto r = Converter<T>::from_string(s);
+                if (r.is_err())
+                    return CliResult<void>::Err(std::move(r).unwrap_err());
+                ctx.set_value<T>(hash, r.unwrap());
+            }
+            return CliResult<void>::Ok();
+        }
 
         /// @brief Finalise parsing: apply defaults, env-vars, and required checks.
         ///
