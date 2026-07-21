@@ -31,16 +31,22 @@ namespace pjh::cli
 
     /// @brief Bitmask flags controlling where a Command appears.
     ///
-    /// Combine with `|`: `set_visibility(Visibility::Cli | Visibility::Repl)`
+    /// Combine with `|`:
+    /// @code
+    ///   cmd.set_visibility(Visibility::Cli | Visibility::Repl);
+    /// @endcode
     enum class Visibility : unsigned
     {
         Hidden = 0,  ///< Hidden from help / completion everywhere
-        Repl = 1,    ///< Visible in interactive REPL
-        Cli = 2,     ///< Visible in batch CLI
+        Repl = 1,    ///< Visible in interactive REPL only
+        Cli = 2,     ///< Visible in batch CLI only
         Both = 3,    ///< Visible everywhere (default)
     };
 
     /// @brief Bitwise OR for Visibility flags.
+    /// @param a First visibility value.
+    /// @param b Second visibility value.
+    /// @return Combined visibility.
     constexpr Visibility operator|(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
@@ -48,6 +54,9 @@ namespace pjh::cli
     }
 
     /// @brief Bitwise AND for Visibility flags.
+    /// @param a First visibility value.
+    /// @param b Second visibility value.
+    /// @return Intersection of the two flags.
     constexpr Visibility operator&(Visibility a, Visibility b) noexcept
     {
         return static_cast<Visibility>(
@@ -68,8 +77,10 @@ namespace pjh::cli
         /// @brief Dispatch an OptionBuilder to the correct typed subclass and
         ///        set a default value.
         ///
-        /// Used by the option<Key>(name, desc, T) auto-dispatch overloads.
-        /// @tparam T Computed from the default value argument.
+        /// Used by the convenience option<Key>(name, desc, T) overloads that
+        /// infer the option type from the default value argument type.
+        /// @tparam T Computed from the default value argument (bool → BoolOption,
+        ///           int → IntOption, string → StrOption, etc.).
         /// @tparam Builder OptionBuilder<Key> deduced at call site.
         template <typename T, typename Builder>
             requires detail::BuiltinType<T>
@@ -91,15 +102,21 @@ namespace pjh::cli
     /// @brief Base node in the command tree.
     ///
     /// Every command can hold:
-    ///   - Named options (--flag -o) via option<Key>() / option<T, Key>()
+    ///   - Named options (--flag -o) registered via option<Key>() / option<T, Key>().
     ///
-    /// BranchCommand and LeafCommand inherit from this base.
-    /// Branch commands have subcommands (add_branch / add_leaf).
-    /// Leaf commands have positional arguments (arg<T, Index>()).
+    /// BranchCommand and LeafCommand extend this base.
+    ///   - Branch commands have child subcommands (add_branch / add_leaf).
+    ///   - Leaf commands have positional arguments (arg<T, Index>()).
+    ///
+    /// Options are stored polymorphically (unique_ptr<OptionDef>) — the builder
+    /// pattern (OptionBuilder) ensures each option is instantiated as the correct
+    /// typed subclass (IntOption, BoolOption, etc.).
     class BaseCommand
     {
     public:
-        /// @brief Construct a command with optional name and description.
+        /// @brief Construct a named command.
+        /// @param name        Command name (e.g. "serve").
+        /// @param description Help text description.
         explicit BaseCommand(std::string name = "", std::string description = "");
         virtual ~BaseCommand() = default;
 
@@ -110,62 +127,69 @@ namespace pjh::cli
 
         // ── Queries ──
 
-        /// @brief Command name (e.g. "serve").
+        /// @brief Command display name.
+        /// @return The value passed at construction, e.g. "serve".
         const std::string &name() const noexcept { return m_name; }
 
-        /// @brief Help description.
+        /// @brief Help description text.
         const std::string &description() const noexcept { return m_description; }
 
-        /// @brief Current visibility flags.
+        /// @brief Current visibility flags (default Both).
         Visibility visibility() const noexcept { return m_visibility; }
 
         /// @brief Evaluate the enabled predicate.
+        /// @return true if the command is enabled (i.e., visible to matching).
         bool is_enabled() const { return m_enabled(); }
 
-        /// @brief Parent command (nullptr for root).
+        /// @brief Parent command (nullptr for the root / App instance).
         BaseCommand *parent() const noexcept { return m_parent; }
 
-        /// @brief Current extra args policy.
+        /// @brief Current extra args policy (default Ignore).
         ExtraArgsPolicy extra_args_policy() const noexcept { return m_extra_args_policy; }
 
         /// @brief All registered options (pointer-based, polymorphic).
+        /// @return Deque of unique_ptr<OptionDef> in registration order.
         const std::deque<std::unique_ptr<OptionDef>> &options() const noexcept
         {
             return m_options;
         }
 
-        /// @brief Look up an option by its long name (without -- prefix).
+        /// @brief Look up an option by its long name.
+        /// @param name Long option name without "--" prefix (e.g. "verbose").
+        /// @return Pointer to OptionDef, or nullptr if not found.
         const OptionDef *find_option_by_long(std::string_view name) const noexcept;
 
         /// @brief Look up an option by its short character.
+        /// @param c Single-character short option, e.g. 'v'.
+        /// @return Pointer to OptionDef, or nullptr if not found.
         const OptionDef *find_option_by_short(char c) const noexcept;
 
         // ── Type queries ──
 
         /// @brief Downcast to BranchCommand (nullptr if this is a leaf).
         virtual BranchCommand *as_branch() noexcept { return nullptr; }
-
-        /// @brief Const overload of as_branch().
+        /// @brief Const overload.
         virtual const BranchCommand *as_branch() const noexcept { return nullptr; }
 
         /// @brief Downcast to LeafCommand (nullptr if this is a branch).
         virtual LeafCommand *as_leaf() noexcept { return nullptr; }
-
-        /// @brief Const overload of as_leaf().
+        /// @brief Const overload.
         virtual const LeafCommand *as_leaf() const noexcept { return nullptr; }
 
-        /// @brief True if this is a BranchCommand.
+        /// @brief True if this command can have subcommands.
         bool is_branch() const noexcept { return as_branch() != nullptr; }
 
-        /// @brief True if this is a LeafCommand.
+        /// @brief True if this command has positional arguments.
         bool is_leaf() const noexcept { return as_leaf() != nullptr; }
 
         // ── Option registration ──
 
-        /// @brief Register an option. Chain .integer()/.boolean()/… to set type.
-        /// @tparam Key Compile-time identifier (fixed_string).
-        /// @return OptionBuilder for attaching a type dispatch and further
-        ///         chain calls.
+        /// @brief Register an option without a short name.
+        /// @tparam Key Compile-time identifier (fixed_string literal).
+        /// @param long_name   Long option name (with or without "--" prefix).
+        /// @param description Help text description.
+        /// @return OptionBuilder for chaining a type dispatch (.integer() / .boolean() /
+        /// …).
         template <auto Key>
             requires detail::OptionKey<decltype(Key)>
         OptionBuilder<Key> option(std::string long_name, std::string description)
@@ -175,8 +199,10 @@ namespace pjh::cli
         }
 
         /// @brief Register an option with a short name.
-        /// @tparam Key Compile-time identifier (fixed_string).
-        /// @param short_name Single-character short form (e.g. 'v').
+        /// @tparam Key Compile-time identifier.
+        /// @param long_name   Long option name.
+        /// @param short_name  Single-character short form (e.g. 'v').
+        /// @param description Help text.
         template <auto Key>
             requires detail::OptionKey<decltype(Key)>
         OptionBuilder<Key> option(
@@ -188,12 +214,14 @@ namespace pjh::cli
             return builder;
         }
 
-        /// @brief Register an option with a default value.
+        /// @brief Register an option with a default value (type inferred from
+        ///        the argument).
         ///
-        /// Dispatches to the correct typed subclass based on the type of
-        /// @p default_value (int -> IntOption, bool -> BoolOption, etc.).
         /// @tparam Key  Compile-time identifier.
         /// @tparam T    Auto-deduced from default_value.
+        /// @param long_name   Long option name.
+        /// @param description Help text.
+        /// @param default_value  Default applied when the option is absent.
         /// @return Reference to the created typed option (as OptionDef&).
         template <auto Key, typename T>
             requires detail::BuiltinType<T>
@@ -222,17 +250,27 @@ namespace pjh::cli
 
         // ── Setters ──
 
-        /// @brief Set visibility level (affects help / REPL matching).
+        /// @brief Set visibility level (affects help / completion / REPL matching).
+        /// @param v Visibility bitmask.
+        /// @return *this for chaining.
         BaseCommand &set_visibility(Visibility v);
 
         /// @brief Set the runtime enable predicate.
-        ///        A disabled command is treated as non-existent during matching.
+        ///
+        /// A disabled command is treated as non-existent during matching.
+        /// Matching a disabled command produces `command_disabled` error.
+        /// @param pred Nullary functor; return false to disable.
         BaseCommand &enabled(std::function<bool()> pred);
 
-        /// @brief Set the action callback invoked when this command is matched.
+        /// @brief Register the action callback invoked when this command is
+        ///        matched and parsed successfully.
+        /// @param fn Callback receiving the populated ParseContext.
+        /// @return *this for chaining.
         BaseCommand &action(std::function<CliResult<void>(ParseContext &)> fn);
 
-        /// @brief Set extra positional args handling policy (default: Ignore).
+        /// @brief Set extra positional args handling policy.
+        /// @param p One of Ignore / Error / Store.
+        /// @return *this for chaining.
         BaseCommand &set_extra_args(ExtraArgsPolicy p);
 
         // ── Lifecycle ──
@@ -241,14 +279,23 @@ namespace pjh::cli
         ParseContext create_context() const noexcept;
 
         /// @brief Pre-fill context with default values from registered options.
+        ///
+        /// Iterates all options; for each option with has_default() and no
+        /// user-supplied value, calls opt->apply_default().
+        /// @param ctx Parse context to modify.
+        /// @return Ok or Err if a default value failed to parse.
         CliResult<void> apply_defaults(ParseContext &ctx) const;
 
         /// @brief Execute the registered action callback.
+        /// @param ctx Fully populated ParseContext from the parser.
+        /// @return The result of the action callback, or Ok if none registered.
         CliResult<void> execute(ParseContext &ctx) const;
 
     public:
         /// @brief Internal — register an option definition.
-        /// @note Public because OptionBuilder and derived types need access.
+        ///
+        /// Populates both lookup maps and the ordered option list.
+        /// @note Public because OptionBuilder and typed subclasses need access.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             m_option_by_long[opt->long_name()] = opt.get();
@@ -257,6 +304,7 @@ namespace pjh::cli
             m_options.push_back(std::move(opt));
         }
 
+        /// @brief Internal — set the parent pointer.
         void set_parent(BaseCommand *parent) noexcept { m_parent = parent; }
 
         std::string m_name;
@@ -284,7 +332,12 @@ namespace pjh::cli
 
     // ── OptionBuilder method definitions ──
 
-    /// @brief Common factory: strip leading --, create typed option, register on command.
+    /// @brief Common factory: strip leading "--", create typed option,
+    ///        register on command.
+    /// @tparam Opt Concrete option type (e.g. IntOption).
+    /// @tparam Tag Matching ValueTag.
+    /// @param has_val Whether the option consumes a value token.
+    /// @return Reference to the newly registered option.
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     template <typename Opt, ValueTag Tag>

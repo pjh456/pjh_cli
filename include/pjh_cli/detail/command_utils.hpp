@@ -12,6 +12,14 @@
 namespace pjh::cli::detail
 {
 
+    /// @brief Check whether a command should be listed in UI output.
+    ///
+    /// Returns true only if the command is enabled and its visibility
+    /// mask includes the requested @p mode.
+    ///
+    /// @param cmd   The command to check.
+    /// @param mode  The active visibility mode (Repl, Cli, Both, Hidden).
+    /// @return true if the command is visible and enabled.
     inline bool is_visible_and_enabled(const BaseCommand &cmd, Visibility mode) noexcept
     {
         if (!cmd.is_enabled())
@@ -21,6 +29,22 @@ namespace pjh::cli::detail
         return true;
     }
 
+    /// @brief Build a display label for an OptionDef (used in usage lines).
+    ///
+    /// Produces labels like:
+    ///   - `"-v"`
+    ///   - `"--verbose"`
+    ///   - `"-v, --verbose"`
+    ///   - `"-p, --port PORT"`
+    ///
+    /// The value placeholder is the option name uppercased.
+    /// Intended for format_usage() rendering directly from the command tree
+    /// (as opposed to option_label(OptionInfo) in HelpFormatter for the
+    /// pre-collected help path).
+    ///
+    /// @param opt  Option definition from the command tree.
+    /// @param sep  Separator between short and long names (default ", ").
+    /// @return Formatted label string.
     inline std::string option_left_label(
         const OptionDef &opt, std::string_view sep = ", ")
     {

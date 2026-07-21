@@ -5,7 +5,7 @@
 
 namespace pjh::cli
 {
-    /// @brief Classification of a parsed token.
+    /// @brief Classification of a single parsed CLI token.
     enum class TokenKind
     {
         ShortOption,  ///< Single-dash short option, e.g. `-v`
@@ -14,11 +14,11 @@ namespace pjh::cli
         DoubleDash,   ///< The `--` terminator token
     };
 
-    /// @brief A single token from the argument tokenizer.
+    /// @brief A single token produced by the argument tokenizer.
     struct Token
     {
-        TokenKind kind;     ///< Kind of this token
-        std::string value;  ///< Token text (option name, value, or "--")
+        TokenKind kind;     ///< Classification of this token.
+        std::string value;  ///< Token text (option name without dashes, value, or "--").
     };
 
 }  // namespace pjh::cli

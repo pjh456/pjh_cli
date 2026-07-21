@@ -19,6 +19,10 @@ namespace pjh::cli::detail
     template <typename T>
     concept NumericOptionType = detail::BuiltinType<T> && std::is_arithmetic_v<T>;
 
+    /// @brief Compute an upper bound for error display when only min is set.
+    /// @tparam T Numeric type.
+    /// @param v The min bound value.
+    /// @return v+1 for floats, numeric_limits::max() for integers.
     template <NumericOptionType T>
     T range_upper(const T &v) noexcept
     {
@@ -28,6 +32,10 @@ namespace pjh::cli::detail
             return std::numeric_limits<T>::max();
     }
 
+    /// @brief Compute a lower bound for error display when only max is set.
+    /// @tparam T Numeric type.
+    /// @param v The max bound value.
+    /// @return v-1 for floats, numeric_limits::lowest() for integers.
     template <NumericOptionType T>
     T range_lower(const T &v) noexcept
     {
@@ -56,12 +64,18 @@ namespace pjh::cli
         pjh::result::Option<T> m_max = pjh::result::Option<T>::None();
 
     public:
+        /// @brief Set the inclusive minimum value.
+        /// @param v Lower bound (inclusive).
+        /// @return *this for chaining.
         Derived &min(T v)
         {
             m_min = pjh::result::Option<T>::Some(std::move(v));
             return static_cast<Derived &>(*this);
         }
 
+        /// @brief Set the inclusive maximum value.
+        /// @param v Upper bound (inclusive).
+        /// @return *this for chaining.
         Derived &max(T v)
         {
             m_max = pjh::result::Option<T>::Some(std::move(v));

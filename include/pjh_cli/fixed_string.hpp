@@ -45,10 +45,17 @@ namespace pjh::cli
     fixed_string(const char (&)[N]) -> fixed_string<N>;
 
     /// @brief Hash a size_t key (identity — positional arg index is its own hash).
+    /// @param k The value to hash (returns k unchanged).
+    /// @return k.
     consteval size_t key_hash(size_t k) noexcept { return k; }
 
     /// @brief Hash a fixed_string key (FNV-1a).
+    ///
+    /// Uses the FNV-1a 64-bit hash algorithm over the string_view content
+    /// (excluding null terminator).
     /// @tparam N String length including null terminator.
+    /// @param s The compile-time string to hash.
+    /// @return 64-bit hash value.
     template <size_t N>
     consteval size_t key_hash(const fixed_string<N> &s) noexcept
     {

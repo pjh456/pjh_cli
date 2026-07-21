@@ -16,6 +16,11 @@
 namespace pjh::cli::detail
 {
 
+    /// @brief Convert a typed value to its string representation for
+    ///        comparison against the allowed-choices list.
+    /// @tparam T Builtin type.
+    /// @param v The value to stringify.
+    /// @return String representation (to_string for numbers, v for strings, etc.).
     template <typename T>
     std::string choice_key(const T &v);
 
@@ -65,6 +70,9 @@ namespace pjh::cli
         std::vector<std::string> m_choices;
 
     public:
+        /// @brief Set the allowed values for this option (exact string match).
+        /// @param vals List of allowed values (copied into internal storage).
+        /// @return *this for chaining.
         Derived &choices(std::vector<std::string> vals)
         {
             m_choices = std::move(vals);

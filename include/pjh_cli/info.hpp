@@ -13,23 +13,28 @@
 namespace pjh::cli
 {
 
-    /// @brief Structured information about a registered option.
+    /// @brief Structured metadata about a registered option.
+    ///
+    /// Produced by collecting data from an OptionDef for use in
+    /// help rendering and hint formatting.  All string_view fields
+    /// alias the command tree's strings.
     struct OptionInfo
     {
-        std::string_view long_name;
-        char short_name = 0;
-        std::string_view description;
-        ValueTag value_tag = ValueTag::Bool;
-        bool has_value = false;
-        bool is_required = false;
-        bool has_default = false;
-        std::string default_str;
-        bool is_negatable = false;
-        bool is_counting = false;
-        std::string_view env_var;
+        std::string_view long_name;           ///< Long option name without "--" prefix.
+        char short_name = 0;                  ///< Short option character (0 if none).
+        std::string_view description;         ///< Help text description.
+        ValueTag value_tag = ValueTag::Bool;  ///< Type tag for display.
+        bool has_value = false;               ///< Whether it consumes a CLI value token.
+        bool is_required = false;             ///< Whether it must appear on the CLI.
+        bool has_default = false;             ///< Whether a typed default is registered.
+        std::string default_str;              ///< Human-readable default value string.
+        bool is_negatable = false;            ///< Whether --no-xxx negation is enabled.
+        bool is_counting = false;             ///< Whether it counts occurrences (-vvv).
+        std::string_view env_var;  ///< Environment variable name (empty if none).
 
         OptionInfo() = default;
 
+        /// @brief Construct from an OptionDef in the command tree.
         explicit OptionInfo(const OptionDef &opt) :
             long_name(opt.long_name()),
             short_name(opt.short_name()),
@@ -46,26 +51,27 @@ namespace pjh::cli
         }
     };
 
-    /// @brief Structured information about a positional argument.
+    /// @brief Structured metadata about a positional argument.
     struct ArgInfo
     {
-        std::string_view name;
-        std::string_view description;
-        bool is_required = false;
+        std::string_view name;         ///< Display name for help / error messages.
+        std::string_view description;  ///< Help text description.
+        bool is_required = false;      ///< Whether a value must be supplied.
 
         ArgInfo() = default;
 
+        /// @brief Construct from an ArgDef.
         explicit ArgInfo(const ArgDef &arg) :
             name(arg.m_name), description(arg.m_description), is_required(arg.m_required)
         {
         }
     };
 
-    /// @brief Structured information about a subcommand.
+    /// @brief Structured metadata about a subcommand.
     struct SubcommandInfo
     {
-        std::string_view name;
-        std::string_view description;
+        std::string_view name;         ///< Subcommand name (e.g. "serve").
+        std::string_view description;  ///< Help text description.
     };
 
     /// @brief Structured help data for a command.
@@ -75,11 +81,11 @@ namespace pjh::cli
     /// as long as the tree exists (typically the program lifetime).
     struct HelpInfo
     {
-        std::string_view program_name;
-        std::string_view description;
-        std::vector<OptionInfo> options;
-        std::vector<ArgInfo> args;
-        std::vector<SubcommandInfo> subcommands;
+        std::string_view program_name;            ///< Binary name for usage line.
+        std::string_view description;             ///< Command description.
+        std::vector<OptionInfo> options;          ///< Registered options.
+        std::vector<ArgInfo> args;                ///< Positional arguments (leaf only).
+        std::vector<SubcommandInfo> subcommands;  ///< Visible child subcommands.
     };
 
     /// @brief Structured context from walking a partial input through the command tree.
@@ -87,10 +93,11 @@ namespace pjh::cli
     /// Built by HintBuilder::build_context() and consumed by HintBuilder::format().
     struct HintContext
     {
-        const BaseCommand *reached_command = nullptr;
-        size_t consumed_positional_args = 0;
-        std::vector<OptionInfo> options;
-        std::vector<ArgInfo> remaining_args;
+        const BaseCommand *reached_command =
+            nullptr;                          ///< Deepest command matched so far.
+        size_t consumed_positional_args = 0;  ///< Number of positional tokens consumed.
+        std::vector<OptionInfo> options;      ///< Options on the reached command.
+        std::vector<ArgInfo> remaining_args;  ///< Unconsumed positional args.
     };
 
 }  // namespace pjh::cli
