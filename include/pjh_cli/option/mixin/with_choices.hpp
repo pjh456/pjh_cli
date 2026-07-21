@@ -78,7 +78,8 @@ namespace pjh::cli
             {
                 auto key = detail::choice_key<T>(v);
                 if (std::ranges::find(m_choices, key) == m_choices.end())
-                    return CliFailure{invalid_choice(this->m_long_name, raw, m_choices)};
+                    return CliFailure{
+                        ErrorFactory::invalid_choice(this->m_long_name, raw, m_choices)};
             }
             return Base::validate_value(v, raw);
         }

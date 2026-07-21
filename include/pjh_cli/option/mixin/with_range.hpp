@@ -77,12 +77,12 @@ namespace pjh::cli
         CliResult<void> validate_value(const T &v, std::string_view raw) const override
         {
             if (this->m_min.is_some() && v < this->m_min.unwrap())
-                return CliFailure{value_out_of_range(
+                return CliFailure{ErrorFactory::value_out_of_range(
                     this->m_long_name, raw, this->m_min.unwrap(),
                     this->m_max.is_some() ? this->m_max.unwrap()
                                           : detail::range_upper<T>(v))};
             if (this->m_max.is_some() && v > this->m_max.unwrap())
-                return CliFailure{value_out_of_range(
+                return CliFailure{ErrorFactory::value_out_of_range(
                     this->m_long_name, raw,
                     this->m_min.is_some() ? this->m_min.unwrap()
                                           : detail::range_lower<T>(v),

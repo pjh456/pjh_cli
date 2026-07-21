@@ -100,7 +100,8 @@ namespace pjh::cli
                         return CliResult<void>::Ok();
                     }
                 }
-                return CliFailure{unknown_option(std::format("--{}", parsed.name))};
+                return CliFailure{
+                    ErrorFactory::unknown_option(std::format("--{}", parsed.name))};
             }
 
             if (opt->has_value())
@@ -108,12 +109,13 @@ namespace pjh::cli
                 if (parsed.has_equals)
                 {
                     if (parsed.value.empty())
-                        return CliFailure{
-                            missing_value(std::format("--{}", parsed.name))};
+                        return CliFailure{ErrorFactory::missing_value(
+                            std::format("--{}", parsed.name))};
                     return opt->parse_value(ctx, parsed.value);
                 }
                 if (i + 1 >= args.size())
-                    return CliFailure{missing_value(std::format("--{}", parsed.name))};
+                    return CliFailure{
+                        ErrorFactory::missing_value(std::format("--{}", parsed.name))};
                 return opt->parse_value(ctx, args[++i]);
             }
 
@@ -158,7 +160,8 @@ namespace pjh::cli
                 char c = arg[j];
                 auto *opt = cmd.find_option_by_short(c);
                 if (!opt)
-                    return CliFailure{unknown_option(std::format("-{}", c))};
+                    return CliFailure{
+                        ErrorFactory::unknown_option(std::format("-{}", c))};
 
                 if (opt->has_value())
                 {
@@ -167,7 +170,8 @@ namespace pjh::cli
                             std::format(
                                 "-{} requires a value as a separate argument", c))};
                     if (i + 1 >= args.size())
-                        return CliFailure{missing_value(std::format("-{}", c))};
+                        return CliFailure{
+                            ErrorFactory::missing_value(std::format("-{}", c))};
                     auto r = opt->parse_value(ctx, args[++i]);
                     if (r.is_err())
                         return r;
@@ -222,7 +226,7 @@ namespace pjh::cli
 
                     if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
                         return CliResult<ParseContext>::Err(
-                            missing_required_option(opt_ptr->long_name()));
+                            ErrorFactory::missing_required_option(opt_ptr->long_name()));
                 }
             }
 
@@ -233,7 +237,7 @@ namespace pjh::cli
                 {
                     if (arg.m_required && !ctx.has_value(arg.m_key_hash))
                         return CliResult<ParseContext>::Err(
-                            missing_required_arg(arg.m_name));
+                            ErrorFactory::missing_required_arg(arg.m_name));
                 }
             }
 
@@ -319,7 +323,8 @@ namespace pjh::cli
                     find_subcommand_match(*branch, a, max_fuzzy_distance, disabled);
 
                 if (disabled)
-                    return CliResult<ParseContext>::Err(command_disabled(a));
+                    return CliResult<ParseContext>::Err(
+                        ErrorFactory::command_disabled(a));
 
                 if (sub)
                 {
@@ -344,7 +349,7 @@ namespace pjh::cli
                 switch (cmd->extra_args_policy())
                 {
                 case ExtraArgsPolicy::Error:
-                    return CliFailure{parse_error(a, static_cast<int>(i))};
+                    return CliFailure{ErrorFactory::parse_error(a, static_cast<int>(i))};
                 case ExtraArgsPolicy::Store:
                     ctx.add_extra_arg(std::string(a));
                     break;
