@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <initializer_list>
+#include <pjh_cli/help_formatter.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <string>
 #include <string_view>
@@ -164,7 +165,7 @@ TEST_CASE("format_usage")
     app.arg<std::string, 0>("source", "Source file").required();
     app.arg<std::string, 1>("dest", "Destination");
 
-    auto usage = format_usage(app, "test");
+    auto usage = HelpFormatter::format_usage(app, "test");
     CHECK(usage.find("Usage:") != std::string_view::npos);
     CHECK(usage.find("--port") != std::string_view::npos);
     CHECK(usage.find("--verbose") != std::string_view::npos);
@@ -179,7 +180,7 @@ TEST_CASE("format_help with args")
     app.option<fixed_string("verbose")>("--verbose", 'v', "Enable verbose").boolean();
     app.arg<std::string, 0>("file", "Input file").required();
 
-    auto help = format_help(app, "test");
+    auto help = HelpFormatter::format_help(app, "test");
     CHECK(help.find("Usage:") != std::string_view::npos);
     CHECK(help.find("Test application") != std::string_view::npos);
     CHECK(help.find("Options:") != std::string_view::npos);
@@ -192,7 +193,7 @@ TEST_CASE("format_help with subcommands")
     App app("test", "1.0", "App with subcommands");
     app.add_leaf("serve", "Start the server");
 
-    auto help = format_help(app, "test");
+    auto help = HelpFormatter::format_help(app, "test");
     CHECK(help.find("Usage:") != std::string_view::npos);
     CHECK(help.find("Subcommands:") != std::string_view::npos);
     CHECK(help.find("serve") != std::string_view::npos);

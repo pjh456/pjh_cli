@@ -3,6 +3,7 @@
 
 #include "pjh_cli/app.hpp"
 #include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/help_formatter.hpp"
 #include "pjh_cli/matcher.hpp"
 
 using namespace pjh::cli;
@@ -26,14 +27,14 @@ int main(int argc, char **argv)
     if (argc < 2 || std::string_view(argv[1]) == "--help" ||
         std::string_view(argv[1]) == "-h")
     {
-        std::cout << format_help(app, "pkg");
+        std::cout << HelpFormatter::format_help(app, "pkg");
         return 0;
     }
 
     auto r = app.parse_fuzzy(argc, argv);
     if (r.is_err())
     {
-        std::cout << format_usage(app, "pkg") << "\n";
+        std::cout << HelpFormatter::format_usage(app, "pkg") << "\n";
         std::cout << "Try: pkg install <name>\n";
         std::cerr << r.unwrap_err().what() << "\n";
         return 1;

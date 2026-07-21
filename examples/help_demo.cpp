@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <pjh_cli.hpp>
+#include <pjh_cli/help_formatter.hpp>
 
 using namespace pjh::cli;
 
@@ -14,15 +15,16 @@ int main()
     {
         LeafCommand root("copy", "Copy files with options");
         root.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
-        root.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
+        root.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output")
+            .boolean();
         root.option<fixed_string("timeout")>("--timeout", 't', "Timeout in seconds")
             .integer()
             .default_value(30)
             .required();
         root.arg<std::string, 0>("source", "Source file").required();
         root.arg<std::string, 1>("dest", "Destination");
-        std::cout << "[usage] " << format_usage(root, "copy") << "\n\n";
-        std::cout << format_help(root, "copy") << "\n";
+        std::cout << "[usage] " << HelpFormatter::format_usage(root, "copy") << "\n\n";
+        std::cout << HelpFormatter::format_help(root, "copy") << "\n";
     }
 
     // ── 2. Branch: subcommands ──
@@ -37,7 +39,7 @@ int main()
             .default_value(true);
         auto &remove = app.add_leaf("remove", "Remove a package");
         remove.arg<std::string, 0>("name", "Package name").required();
-        std::cout << format_help(app, "pkg") << "\n";
+        std::cout << HelpFormatter::format_help(app, "pkg") << "\n";
     }
 
     // ── 3. App::parse with --help (auto-detection) ──

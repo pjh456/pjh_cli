@@ -6,6 +6,7 @@
 
 #include "pjh_cli/app.hpp"
 #include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/help_formatter.hpp"
 #include "pjh_cli/matcher.hpp"
 #include "pjh_cli/parse_context.hpp"
 #include "pjh_cli/parser.hpp"
@@ -65,7 +66,7 @@ TEST_CASE("const execute")
 TEST_CASE("format help includes description")
 {
     App app("test", "1.0.0", "A test application");
-    auto help = format_help(app, "test");
+    auto help = HelpFormatter::format_help(app, "test");
     CHECK(help.find("A test application") != std::string_view::npos);
     CHECK(help.find("Usage:") != std::string_view::npos);
     CHECK(help.find("test") != std::string_view::npos);
@@ -74,7 +75,7 @@ TEST_CASE("format help includes description")
 TEST_CASE("format usage includes program name")
 {
     App app("myapp", "1.0", "My app");
-    auto usage = format_usage(app, "myapp");
+    auto usage = HelpFormatter::format_usage(app, "myapp");
     CHECK(usage.find("Usage:") != std::string_view::npos);
     CHECK(usage.find("myapp") != std::string_view::npos);
 }

@@ -7,7 +7,6 @@
 
 #include "command/base_command.hpp"
 #include "command/branch_command.hpp"
-#include "info.hpp"
 
 namespace pjh::cli
 {
@@ -37,22 +36,6 @@ namespace pjh::cli
         const BaseCommand &cmd,
         std::string_view prefix,
         Visibility mode = Visibility::Both);
-
-    /// @brief Format usage line, e.g. "app [--port N] <source> <dest>".
-    std::string format_usage(const BaseCommand &cmd, std::string_view program_name = "");
-
-    /// @brief Format full help block (usage + description + options + args +
-    ///        subcommands).
-    std::string format_help(const BaseCommand &cmd, std::string_view program_name = "");
-
-    /// @brief Collect structured help data from a command.
-    HelpInfo collect_help(
-        const BaseCommand &cmd,
-        std::string_view program_name = "",
-        Visibility visibility = Visibility::Both);
-
-    /// @brief Render HelpInfo as a human-readable help string.
-    std::string format_help(const HelpInfo &info);
 
 }  // namespace pjh::cli
 

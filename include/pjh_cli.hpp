@@ -18,6 +18,7 @@
 #include "pjh_cli/converter.hpp"
 #include "pjh_cli/error.hpp"
 #include "pjh_cli/fixed_string.hpp"
+#include "pjh_cli/help_formatter.hpp"
 #include "pjh_cli/hint.hpp"
 #include "pjh_cli/matcher.hpp"
 #include "pjh_cli/option/bool_option.hpp"

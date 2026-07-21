@@ -7,6 +7,7 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/converter.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
+#include <pjh_cli/help_formatter.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
 #include <span>
@@ -230,7 +231,7 @@ namespace pjh::cli
         if (double_dash || (a != "--help" && a != "-h"))
             return pjh::result::Option<ParseContext>::None();
 
-        ctx.set_help_text(format_help(*cmd, cmd->name()));
+        ctx.set_help_text(HelpFormatter::format_help(*cmd, cmd->name()));
         ctx.set_matched_command(cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }

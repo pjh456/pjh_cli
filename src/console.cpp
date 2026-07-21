@@ -2,6 +2,7 @@
 #include <iostream>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
+#include <pjh_cli/help_formatter.hpp>
 #include <pjh_cli/matcher.hpp>
 #include <pjh_cli/parser.hpp>
 #include <string>
@@ -100,7 +101,8 @@ namespace pjh::cli
             else
             {
                 std::cout << "No matches.";
-                std::cout << " Try: " << format_usage(m_root, m_root.name());
+                std::cout << " Try: "
+                          << HelpFormatter::format_usage(m_root, m_root.name());
             }
         }
         std::cout << "\n";
@@ -112,7 +114,7 @@ namespace pjh::cli
     {
         if (tokens.size() == 1)
         {
-            std::cout << format_help(m_root, m_root.name());
+            std::cout << HelpFormatter::format_help(m_root, m_root.name());
             return CliResult<void>::Ok();
         }
 
@@ -144,7 +146,7 @@ namespace pjh::cli
             target = sub;
         }
 
-        std::cout << format_help(*target, target->name());
+        std::cout << HelpFormatter::format_help(*target, target->name());
         return CliResult<void>::Ok();
     }
 
