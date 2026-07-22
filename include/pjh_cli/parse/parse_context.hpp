@@ -114,6 +114,51 @@ namespace pjh::cli
             return fallback;
         }
 
+        // ── Enum convenience ──
+
+        /// @brief Retrieve an enum value (stored as int internally).
+        /// @tparam E Enum type.
+        /// @tparam Key fixed_string or size_t.
+        /// @return The enum value.
+        /// @throws LogicError if no value is stored for this key.
+        template <typename E, auto Key>
+            requires std::is_enum_v<E> && detail::OptionKey<decltype(Key)>
+        E get_enum() const
+        {
+            return static_cast<E>(get<int, Key>());
+        }
+
+        /// @brief Try to retrieve an enum value; returns None if absent.
+        template <typename E, auto Key>
+            requires std::is_enum_v<E> && detail::OptionKey<decltype(Key)>
+        pjh::result::Option<E> try_get_enum() const
+        {
+            auto r = try_get<int, Key>();
+            if (r.is_some())
+                return pjh::result::Option<E>::Some(static_cast<E>(r.unwrap()));
+            return pjh::result::Option<E>::None();
+        }
+
+        /// @brief Retrieve an enum value or fallback if absent.
+        template <typename E, auto Key>
+            requires std::is_enum_v<E> && detail::OptionKey<decltype(Key)>
+        E get_or_enum(E fallback) const
+        {
+            return static_cast<E>(get_or<int, Key>(static_cast<int>(fallback)));
+        }
+
+        /// @brief Retrieve all enum values for a repeatable option.
+        template <typename E, auto Key>
+            requires std::is_enum_v<E> && detail::OptionKey<decltype(Key)>
+        std::vector<E> get_all_enum() const
+        {
+            auto &ints = get_all<int, Key>();
+            std::vector<E> out;
+            out.reserve(ints.size());
+            for (auto &v : ints) out.push_back(static_cast<E>(v));
+            return out;
+        }
+
         /// @brief Store a single value (used internally by parser).
         /// @tparam T Value type.
         /// @param hash  Runtime key hash.

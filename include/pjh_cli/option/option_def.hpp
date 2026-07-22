@@ -9,6 +9,7 @@
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -26,6 +27,9 @@ namespace pjh::cli
     class StrOption;
     class FloatOption;
     class PathOption;
+    template <typename E>
+        requires std::is_enum_v<E>
+    class EnumOption;
     /// @endcond
 
     // ──────────────────────────────────────────
@@ -260,6 +264,14 @@ namespace pjh::cli
         /// @brief Create the option as a filesystem path type.
         /// @return Reference to the newly created PathOption.
         PathOption &path();
+
+        /// @brief Create the option as an enum-valued type.
+        /// @tparam E Enum type whose string-to-value mapping is provided
+        ///           at registration time via `.mapping()`.
+        /// @return Reference to the newly created EnumOption<E>.
+        template <typename E>
+            requires std::is_enum_v<E>
+        EnumOption<E> &enum_type();
 
     private:
         template <typename Opt, ValueTag Tag>

@@ -138,24 +138,6 @@ namespace pjh::cli
             return CliError(msg);
         }
 
-        /// @brief Value is not one of the allowed choices.
-        /// @param name     Option name.
-        /// @param value    The rejected value.
-        /// @param choices  List of allowed values.
-        /// @return CliError listing the allowed choices.
-        static CliError invalid_choice(
-            std::string_view name,
-            std::string_view value,
-            const std::vector<std::string> &choices)
-        {
-            std::string msg = std::format(
-                "invalid value '{}' for '{}': expected one of: {}", value, name,
-                choices[0]);
-            for (size_t i = 1; i < choices.size(); i++)
-                msg = std::format("{}, {}", std::move(msg), choices[i]);
-            return CliError(msg);
-        }
-
         /// @brief Value is outside the allowed range [min, max] (int).
         /// @param name   Option name.
         /// @param value  The raw string that was parsed.
@@ -184,6 +166,24 @@ namespace pjh::cli
                 std::format(
                     "value '{}' for '{}' is out of range [{}, {}]", value, name, min,
                     max));
+        }
+
+        /// @brief String value did not match any valid enum mapping.
+        /// @param raw    The user-supplied (invalid) value.
+        /// @param valid  List of valid enum names.
+        /// @return CliError with message listing the valid choices.
+        static CliError enum_value_error(
+            std::string_view raw, const std::vector<std::string> &valid)
+        {
+            std::string joined;
+            for (size_t i = 0; i < valid.size(); i++)
+            {
+                if (i > 0)
+                    joined += ", ";
+                joined += valid[i];
+            }
+            return CliError(
+                std::format("invalid value '{}': expected one of: {}", raw, joined));
         }
 
         /// @brief Command exists but is currently disabled via enabled_predicate.

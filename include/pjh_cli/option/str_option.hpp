@@ -2,7 +2,6 @@
 #define INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 
 #include <pjh_cli/detail/option_chain.hpp>
-#include <pjh_cli/option/mixin/with_choices.hpp>
 #include <pjh_cli/option/mixin/with_default.hpp>
 #include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
@@ -13,13 +12,12 @@
 namespace pjh::cli
 {
 
-    /// @brief String-valued option with optional choices validation.
+    /// @brief String-valued option.
     class StrOption : public detail::option_chain<
                           std::string,
                           StrOption,
                           WithRequired,
                           WithEnv,
-                          WithChoices,
                           WithRepeatable,
                           WithDefault>
     {

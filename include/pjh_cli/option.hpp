@@ -4,6 +4,7 @@
 #include <pjh_cli/option/arg_def.hpp>
 #include <pjh_cli/option/bool_option.hpp>
 #include <pjh_cli/option/count_option.hpp>
+#include <pjh_cli/option/enum_option.hpp>
 #include <pjh_cli/option/float_option.hpp>
 #include <pjh_cli/option/int_option.hpp>
 #include <pjh_cli/option/option_def.hpp>

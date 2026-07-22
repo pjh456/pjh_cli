@@ -11,6 +11,7 @@
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/option/bool_option.hpp>
 #include <pjh_cli/option/count_option.hpp>
+#include <pjh_cli/option/enum_option.hpp>
 #include <pjh_cli/option/float_option.hpp>
 #include <pjh_cli/option/int_option.hpp>
 #include <pjh_cli/option/option_def.hpp>
@@ -408,6 +409,15 @@ namespace pjh::cli
     PathOption &OptionBuilder<Key>::path()
     {
         return make_option<PathOption, ValueTag::Path>(true);
+    }
+
+    template <auto Key>
+        requires detail::OptionKey<decltype(Key)>
+    template <typename E>
+        requires std::is_enum_v<E>
+    EnumOption<E> &OptionBuilder<Key>::enum_type()
+    {
+        return make_option<EnumOption<E>, ValueTag::Int>(true);
     }
 
 }  // namespace pjh::cli

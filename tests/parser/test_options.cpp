@@ -421,3 +421,67 @@ TEST_CASE("Repeatable greedily consumes negative numbers")
     CHECK(all[2] == 0);
     CHECK(all[3] == 7);
 }
+
+// ── enum option ──
+
+enum class Color
+{
+    red,
+    green,
+    blue
+};
+
+TEST_CASE("EnumOption basic mapping")
+{
+    App app("test", "1.0", "Enum basic");
+    app.option<fixed_string("color")>("--color", 'c', "Color")
+        .enum_type<Color>()
+        .mapping({{"red", Color::red}, {"green", Color::green}});
+    Argv argv{"test", "--color", "red"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto v = r.unwrap().get_enum<Color, fixed_string("color")>();
+    CHECK(v == Color::red);
+}
+
+TEST_CASE("EnumOption invalid value errors")
+{
+    App app("test", "1.0", "Enum err");
+    app.option<fixed_string("color")>("--color", 'c', "Color")
+        .enum_type<Color>()
+        .mapping({{"red", Color::red}, {"green", Color::green}});
+    Argv argv{"test", "--color", "blue"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("EnumOption default_value applied when absent")
+{
+    App app("test", "1.0", "Enum default");
+    app.option<fixed_string("color")>("--color", 'c', "Color")
+        .enum_type<Color>()
+        .mapping({{"red", Color::red}, {"green", Color::green}})
+        .default_value(Color::green);
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto v = r.unwrap().get_enum<Color, fixed_string("color")>();
+    CHECK(v == Color::green);
+}
+
+TEST_CASE("EnumOption repeatable collects multiple values")
+{
+    App app("test", "1.0", "Enum repeat");
+    app.option<fixed_string("colors")>("--colors", 'c', "Colors")
+        .enum_type<Color>()
+        .mapping({{"red", Color::red}, {"green", Color::green}, {"blue", Color::blue}})
+        .repeatable();
+    Argv argv{"test", "--colors", "red", "green", "blue"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all_enum<Color, fixed_string("colors")>();
+    REQUIRE(all.size() == 3);
+    CHECK(all[0] == Color::red);
+    CHECK(all[1] == Color::green);
+    CHECK(all[2] == Color::blue);
+}
