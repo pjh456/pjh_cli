@@ -235,6 +235,21 @@ namespace pjh::cli
         static pjh::result::Option<ParseContext> try_handle_help(
             BaseCommand *cmd, ParseContext &&ctx, std::string_view a, bool double_dash);
 
+        /// @brief If the current token is --version, return a version-only
+        ///        ParseContext immediately.
+        ///
+        /// The returned context has version_requested() == true.  The caller
+        /// should print version_text() instead of executing the action.
+        ///
+        /// @param root        Root command (App) to read version from.
+        /// @param ctx         Parse context (moved in).
+        /// @param a           Current argument token.
+        /// @param double_dash  Whether we've already seen a `--` separator.
+        /// @return Some(ParseContext) if this was a version request,
+        ///         None() otherwise.
+        static pjh::result::Option<ParseContext> try_handle_version(
+            BaseCommand &root, ParseContext &&ctx, std::string_view a, bool double_dash);
+
         /// @brief If the token matches a (possibly fuzzy) subcommand, descend.
         ///
         /// On success the returned SubcommandResult contains the matched

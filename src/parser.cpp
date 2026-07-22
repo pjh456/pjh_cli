@@ -273,6 +273,18 @@ namespace pjh::cli
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
 
+    pjh::result::Option<ParseContext> Parser::try_handle_version(
+        BaseCommand &root, ParseContext &&ctx, std::string_view a, bool double_dash)
+    {
+        if (double_dash || a != "--version")
+            return pjh::result::Option<ParseContext>::None();
+
+        auto &ver = root.version();
+        ctx.set_version_text(std::format("{} version {}\n", root.name(), ver));
+        ctx.set_matched_command(&root);
+        return pjh::result::Option<ParseContext>::Some(std::move(ctx));
+    }
+
     CliResult<Parser::SubcommandResult> Parser::try_descend_subcommand(
         BaseCommand *cmd,
         ParseContext &ctx,
@@ -339,6 +351,12 @@ namespace pjh::cli
             auto help = try_handle_help(cmd, std::move(ctx), a, double_dash);
             if (help.is_some())
                 return CliResult<ParseContext>::Ok(std::move(help).unwrap());
+
+            {
+                auto ver = try_handle_version(root, std::move(ctx), a, double_dash);
+                if (ver.is_some())
+                    return CliResult<ParseContext>::Ok(std::move(ver).unwrap());
+            }
 
             if (!double_dash && a.size() > 1 && a[0] == '-')
             {

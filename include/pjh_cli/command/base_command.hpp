@@ -143,6 +143,14 @@ namespace pjh::cli
         /// @brief Parent command (nullptr for the root / App instance).
         BaseCommand *parent() const noexcept { return m_parent; }
 
+        /// @brief Application version string (empty for non-root commands).
+        ///        Overridden by App to return its version.
+        virtual const std::string &version() const noexcept
+        {
+            static const std::string empty;
+            return empty;
+        }
+
         /// @brief Current extra args policy (default Ignore).
         ExtraArgsPolicy extra_args_policy() const noexcept { return m_extra_args_policy; }
 

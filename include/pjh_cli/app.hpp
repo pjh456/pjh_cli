@@ -32,7 +32,7 @@ namespace pjh::cli
         App(std::string name, std::string version, std::string description);
 
         /// @brief The version string passed at construction.
-        const std::string &version() const noexcept { return m_version; }
+        const std::string &version() const noexcept override { return m_version; }
 
         /// @brief Parse CLI arguments (exact subcommand matching).
         ///

@@ -170,6 +170,15 @@ namespace pjh::cli
         /// @param text Output from HelpFormatter::format_help().
         void set_help_text(std::string text) { m_help_text = std::move(text); }
 
+        /// @brief True if --version was encountered during parsing.
+        bool version_requested() const noexcept { return !m_version_text.empty(); }
+
+        /// @brief Pre-formatted version string from --version handling.
+        const std::string &version_text() const noexcept { return m_version_text; }
+
+        /// @brief Set the version text (used internally by Parser).
+        void set_version_text(std::string text) { m_version_text = std::move(text); }
+
         /// @brief Matched subcommand chain (root excluded).
         ///
         /// Each entry is a command along the matched path, in top-down order.
@@ -306,6 +315,7 @@ namespace pjh::cli
         BaseCommand *m_matched_cmd = nullptr;
         std::vector<std::string> m_extra_args;
         std::string m_help_text;
+        std::string m_version_text;
     };
 
 }  // namespace pjh::cli
