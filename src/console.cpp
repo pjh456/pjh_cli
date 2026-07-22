@@ -179,7 +179,10 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
-        return ctx.matched_command()->execute(ctx);
+        auto *cmd = ctx.matched_command();
+        if (!cmd)
+            return CliFailure{CliError("no command matched")};
+        return cmd->execute(ctx);
     }
 
 }  // namespace pjh::cli
