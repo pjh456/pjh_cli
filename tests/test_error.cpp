@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <iostream>
 #include <pjh_cli/core/error.hpp>
 #include <stdexcept>
 #include <string_view>

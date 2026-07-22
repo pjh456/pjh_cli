@@ -1,5 +1,10 @@
 #include <doctest/doctest.h>
-#include <stdlib.h>
+#include <cstdlib>
+
+#ifdef _WIN32
+#define setenv(name, val, overwrite) _putenv_s(name, val)
+#define unsetenv(name) _putenv_s(name, "")
+#endif
 
 #include <initializer_list>
 #include <pjh_cli/app.hpp>
