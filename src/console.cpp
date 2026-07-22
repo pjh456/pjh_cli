@@ -193,7 +193,7 @@ namespace pjh::cli
 
         auto *cmd = ctx.matched_command();
         if (!cmd)
-            return CliFailure{CliError("no command matched")};
+            return CliFailure{ErrorFactory::no_command_matched()};
         return cmd->execute(ctx);
     }
 

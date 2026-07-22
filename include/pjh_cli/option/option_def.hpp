@@ -283,7 +283,7 @@ namespace pjh::cli
     /// @brief Default: option does not accept a value; returns an error.
     inline CliResult<void> OptionDef::parse_value(ParseContext &, std::string_view) const
     {
-        return CliFailure{CliError("option does not accept a value")};
+        return CliFailure{ErrorFactory::option_does_not_accept_value(long_name())};
     }
 
     /// @brief Default: no-op (no default value to apply).

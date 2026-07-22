@@ -93,7 +93,8 @@ namespace pjh::cli
             if (m_default.is_some() && !ctx.has_value(this->m_key_hash))
             {
                 auto vr = this->validate_value(m_default.unwrap(), "");
-                if (vr.is_err()) return vr;
+                if (vr.is_err())
+                    return vr;
                 return this->store_or_append(ctx, this->m_key_hash, m_default.unwrap());
             }
             return CliResult<void>::Ok();
@@ -109,7 +110,8 @@ namespace pjh::cli
         /// @brief Convert raw string → typed value. Override in value-owning mixins.
         virtual CliResult<T> convert_value(std::string_view) const
         {
-            return CliFailure{CliError("option does not accept a value")};
+            return CliFailure{
+                ErrorFactory::option_does_not_accept_value(this->long_name())};
         }
 
         /// @brief Validate a parsed typed value. Chain by calling Base::validate_value.

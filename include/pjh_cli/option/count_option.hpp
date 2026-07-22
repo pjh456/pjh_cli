@@ -28,7 +28,7 @@ namespace pjh::cli
 
         CliResult<void> parse_value(ParseContext &, std::string_view) const override
         {
-            return CliFailure{CliError("counting option does not accept a value")};
+            return CliFailure{ErrorFactory::option_does_not_accept_value(long_name())};
         }
 
         CliResult<void> apply_default(ParseContext &) const override
