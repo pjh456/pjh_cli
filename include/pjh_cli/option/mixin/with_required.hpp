@@ -11,7 +11,7 @@ namespace pjh::cli
     ///
     /// When an option is marked required, parsing fails if the option
     /// does not appear on the command line.
-    template <typename Derived, typename Base = OptionDef>
+    template <typename T, typename Derived, typename Base = OptionDef>
         requires std::derived_from<Base, OptionDef>
     class WithRequired : public Base
     {

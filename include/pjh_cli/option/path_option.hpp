@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_OPTION_PATH_OPTION_HPP
 
 #include <filesystem>
+#include <pjh_cli/detail/option_chain.hpp>
 #include <pjh_cli/option/mixin/with_default.hpp>
 #include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
@@ -12,13 +13,13 @@ namespace pjh::cli
 {
 
     /// @brief Filesystem path option.
-    class PathOption : public WithRequired<
+    class PathOption : public detail::option_chain<
+                           std::filesystem::path,
                            PathOption,
-                           WithEnv<
-                               PathOption,
-                               WithRepeatable<
-                                   PathOption,
-                                   WithDefault<std::filesystem::path, PathOption>>>>
+                           WithRequired,
+                           WithEnv,
+                           WithRepeatable,
+                           WithDefault>
     {
     protected:
         CliResult<std::filesystem::path> convert_value(

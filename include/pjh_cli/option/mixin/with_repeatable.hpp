@@ -12,7 +12,7 @@ namespace pjh::cli
     /// When repeatable is enabled, the option consumes multiple value tokens
     /// greedily (--files a b c) and appends them to a vector.  Repeated flag
     /// occurrences (--files a --files b) also append.
-    template <typename Derived, typename Base = OptionDef>
+    template <typename T, typename Derived, typename Base = OptionDef>
         requires std::derived_from<Base, OptionDef>
     class WithRepeatable : public Base
     {
