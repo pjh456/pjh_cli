@@ -354,3 +354,70 @@ TEST_CASE("Non-repeatable next token is option flag errors")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
+
+// ── negative number values ──
+
+TEST_CASE("Negative integer --offset -5")
+{
+    App app("test", "1.0", "Neg int");
+    app.option<fixed_string("offset")>("--offset", 'o', "Offset").integer();
+    Argv argv{"test", "--offset", "-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("offset")>() == -5);
+}
+
+TEST_CASE("Negative integer short -o -5")
+{
+    App app("test", "1.0", "Neg short");
+    app.option<fixed_string("offset")>("--offset", 'o', "Offset").integer();
+    Argv argv{"test", "-o", "-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("offset")>() == -5);
+}
+
+TEST_CASE("Negative integer compact -o-5")
+{
+    App app("test", "1.0", "Neg compact");
+    app.option<fixed_string("offset")>("--offset", 'o', "Offset").integer();
+    Argv argv{"test", "-o-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("offset")>() == -5);
+}
+
+TEST_CASE("Negative float --ratio -3.14")
+{
+    App app("test", "1.0", "Neg float");
+    app.option<fixed_string("ratio")>("--ratio", 'r', "Ratio").floating();
+    Argv argv{"test", "--ratio", "-3.14"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<double, fixed_string("ratio")>() == doctest::Approx(-3.14));
+}
+
+TEST_CASE("Option-flag next token still errors for valued option")
+{
+    App app("test", "1.0", "Flag next");
+    app.option<fixed_string("offset")>("--offset", 'o', "Offset").integer();
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    Argv argv{"test", "--offset", "--verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Repeatable greedily consumes negative numbers")
+{
+    App app("test", "1.0", "Neg repeat");
+    app.option<fixed_string("nums")>("--nums", 'n', "Nums").integer().repeatable();
+    Argv argv{"test", "--nums", "-5", "-3", "0", "7"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<int, fixed_string("nums")>();
+    REQUIRE(all.size() == 4);
+    CHECK(all[0] == -5);
+    CHECK(all[1] == -3);
+    CHECK(all[2] == 0);
+    CHECK(all[3] == 7);
+}
