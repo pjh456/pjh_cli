@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <format>
 #include <memory>
+#include <mutex>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
@@ -200,8 +201,15 @@ namespace pjh::cli
             {
                 if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
                 {
-                    const char *env_val = std::getenv(opt_ptr->env_var().c_str());
-                    if (env_val)
+                    static std::mutex env_mutex;
+                    std::string env_val;
+                    {
+                        std::lock_guard<std::mutex> lock(env_mutex);
+                        const char *raw = std::getenv(opt_ptr->env_var().c_str());
+                        if (raw)
+                            env_val = raw;
+                    }
+                    if (!env_val.empty())
                     {
                         auto r = opt_ptr->parse_value(ctx, env_val);
                         if (r.is_err())
