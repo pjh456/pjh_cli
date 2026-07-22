@@ -96,6 +96,14 @@ namespace pjh::cli
         ///        Default false. Overridden by WithRepeatable mixin.
         virtual bool is_repeatable() const noexcept { return false; }
 
+        /// @brief Environment variable name (empty if none).
+        ///        Default empty. Overridden by WithEnv mixin.
+        virtual const std::string &env_var() const noexcept
+        {
+            static const std::string empty;
+            return empty;
+        }
+
         /// @brief Parse a raw CLI token and store the typed value in @p ctx.
         /// @param ctx Parse context to write into.
         /// @param raw The raw string value from the command line.
@@ -152,16 +160,6 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Set the environment variable name for fallback.
-        OptionDef &env(std::string var)
-        {
-            m_env_var = std::move(var);
-            return *this;
-        }
-
-        /// @brief Environment variable name (empty if none).
-        const std::string &env_var() const noexcept { return m_env_var; }
-
         /// @brief Set the compile-time hash for ParseContext indexing.
         OptionDef &set_key_hash(size_t h)
         {
@@ -203,7 +201,6 @@ namespace pjh::cli
         }
 
         std::string m_long_name;
-        std::string m_env_var;
         char m_short_name{};
         std::string m_description;
         bool m_has_value{};

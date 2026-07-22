@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <pjh_cli/option/mixin/with_default.hpp>
+#include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
 #include <string_view>
 
@@ -10,9 +11,10 @@ namespace pjh::cli
 {
 
     /// @brief Filesystem path option.
-    class PathOption : public WithRepeatable<
-                           PathOption,
-                           WithDefault<std::filesystem::path, PathOption>>
+    class PathOption
+        : public WithEnv<
+              PathOption,
+              WithRepeatable<PathOption, WithDefault<std::filesystem::path, PathOption>>>
     {
     protected:
         CliResult<std::filesystem::path> convert_value(
