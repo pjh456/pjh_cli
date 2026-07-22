@@ -1,10 +1,9 @@
 #ifndef INCLUDE_PJH_CLI_HINT_HPP
 #define INCLUDE_PJH_CLI_HINT_HPP
-#include <string>
-#include <string_view>
-
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/format/info.hpp>
+#include <string>
+#include <string_view>
 
 namespace pjh::cli
 {

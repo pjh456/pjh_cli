@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 

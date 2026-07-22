@@ -1,9 +1,8 @@
 #include <iostream>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
 
 using namespace pjh::cli;
 

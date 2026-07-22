@@ -1,16 +1,15 @@
 #include <doctest/doctest.h>
 
 #include <initializer_list>
+#include <pjh_cli/app.hpp>
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <pjh_cli/app.hpp>
-#include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/command/leaf_command.hpp>
-#include <pjh_cli/core/fixed_string.hpp>
 
 using namespace pjh::cli;
 

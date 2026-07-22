@@ -3,15 +3,14 @@
 
 #include <concepts>
 #include <limits>
+#include <pjh_cli/core/converter.hpp>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <pjh_result.hpp>
 #include <string_view>
 #include <type_traits>
 #include <utility>
-
-#include <pjh_cli/core/converter.hpp>
-#include <pjh_cli/core/error.hpp>
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli::detail
 {

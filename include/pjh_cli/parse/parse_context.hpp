@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/concept.hpp>
 #include <pjh_result.hpp>
 #include <string>
 #include <tuple>
@@ -11,11 +15,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
-#include <pjh_cli/detail/concept.hpp>
-#include <pjh_cli/core/error.hpp>
-#include <pjh_cli/core/fixed_string.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

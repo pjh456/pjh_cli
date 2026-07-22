@@ -2,12 +2,11 @@
 
 #include <initializer_list>
 #include <memory>
-#include <string>
-#include <vector>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <string>
+#include <vector>
 
 using namespace pjh::cli;
 

@@ -11,12 +11,12 @@
 ///   - Fuzzy command matching and tab completion
 ///   - Result<T, CliError> based error handling (no exceptions for parse errors)
 
-#include <pjh_cli/core.hpp>
-#include <pjh_cli/option.hpp>
-#include <pjh_cli/command.hpp>
-#include <pjh_cli/parse.hpp>
-#include <pjh_cli/format.hpp>
-#include <pjh_cli/console.hpp>
 #include <pjh_cli/app.hpp>
+#include <pjh_cli/command.hpp>
+#include <pjh_cli/console.hpp>
+#include <pjh_cli/core.hpp>
+#include <pjh_cli/format.hpp>
+#include <pjh_cli/option.hpp>
+#include <pjh_cli/parse.hpp>
 
 #endif  // INCLUDE_PJH_CLI_HPP

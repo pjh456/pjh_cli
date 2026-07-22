@@ -1,14 +1,13 @@
 #ifndef INCLUDE_PJH_CLI_PARSER_HPP
 #define INCLUDE_PJH_CLI_PARSER_HPP
 
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/core/converter.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
 #include <span>
 #include <string_view>
 #include <vector>
-
-#include <pjh_cli/command/branch_command.hpp>
-#include <pjh_cli/core/converter.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

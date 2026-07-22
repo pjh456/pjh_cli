@@ -2,11 +2,10 @@
 #include <stdlib.h>
 
 #include <initializer_list>
-#include <string>
-#include <vector>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <string>
+#include <vector>
 
 using namespace pjh::cli;
 

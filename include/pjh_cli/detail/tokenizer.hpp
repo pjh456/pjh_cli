@@ -2,11 +2,10 @@
 #define INCLUDE_PJH_CLI_DETAIL_TOKENIZER_HPP
 
 #include <cstddef>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <pjh_cli/detail/string_utils.hpp>
 
 namespace pjh::cli::detail
 {

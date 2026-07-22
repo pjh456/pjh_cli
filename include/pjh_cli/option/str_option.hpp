@@ -1,11 +1,10 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_STR_OPTION_HPP
 
-#include <string>
-#include <string_view>
-
 #include <pjh_cli/option/mixin/with_choices.hpp>
 #include <pjh_cli/option/mixin/with_default.hpp>
+#include <string>
+#include <string_view>
 
 namespace pjh::cli
 {

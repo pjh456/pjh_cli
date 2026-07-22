@@ -1,16 +1,15 @@
 #include <doctest/doctest.h>
 
-#include <string>
-#include <string_view>
-#include <vector>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parser.hpp>
-#include <pjh_cli/core/type.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using namespace pjh::cli;
 

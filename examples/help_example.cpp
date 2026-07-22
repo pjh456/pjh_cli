@@ -1,10 +1,9 @@
 #include <iostream>
-#include <string_view>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
+#include <string_view>
 
 using namespace pjh::cli;
 

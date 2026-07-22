@@ -3,13 +3,12 @@
 
 #include <charconv>
 #include <concepts>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <string>
 #include <string_view>
 #include <system_error>
-
-#include <pjh_cli/detail/string_utils.hpp>
-#include <pjh_cli/core/error.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

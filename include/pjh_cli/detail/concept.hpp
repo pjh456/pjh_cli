@@ -3,9 +3,8 @@
 
 #include <concepts>
 #include <cstddef>
-#include <type_traits>
-
 #include <pjh_cli/core/fixed_string.hpp>
+#include <type_traits>
 
 namespace pjh::cli::detail
 {

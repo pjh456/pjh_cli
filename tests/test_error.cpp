@@ -1,9 +1,8 @@
 #include <doctest/doctest.h>
 
+#include <pjh_cli/core/error.hpp>
 #include <stdexcept>
 #include <string_view>
-
-#include <pjh_cli/core/error.hpp>
 
 using namespace pjh::cli;
 

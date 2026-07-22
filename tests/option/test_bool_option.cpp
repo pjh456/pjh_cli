@@ -1,13 +1,12 @@
 #include <doctest/doctest.h>
 
 #include <initializer_list>
-#include <string>
-#include <string_view>
-#include <vector>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using namespace pjh::cli;
 

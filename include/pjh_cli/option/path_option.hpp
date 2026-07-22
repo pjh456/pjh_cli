@@ -2,9 +2,8 @@
 #define INCLUDE_PJH_CLI_OPTION_PATH_OPTION_HPP
 
 #include <filesystem>
-#include <string_view>
-
 #include <pjh_cli/option/mixin/with_default.hpp>
+#include <string_view>
 
 namespace pjh::cli
 {

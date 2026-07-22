@@ -1,14 +1,13 @@
 #ifndef INCLUDE_PJH_CLI_INFO_HPP
 #define INCLUDE_PJH_CLI_INFO_HPP
 
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/arg_def.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <pjh_cli/option/arg_def.hpp>
-#include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

@@ -1,11 +1,10 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_HPP
 
-#include <string>
-#include <vector>
-
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <string>
+#include <vector>
 
 namespace pjh::cli
 {

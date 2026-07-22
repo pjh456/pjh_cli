@@ -1,11 +1,11 @@
 #include <doctest/doctest.h>
 
-#include <string>
-#include <string_view>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/console.hpp>
+#include <string>
+#include <string_view>
+
 #include "test_helpers.hpp"
 
 using namespace pjh::cli;

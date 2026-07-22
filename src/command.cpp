@@ -5,15 +5,14 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

@@ -3,15 +3,14 @@
 
 #include <cstddef>
 #include <functional>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/concept.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/detail/concept.hpp>
-#include <pjh_cli/core/error.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

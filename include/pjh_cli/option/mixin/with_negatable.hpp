@@ -2,10 +2,9 @@
 #define INCLUDE_PJH_CLI_OPTION_MIXIN_WITH_NEGATABLE_HPP
 
 #include <concepts>
-#include <utility>
-
-#include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <utility>
 
 namespace pjh::cli
 {

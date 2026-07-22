@@ -1,12 +1,11 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_COUNT_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_COUNT_OPTION_HPP
 
-#include <string_view>
-
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
+#include <string_view>
 
 namespace pjh::cli
 {

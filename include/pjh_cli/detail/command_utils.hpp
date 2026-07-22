@@ -2,12 +2,11 @@
 #define INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
 
 #include <format>
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <string>
 #include <string_view>
-
-#include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/detail/string_utils.hpp>
 
 namespace pjh::cli::detail
 {

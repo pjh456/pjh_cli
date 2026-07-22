@@ -8,8 +8,7 @@ namespace pjh::cli
 {
 
     /// @brief Integer-valued option with min/max range validation.
-    class IntOption
-        : public WithRange<int, IntOption, WithDefault<int, IntOption>>
+    class IntOption : public WithRange<int, IntOption, WithDefault<int, IntOption>>
     {
     };
 

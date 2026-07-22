@@ -2,9 +2,8 @@
 #define INCLUDE_PJH_CLI_ARG_DEF_HPP
 
 #include <cstddef>
-#include <string>
-
 #include <pjh_cli/core/type.hpp>
+#include <string>
 
 namespace pjh::cli
 {

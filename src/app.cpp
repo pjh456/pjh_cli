@@ -1,11 +1,10 @@
 #include <pjh_cli/app.hpp>
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string>
 #include <utility>
-
-#include <pjh_cli/command/branch_command.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

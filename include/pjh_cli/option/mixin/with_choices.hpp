@@ -3,15 +3,14 @@
 
 #include <concepts>
 #include <filesystem>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include <pjh_cli/core/error.hpp>
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli::detail
 {

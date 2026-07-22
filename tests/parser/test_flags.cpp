@@ -2,6 +2,7 @@
 
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser bool flag")

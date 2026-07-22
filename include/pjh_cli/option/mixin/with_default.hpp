@@ -3,13 +3,12 @@
 
 #include <concepts>
 #include <filesystem>
+#include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <pjh_result.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli::detail
 {

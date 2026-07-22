@@ -1,8 +1,7 @@
 #include <iostream>
-#include <string>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <string>
 
 using namespace pjh::cli;
 

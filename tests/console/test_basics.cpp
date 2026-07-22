@@ -1,9 +1,8 @@
 #include <doctest/doctest.h>
 
-#include <string>
-
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
+#include <string>
 
 using namespace pjh::cli;
 

@@ -1,12 +1,11 @@
 #ifndef INCLUDE_PJH_CLI_MATCHER_HPP
 #define INCLUDE_PJH_CLI_MATCHER_HPP
 
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/branch_command.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/command/branch_command.hpp>
 
 namespace pjh::cli
 {

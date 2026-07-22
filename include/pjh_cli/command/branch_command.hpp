@@ -1,10 +1,9 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_BRANCH_COMMAND_HPP
 #define INCLUDE_PJH_CLI_COMMAND_BRANCH_COMMAND_HPP
 
-#include <unordered_map>
-
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <unordered_map>
 
 namespace pjh::cli
 {
