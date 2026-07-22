@@ -7,6 +7,8 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <cwchar>
 #include <windows.h>
 #else
 extern char **environ;
@@ -26,7 +28,7 @@ namespace pjh::cli::detail
             auto *block = GetEnvironmentStringsW();
             if (!block)
                 return;
-            for (auto *env = block; *env; env += wcslen(env) + 1)
+            for (auto *env = block; *env; env += std::wcslen(env) + 1)
             {
                 std::wstring_view entry(env);
                 auto eq = entry.find(L'=');
