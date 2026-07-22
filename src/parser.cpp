@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -19,6 +20,17 @@
 #include <string>
 #include <string_view>
 #include <utility>
+
+namespace
+{
+    /// @brief Check if a raw token looks like an option flag (--opt or -v).
+    ///        Negative numbers like -5 or -3.14 are NOT detected as flags.
+    bool is_option_flag(std::string_view s) noexcept
+    {
+        return s.size() > 1 && s[0] == '-' &&
+               !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
+    }
+}
 
 namespace pjh::cli
 {
@@ -94,7 +106,7 @@ namespace pjh::cli
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
             auto next = args[i + 1];
-            if (!next.empty() && next[0] == '-')
+            if (is_option_flag(next))
                 return CliFailure{
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
@@ -105,7 +117,7 @@ namespace pjh::cli
             while (opt->is_repeatable() && i + 1 < args.size())
             {
                 next = args[i + 1];
-                if (!next.empty() && next[0] == '-')
+                if (is_option_flag(next))
                     break;
                 r = opt->parse_value(ctx, args[++i]);
                 if (r.is_err())
@@ -158,7 +170,7 @@ namespace pjh::cli
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
                 auto next = args[i + 1];
-                if (!next.empty() && next[0] == '-')
+                if (is_option_flag(next))
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
                 auto r = opt->parse_value(ctx, args[++i]);
@@ -168,7 +180,7 @@ namespace pjh::cli
                 while (opt->is_repeatable() && i + 1 < args.size())
                 {
                     next = args[i + 1];
-                    if (!next.empty() && next[0] == '-')
+                    if (is_option_flag(next))
                         break;
                     r = opt->parse_value(ctx, args[++i]);
                     if (r.is_err())
