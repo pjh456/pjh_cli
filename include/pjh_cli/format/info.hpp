@@ -127,6 +127,20 @@ namespace pjh::cli
         std::vector<HelpSection> sections;  ///< Sections in display order.
     };
 
+    // ── Hint display structs ──
+
+    /// @brief A single token in an interactive hint string.
+    struct HintToken
+    {
+        std::string display;  ///< Fully formatted: "[INT:port]" or "<src>"
+    };
+
+    /// @brief Structured interactive hint, ready for rendering.
+    struct HintInfo
+    {
+        std::vector<HintToken> tokens;  ///< Tokens in display order.
+    };
+
     /// @brief Structured context from walking a partial input through the command tree.
     ///
     /// Built by HintBuilder::build_context() and consumed by HintBuilder::format().

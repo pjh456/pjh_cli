@@ -38,13 +38,22 @@ namespace pjh::cli
         /// @brief Walk a partial input string to determine the current command position.
         static HintContext build_context(const BaseCommand &root, std::string_view input);
 
+        /// @brief Build structured hint data from context and config.
+        ///
+        /// Pre-computes display strings for options (respecting filter)
+        /// and remaining positional arguments.
+        static HintInfo build_hint(const HintContext &ctx, HintConfig config = {});
+
+        /// @brief Render HintInfo as a space-separated hint string.
+        static std::string format(const HintInfo &info);
+
         /// @brief Render HintContext as a hint string showing all available options and
         /// args.
         static std::string format(const HintContext &ctx);
 
         /// @brief Format an interactive hint for the command reached by parsing @p input.
         ///
-        /// Internally calls build_context() and renders the result.
+        /// Internally calls build_context() + build_hint() + format(HintInfo).
         /// For direct access to the structured data, use build_context() directly.
         static std::string format(
             const BaseCommand &root, std::string_view input, HintConfig config = {});

@@ -31,6 +31,17 @@ namespace pjh::cli
             }
             return "STR";
         }
+
+        std::string option_label(
+            ValueTag tag, bool is_counting, std::string_view long_name, char short_name)
+        {
+            auto label = type_name(tag, is_counting) + ":";
+            if (!long_name.empty())
+                label += long_name;
+            else if (short_name != 0)
+                label += short_name;
+            return label;
+        }
     }
 
     std::string HintBuilder::option_type_name(const OptionDef &opt)
@@ -86,88 +97,78 @@ namespace pjh::cli
         return ctx;
     }
 
-    // ── Basic renderer ──
+    // ── build_hint ──
 
-    namespace
+    HintInfo HintBuilder::build_hint(const HintContext &ctx, HintConfig config)
     {
-        std::string option_label(
-            ValueTag tag, bool is_counting, std::string_view long_name, char short_name)
-        {
-            auto label = type_name(tag, is_counting) + ":";
-            if (!long_name.empty())
-                label += long_name;
-            else if (short_name != 0)
-                label += short_name;
-            return label;
-        }
+        HintInfo info;
 
-        void trim_trailing_space(std::string &s)
-        {
-            if (!s.empty() && s.back() == ' ')
-                s.pop_back();
-        }
-    }
-
-    std::string HintBuilder::format(const HintContext &ctx)
-    {
-        std::ostringstream os;
-
-        for (const auto &opt : ctx.options)
+        auto add_option = [&](const OptionInfo &opt)
         {
             auto label = option_label(
                 opt.value_tag, opt.is_counting, opt.long_name, opt.short_name);
-
+            HintToken tok;
             if (opt.is_required)
-                os << label << " ";
+                tok.display = label;
             else
-                os << "[" << label << "] ";
+                tok.display = "[" + label + "]";
+            info.tokens.push_back(std::move(tok));
+        };
+
+        switch (config.option_mode)
+        {
+        case HintOptionMode::All:
+            for (const auto &opt : ctx.options)
+                add_option(opt);
+            break;
+        case HintOptionMode::Required:
+            for (const auto &opt : ctx.options)
+                if (opt.is_required)
+                    add_option(opt);
+            break;
+        case HintOptionMode::None:
+            break;
         }
 
-        for (const auto &arg : ctx.remaining_args) os << "<" << arg.name << "> ";
+        for (const auto &arg : ctx.remaining_args)
+        {
+            HintToken tok;
+            tok.display = "<" + std::string(arg.name) + ">";
+            info.tokens.push_back(std::move(tok));
+        }
 
+        return info;
+    }
+
+    // ── format(HintInfo) ──
+
+    std::string HintBuilder::format(const HintInfo &info)
+    {
+        if (info.tokens.empty())
+            return {};
+
+        std::ostringstream os;
+        for (const auto &tok : info.tokens)
+            os << tok.display << " ";
         auto result = os.str();
-        trim_trailing_space(result);
+        result.pop_back();
         return result;
     }
 
-    // ── Backward-compatible wrapper ──
+    // ── format(HintContext) — adapter ──
+
+    std::string HintBuilder::format(const HintContext &ctx)
+    {
+        return format(build_hint(ctx));
+    }
+
+    // ── format(BaseCommand, input, config) — adapter ──
 
     std::string HintBuilder::format(
         const BaseCommand &root, std::string_view input, HintConfig config)
     {
         auto ctx = build_context(root, input);
-
-        if (config.option_mode == HintOptionMode::All)
-            return format(ctx);
-
-        std::ostringstream os;
-
-        if (config.option_mode != HintOptionMode::None)
-        {
-            for (const auto &opt_ptr : ctx.reached_command->options())
-            {
-                bool show =
-                    (config.option_mode == HintOptionMode::Required &&
-                     opt_ptr->is_required());
-                if (!show)
-                    continue;
-
-                auto label = option_label(
-                    opt_ptr->value_tag(), opt_ptr->is_counting(), opt_ptr->long_name(),
-                    opt_ptr->short_name());
-
-                if (opt_ptr->is_required())
-                    os << label << " ";
-                else
-                    os << "[" << label << "] ";
-            }
-        }
-
-        for (const auto &arg : ctx.remaining_args) os << "<" << arg.name << "> ";
-
-        auto result = os.str();
-        trim_trailing_space(result);
-        return result;
+        return format(build_hint(ctx, config));
     }
 
 }  // namespace pjh::cli
