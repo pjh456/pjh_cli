@@ -30,7 +30,6 @@
 #include "pjh_cli/option_def.hpp"
 #include "pjh_cli/parse_context.hpp"
 #include "pjh_cli/parser.hpp"
-#include "pjh_cli/token.hpp"
 #include "pjh_cli/type.hpp"
 
 #endif  // INCLUDE_PJH_CLI_HPP
