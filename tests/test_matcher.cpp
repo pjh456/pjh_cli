@@ -244,3 +244,56 @@ TEST_CASE("parse_fuzzy no match")
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     CHECK(r.is_ok());
 }
+
+TEST_CASE("parse_fuzzy multi-candidate ambiguous falls through")
+{
+    App app("test", "1.0", "Multi fuzzy");
+    app.add_leaf("start", "Start server");
+    app.add_leaf("stop", "Stop server");
+
+    Argv argv{"test", "st"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    // Both "start" and "stop" are within edit distance 3 from "st",
+    // so fuzzy matching is ambiguous and neither is matched.
+    // The matched command stays at root.
+    CHECK(r.unwrap().matched_command()->name() == "test");
+}
+
+TEST_CASE("collect_help respects visibility filter")
+{
+    App app("test", "1.0", "Visibility");
+    app.add_leaf("cli_only", "CLI only").set_visibility(Visibility::Cli);
+    app.add_leaf("repl_only", "REPL only").set_visibility(Visibility::Repl);
+    app.add_leaf("both_cmd", "Both").set_visibility(Visibility::Both);
+    app.add_leaf("hidden_cmd", "Hidden").set_visibility(Visibility::Hidden);
+
+    auto all = HelpFormatter::collect_help(app, "test", Visibility::Both);
+    CHECK(all.subcommands.size() == 3);
+
+    auto cli = HelpFormatter::collect_help(app, "test", Visibility::Cli);
+    CHECK(cli.subcommands.size() == 2);
+
+    auto repl = HelpFormatter::collect_help(app, "test", Visibility::Repl);
+    CHECK(repl.subcommands.size() == 2);
+
+    auto none = HelpFormatter::collect_help(app, "test", static_cast<Visibility>(0));
+    CHECK(none.subcommands.empty());
+}
+
+TEST_CASE("collect_help includes option metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("port")>("--port", 'p', "Port number")
+        .integer().default_value(8080).required();
+    cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
+    cmd.arg<std::string, 0>("file", "Input file").required();
+
+    auto info = HelpFormatter::collect_help(cmd, "test");
+    CHECK(info.program_name == "test");
+    CHECK(info.description == "Test app");
+    CHECK(info.options.size() == 2);
+    CHECK(info.args.size() == 1);
+    CHECK(info.args[0].name == "file");
+    CHECK(info.args[0].is_required);
+}

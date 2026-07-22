@@ -334,3 +334,30 @@ TEST_CASE("key_hash constexpr correctness")
     static_assert(h3 == 0);
     static_assert(h4 == 42);
 }
+
+TEST_CASE("OptionDef completer callback stored and callable")
+{
+    App app("test", "1.0", "Completer");
+    app.option<fixed_string("color")>("--color", "Color").str().completer(
+        []() -> std::vector<std::string> { return {"red", "green", "blue"}; });
+
+    auto *def = app.find_option_by_long("color");
+    REQUIRE(def != nullptr);
+    auto &fn = def->completer_fn();
+    REQUIRE(fn);
+    auto candidates = fn();
+    REQUIRE(candidates.size() == 3);
+    CHECK(candidates[0] == "red");
+    CHECK(candidates[1] == "green");
+    CHECK(candidates[2] == "blue");
+}
+
+TEST_CASE("OptionDef completer empty when not registered")
+{
+    App app("test", "1.0", "No completer");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+
+    auto *def = app.find_option_by_long("port");
+    REQUIRE(def != nullptr);
+    CHECK_FALSE(def->completer_fn());
+}

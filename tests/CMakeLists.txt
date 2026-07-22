@@ -15,6 +15,7 @@ set(PJH_CLI_TEST_SOURCES
     option/test_int_option.cpp
     option/test_path_option.cpp
     option/test_str_option.cpp
+    option/test_enum_option.cpp
     parser/test_options.cpp
     parser/test_flags.cpp
     parser/test_positional.cpp
@@ -29,10 +30,13 @@ set(PJH_CLI_TEST_SOURCES
     test_string_utils.cpp
     test_command_utils.cpp
     test_hint.cpp
+    test_parse_concurrent.cpp
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
 target_link_libraries(pjh_cli_tests PRIVATE pjh_cli doctest)
+find_package(Threads REQUIRED)
+target_link_libraries(pjh_cli_tests PRIVATE Threads::Threads)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/doctest/scripts/cmake/doctest.cmake)
 doctest_discover_tests(pjh_cli_tests)
