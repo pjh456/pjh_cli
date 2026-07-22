@@ -94,9 +94,9 @@ namespace pjh::cli
         auto child =
             std::make_unique<BranchCommand>(std::move(name), std::move(description));
         child->set_parent(this);
-        child->m_extra_args_policy = m_extra_args_policy;
-        child->m_visibility = m_visibility;
-        child->m_enabled = m_enabled;
+        child->set_extra_args(extra_args_policy());
+        child->set_visibility(visibility());
+        child->enabled(m_enabled);
         auto &ref = *child;
         m_subcommand_by_name[ref.name()] = &ref;
         m_subcommands.push_back(std::move(child));
@@ -108,9 +108,9 @@ namespace pjh::cli
         auto child =
             std::make_unique<LeafCommand>(std::move(name), std::move(description));
         child->set_parent(this);
-        child->m_extra_args_policy = m_extra_args_policy;
-        child->m_visibility = m_visibility;
-        child->m_enabled = m_enabled;
+        child->set_extra_args(extra_args_policy());
+        child->set_visibility(visibility());
+        child->enabled(m_enabled);
         auto &ref = *child;
         m_subcommand_by_name[ref.name()] = &ref;
         m_subcommands.push_back(std::move(child));

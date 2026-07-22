@@ -291,10 +291,9 @@ namespace pjh::cli
         CliResult<void> execute(ParseContext &ctx) const;
 
     public:
-        /// @brief Internal — register an option definition.
+        /// @brief Register an option definition.
         ///
         /// Populates both lookup maps and the ordered option list.
-        /// @note Public because OptionBuilder and typed subclasses need access.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             m_option_by_long[opt->long_name()] = opt.get();
@@ -303,9 +302,11 @@ namespace pjh::cli
             m_options.push_back(std::move(opt));
         }
 
-        /// @brief Internal — set the parent pointer.
-        void set_parent(BaseCommand *parent) noexcept { m_parent = parent; }
+    private:
+        friend class BranchCommand;
 
+        /// @brief Set the parent pointer.
+        void set_parent(BaseCommand *parent) noexcept { m_parent = parent; }
         std::string m_name;
         std::string m_description;
         BaseCommand *m_parent = nullptr;
