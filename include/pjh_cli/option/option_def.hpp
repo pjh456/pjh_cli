@@ -64,7 +64,8 @@ namespace pjh::cli
         virtual bool has_value() const noexcept { return m_has_value; }
 
         /// @brief Whether this option must appear on the command line.
-        bool is_required() const noexcept { return m_required; }
+        ///        Default false. Overridden by WithRequired mixin.
+        virtual bool is_required() const noexcept { return false; }
 
         /// @brief Compile-time hash used to index ParseContext.
         size_t key_hash() const noexcept { return m_key_hash; }
@@ -174,13 +175,6 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Mark this option as required.
-        OptionDef &required(bool r = true)
-        {
-            m_required = r;
-            return *this;
-        }
-
         /// @brief Register a completer function for shell completion.
         OptionDef &completer(std::function<std::vector<std::string>()> fn)
         {
@@ -204,7 +198,6 @@ namespace pjh::cli
         char m_short_name{};
         std::string m_description;
         bool m_has_value{};
-        bool m_required{};
         size_t m_key_hash{};
         ValueTag m_value_tag{};
         std::function<std::vector<std::string>()> m_completer;

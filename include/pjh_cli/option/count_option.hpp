@@ -3,6 +3,7 @@
 
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/mixin/with_required.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string_view>
@@ -15,7 +16,7 @@ namespace pjh::cli
     /// Never consumes a CLI value token, never has a default value.
     /// Each occurrence increments the stored int by 1.
     /// Accessible via `ctx.get<int, "key">()`.
-    class CountOption : public OptionDef
+    class CountOption : public WithRequired<CountOption, OptionDef>
     {
     public:
         bool has_value() const noexcept override { return false; }

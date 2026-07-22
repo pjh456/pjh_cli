@@ -5,18 +5,21 @@
 #include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_range.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
+#include <pjh_cli/option/mixin/with_required.hpp>
 
 namespace pjh::cli
 {
 
     /// @brief Double-valued floating-point option with min/max range validation.
     class FloatOption
-        : public WithEnv<
+        : public WithRequired<
               FloatOption,
-              WithRange<
-                  double,
+              WithEnv<
                   FloatOption,
-                  WithRepeatable<FloatOption, WithDefault<double, FloatOption>>>>
+                  WithRange<
+                      double,
+                      FloatOption,
+                      WithRepeatable<FloatOption, WithDefault<double, FloatOption>>>>>
     {
     };
 
