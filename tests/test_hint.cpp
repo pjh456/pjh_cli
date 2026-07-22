@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <iostream>
 #include <pjh_cli.hpp>
 #include <string>
 #include <string_view>

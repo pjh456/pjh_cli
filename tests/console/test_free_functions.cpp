@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
