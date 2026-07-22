@@ -73,6 +73,7 @@ namespace pjh::cli
     {
         std::string_view name;         ///< Subcommand name (e.g. "serve").
         std::string_view description;  ///< Help text description.
+        std::vector<std::string> aliases;  ///< Alternative names (empty if none).
     };
 
     /// @brief Structured help data for a command.

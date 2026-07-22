@@ -89,7 +89,19 @@ namespace pjh::cli
                     found = true;
                 }
                 std::cout << " " << sub_ptr->name();
+                continue;
             }
+            for (const auto &a : sub_ptr->aliases())
+                if (a.find(query) != std::string_view::npos)
+                {
+                    if (!found)
+                    {
+                        std::cout << "Matching subcommands:";
+                        found = true;
+                    }
+                    std::cout << " " << sub_ptr->name();
+                    break;
+                }
         }
 
         if (!found)

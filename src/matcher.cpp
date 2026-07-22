@@ -44,9 +44,15 @@ namespace pjh::cli
         {
             if (!detail::is_visible_and_enabled(*sub_ptr, mode))
                 continue;
-            int d = edit_distance(input, sub_ptr->name());
-            if (d <= max_distance)
-                results.push_back({sub_ptr.get(), d});
+            int best_d = edit_distance(input, sub_ptr->name());
+            for (const auto &a : sub_ptr->aliases())
+            {
+                int d = edit_distance(input, a);
+                if (d < best_d)
+                    best_d = d;
+            }
+            if (best_d <= max_distance)
+                results.push_back({sub_ptr.get(), best_d});
         }
 
         std::ranges::stable_sort(results, {}, &FuzzyMatch::distance);
@@ -75,12 +81,15 @@ namespace pjh::cli
         {
             auto &branch = static_cast<const BranchCommand &>(cmd);
             for (const auto &sub_ptr : branch.subcommands())
-            {
-                if (!detail::is_visible_and_enabled(*sub_ptr, mode))
-                    continue;
-                if (sub_ptr->name().starts_with(prefix))
-                    candidates.push_back(sub_ptr->name());
-            }
+                {
+                    if (!detail::is_visible_and_enabled(*sub_ptr, mode))
+                        continue;
+                    if (sub_ptr->name().starts_with(prefix))
+                        candidates.push_back(sub_ptr->name());
+                    for (const auto &a : sub_ptr->aliases())
+                        if (a.starts_with(prefix))
+                            candidates.push_back(a);
+                }
         }
 
         // Option completion (prefix starts with '-')

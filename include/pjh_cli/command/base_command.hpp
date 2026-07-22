@@ -20,6 +20,7 @@
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 #include <unordered_map>
 #include <utility>
 
@@ -293,6 +294,14 @@ namespace pjh::cli
         /// @return *this for chaining.
         BaseCommand &set_extra_args(ExtraArgsPolicy p);
 
+        /// @brief Register an alias name for this command.
+        /// @param name Alternative name that also matches this command.
+        /// @return *this for chaining.
+        BaseCommand &alias(std::string name);
+
+        /// @brief Registered alias names.
+        const std::vector<std::string> &aliases() const noexcept { return m_aliases; }
+
         // ── Lifecycle ──
 
         /// @brief Create an empty ParseContext for this command.
@@ -349,6 +358,7 @@ namespace pjh::cli
             return true;
         };
         std::function<CliResult<void>(ParseContext &)> m_action;
+        std::vector<std::string> m_aliases;
     };
 
     // ── OptionBuilder method definitions ──

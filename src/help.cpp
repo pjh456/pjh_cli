@@ -66,7 +66,8 @@ namespace pjh::cli
             {
                 if (!detail::is_visible_and_enabled(*sub_ptr, visibility))
                     continue;
-                info.subcommands.push_back({sub_ptr->name(), sub_ptr->description()});
+                std::vector<std::string> aliases(sub_ptr->aliases().begin(), sub_ptr->aliases().end());
+                info.subcommands.push_back({sub_ptr->name(), sub_ptr->description(), std::move(aliases)});
             }
         }
 
@@ -155,7 +156,22 @@ namespace pjh::cli
         // Subcommands section
         format_section(
             "Subcommands", info.subcommands, 28,
-            [](const SubcommandInfo &s) { return std::string(s.name); },
+            [](const SubcommandInfo &s)
+            {
+                std::string label(s.name);
+                if (!s.aliases.empty())
+                {
+                    label += " (";
+                    for (size_t i = 0; i < s.aliases.size(); i++)
+                    {
+                        if (i > 0)
+                            label += ", ";
+                        label += s.aliases[i];
+                    }
+                    label += ")";
+                }
+                return label;
+            },
             [](const SubcommandInfo &s) { return std::string(s.description); });
 
         return os.str();

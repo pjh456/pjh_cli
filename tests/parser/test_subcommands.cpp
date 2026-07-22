@@ -292,3 +292,69 @@ TEST_CASE("Parser double dash before subcommand stops lookup")
     CHECK(extra.size() == 1);
     CHECK(extra[0] == "son");
 }
+
+// ──────────────────────────────────────────
+//  Subcommand aliases
+// ──────────────────────────────────────────
+
+TEST_CASE("Parser alias exact match")
+{
+    App app("test", "1.0", "Alias test");
+    auto &serve = app.add_leaf("serve", "Start server");
+    serve.alias("run");
+    serve.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    Argv argv{"test", "run", "--port", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
+    CHECK(r.unwrap().matched_path() == "serve");
+}
+
+TEST_CASE("Parser alias both names work")
+{
+    App app("test", "1.0", "Alias both");
+    auto &cmd = app.add_leaf("list", "List items");
+    cmd.alias("ls");
+    cmd.alias("show");
+    cmd.option<fixed_string("all")>("--all", 'a', "Show all").boolean();
+
+    Argv argv1{"test", "list", "--all"};
+    auto r1 = app.parse(argv1.argc(), argv1.argv());
+    CHECK(r1.is_ok());
+    CHECK(r1.unwrap().matched_path() == "list");
+
+    Argv argv2{"test", "ls", "--all"};
+    auto r2 = app.parse(argv2.argc(), argv2.argv());
+    CHECK(r2.is_ok());
+    CHECK(r2.unwrap().matched_path() == "list");
+
+    Argv argv3{"test", "show"};
+    auto r3 = app.parse(argv3.argc(), argv3.argv());
+    CHECK(r3.is_ok());
+    CHECK(r3.unwrap().matched_path() == "list");
+}
+
+TEST_CASE("Parser alias on branch subcommand")
+{
+    App app("test", "1.0", "Alias branch");
+    auto &db = app.add_branch("database", "Database commands");
+    db.alias("db");
+    auto &migrate = db.add_leaf("migrate", "Run migrations");
+
+    Argv argv{"test", "db", "migrate"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().matched_path() == "database migrate");
+}
+
+TEST_CASE("Parser alias with fuzzy match")
+{
+    App app("test", "1.0", "Alias fuzzy");
+    auto &serve = app.add_leaf("serve", "Start server");
+    serve.alias("start");
+
+    Argv argv{"test", "stert"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().matched_path() == "serve");
+}

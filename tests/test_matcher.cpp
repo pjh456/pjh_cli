@@ -297,3 +297,59 @@ TEST_CASE("collect_help includes option metadata")
     CHECK(info.args[0].name == "file");
     CHECK(info.args[0].is_required);
 }
+
+// ──────────────────────────────────────────
+//  Alias tests
+// ──────────────────────────────────────────
+
+TEST_CASE("fuzzy find matches alias name")
+{
+    App app("test", "1.0", "Fuzzy alias");
+    auto &cmd = app.add_leaf("server", "Start server");
+    cmd.alias("sr");
+
+    auto exact = fuzzy_find_subcommands(app, "sever", 2);
+    CHECK(!exact.empty());
+    CHECK(exact[0].command->name() == "server");
+}
+
+TEST_CASE("complete matches alias prefix")
+{
+    App app("test", "1.0", "Complete alias");
+    auto &cmd = app.add_leaf("list", "List items");
+    cmd.alias("ls");
+
+    auto candidates = complete(app, "l");
+    bool has_ls = false;
+    for (const auto &c : candidates)
+        if (c == "ls")
+            has_ls = true;
+    CHECK(has_ls);
+}
+
+TEST_CASE("format_help shows aliases in subcommands section")
+{
+    App app("test", "1.0", "App with aliases");
+    auto &cmd = app.add_leaf("list", "List items");
+    cmd.alias("ls").alias("show");
+
+    auto help = HelpFormatter::format_help(app, "test");
+    CHECK(help.find("Subcommands:") != std::string_view::npos);
+    CHECK(help.find("list") != std::string_view::npos);
+    CHECK(help.find("ls, show") != std::string_view::npos);
+}
+
+TEST_CASE("list_subcommands does not include aliases")
+{
+    App app("test", "1.0", "List no aliases");
+    app.add_leaf("list", "List items").alias("ls");
+    app.add_leaf("config", "Config").alias("cfg");
+
+    auto names = list_subcommands(app);
+    CHECK(names.size() == 2);
+    CHECK(std::find(names.begin(), names.end(), "list") != names.end());
+    CHECK(std::find(names.begin(), names.end(), "config") != names.end());
+    // Aliases should not appear as separate entries
+    CHECK(std::find(names.begin(), names.end(), "ls") == names.end());
+    CHECK(std::find(names.begin(), names.end(), "cfg") == names.end());
+}

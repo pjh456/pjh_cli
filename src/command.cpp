@@ -87,6 +87,12 @@ namespace pjh::cli
         return *this;
     }
 
+    BaseCommand &BaseCommand::alias(std::string name)
+    {
+        m_aliases.push_back(std::move(name));
+        return *this;
+    }
+
     // ── BranchCommand ──
 
     BranchCommand &BranchCommand::add_branch(std::string name, std::string description)
@@ -120,14 +126,26 @@ namespace pjh::cli
     BaseCommand *BranchCommand::find_subcommand(std::string_view name) noexcept
     {
         auto it = m_subcommand_by_name.find(name);
-        return it != m_subcommand_by_name.end() ? it->second : nullptr;
+        if (it != m_subcommand_by_name.end())
+            return it->second;
+        for (auto &sub : m_subcommands)
+            for (auto &a : sub->aliases())
+                if (a == name)
+                    return sub.get();
+        return nullptr;
     }
 
     const BaseCommand *BranchCommand::find_subcommand(
         std::string_view name) const noexcept
     {
         auto it = m_subcommand_by_name.find(name);
-        return it != m_subcommand_by_name.end() ? it->second : nullptr;
+        if (it != m_subcommand_by_name.end())
+            return it->second;
+        for (const auto &sub : m_subcommands)
+            for (const auto &a : sub->aliases())
+                if (a == name)
+                    return sub.get();
+        return nullptr;
     }
 
     // ── ParseContext ──
