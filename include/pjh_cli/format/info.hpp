@@ -153,6 +153,44 @@ namespace pjh::cli
         std::vector<ArgInfo> remaining_args;  ///< Unconsumed positional args.
     };
 
+    // ── Completion / suggestion structs ──
+
+    /// @brief A single completion candidate (subcommand name or option flag).
+    struct CompletionCandidate
+    {
+        std::string display;  ///< "--verbose" or "serve"
+    };
+
+    /// @brief A single fuzzy match suggestion with distance score.
+    struct FuzzySuggestion
+    {
+        std::string name;       ///< Matched command name.
+        int distance = 0;       ///< Levenshtein distance.
+    };
+
+    /// @brief Bundle of fuzzy match suggestions.
+    struct SuggestionInfo
+    {
+        std::vector<FuzzySuggestion> matches;
+    };
+
+    // ── Version info ──
+
+    /// @brief Structured program version information.
+    struct VersionInfo
+    {
+        std::string program_name;
+        std::string version;
+    };
+
+    // ── Path info ──
+
+    /// @brief Matched subcommand path as a list of command name strings.
+    struct MatchedPath
+    {
+        std::vector<std::string> commands;
+    };
+
 }  // namespace pjh::cli
 
 #endif

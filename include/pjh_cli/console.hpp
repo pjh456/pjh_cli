@@ -3,6 +3,7 @@
 
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <string>
 #include <vector>
 
@@ -94,17 +95,15 @@ namespace pjh::cli
         /// @return Ok() after printing help text or error messages to stdout.
         CliResult<void> handle_help(const std::vector<std::string> &tokens);
 
-        /// @brief Fuzzy-find subcommand names under @p branch and format them
-        ///        as a space-separated string: `" cmd1 cmd2"`.
+        /// @brief Fuzzy-find subcommand names under @p branch.
         ///
         /// Uses fuzzy_find_subcommands() with max_distance = 3 and
-        /// Visibility::Repl.  Returns empty string if no fuzzy match is found.
+        /// Visibility::Repl.
         ///
         /// @param branch  The parent branch to search under.
         /// @param input   User input to match (mangled or abbreviated name).
-        /// @return Space-separated string prefixed with a single space,
-        ///         or empty.
-        static std::string format_fuzzy_suggestions(
+        /// @return SuggestionInfo with matches sorted by distance.
+        static SuggestionInfo collect_fuzzy_suggestions(
             BranchCommand &branch, std::string_view input);
     };
 

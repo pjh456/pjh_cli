@@ -8,6 +8,7 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -174,14 +175,25 @@ namespace pjh::cli
         return result;
     }
 
-    std::string ParseContext::matched_path() const
+    MatchedPath ParseContext::matched_path_info() const
     {
         auto cmds = matched_commands();
-        if (cmds.empty())
+        MatchedPath out;
+        out.commands.reserve(cmds.size());
+        for (auto *c : cmds)
+            out.commands.push_back(c->name());
+        return out;
+    }
+
+    std::string ParseContext::matched_path() const
+    {
+        auto info = matched_path_info();
+        if (info.commands.empty())
             return {};
         std::ostringstream os;
-        os << cmds[0]->name();
-        for (size_t i = 1; i < cmds.size(); ++i) os << ' ' << cmds[i]->name();
+        os << info.commands[0];
+        for (size_t i = 1; i < info.commands.size(); ++i)
+            os << ' ' << info.commands[i];
         return os.str();
     }
 

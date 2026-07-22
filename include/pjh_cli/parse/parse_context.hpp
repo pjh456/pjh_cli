@@ -7,6 +7,10 @@
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
+
+// Forward decl — MatchedPath used as return type of matched_path_info().
+// Full definition is in format/info.hpp, included by callers as needed.
+namespace pjh::cli { struct MatchedPath; }
 #include <pjh_cli/detail/concept.hpp>
 #include <pjh_result.hpp>
 #include <string>
@@ -236,6 +240,10 @@ namespace pjh::cli
         /// @brief Full matched subcommand path as a space-separated string.
         /// @return e.g. "config set".
         std::string matched_path() const;
+
+        /// @brief Matched subcommand path as a struct of command name strings.
+        /// @return MatchedPath{commands} — e.g. MatchedPath{{"config", "set"}}
+        MatchedPath matched_path_info() const;
 
         /// @brief Set the deepest matched command (used internally by Parser).
         void set_matched_command(BaseCommand *cmd) { m_matched_cmd = cmd; }

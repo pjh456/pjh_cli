@@ -3,6 +3,7 @@
 
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -57,6 +58,11 @@ namespace pjh::cli
     /// @param prefix Partial token to match against.
     /// @param mode   Visibility filter (default Both).
     /// @return Sorted, deduplicated candidate list (may be empty).
+    std::vector<CompletionCandidate> complete_candidates(
+        const BaseCommand &cmd,
+        std::string_view prefix,
+        Visibility mode = Visibility::Both);
+
     std::vector<std::string> complete(
         const BaseCommand &cmd,
         std::string_view prefix,

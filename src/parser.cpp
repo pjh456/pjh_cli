@@ -8,6 +8,7 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/error.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
@@ -319,8 +320,9 @@ namespace pjh::cli
         if (double_dash || a != "--version")
             return pjh::result::Option<ParseContext>::None();
 
-        auto &ver = root.version();
-        ctx.set_version_text(std::format("{} version {}\n", root.name(), ver));
+        VersionInfo vi{std::string(root.name()), root.version()};
+        ctx.set_version_text(
+            std::format("{} version {}\n", vi.program_name, vi.version));
         ctx.set_matched_command(&root);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }

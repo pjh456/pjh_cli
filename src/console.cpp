@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <format>
 #include <iostream>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
@@ -6,6 +7,7 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string>
@@ -15,6 +17,59 @@
 
 namespace pjh::cli
 {
+    namespace
+    {
+        std::string format_suggestions(const SuggestionInfo &info)
+        {
+            std::string out;
+            for (auto &m : info.matches)
+                out += " " + m.name;
+            return out;
+        }
+
+        std::string format_no_subcommands()
+        {
+            return "No subcommands available.";
+        }
+
+        std::string format_subcommand_list(const std::vector<std::string> &names)
+        {
+            if (names.empty())
+                return format_no_subcommands();
+            std::string out = "Subcommands:";
+            for (auto &n : names)
+                out += " " + n;
+            return out;
+        }
+
+        std::string format_matched_subcommands(const std::vector<std::string> &names)
+        {
+            std::string out = "Matching subcommands:";
+            for (auto &n : names)
+                out += " " + n;
+            return out;
+        }
+
+        std::string format_no_match(const std::string &usage)
+        {
+            return std::format("No matches. Try: {}", usage);
+        }
+
+        std::string format_has_no_subcommands(const std::string &name)
+        {
+            return std::format("'{}' has no subcommands.", name);
+        }
+
+        std::string format_unknown_subcommand(
+            const std::string &name, std::string_view suggestions)
+        {
+            if (suggestions.empty())
+                return std::format("Unknown subcommand '{}'.", name);
+            return std::format(
+                "Unknown subcommand '{}'. Did you mean:{}", name, suggestions);
+        }
+    }
+
     InteractiveConsole::InteractiveConsole(BranchCommand &root, std::string prompt) :
         m_root(root), m_prompt(std::move(prompt))
     {
@@ -46,16 +101,15 @@ namespace pjh::cli
 
     void InteractiveConsole::stop() { m_running = false; }
 
-    std::string InteractiveConsole::format_fuzzy_suggestions(
+    SuggestionInfo InteractiveConsole::collect_fuzzy_suggestions(
         BranchCommand &branch, std::string_view input)
     {
         auto fuzzy = fuzzy_find_subcommands(branch, input, 3, Visibility::Repl);
-        if (fuzzy.empty())
-            return {};
-
-        std::string result;
-        for (const auto &f : fuzzy) result += " " + f.command->name();
-        return result;
+        SuggestionInfo info;
+        info.matches.reserve(fuzzy.size());
+        for (auto &f : fuzzy)
+            info.matches.push_back({f.command->name(), f.distance});
+        return info;
     }
 
     CliResult<void> InteractiveConsole::handle_query(const std::string &query)
@@ -63,18 +117,11 @@ namespace pjh::cli
         if (query.empty())
         {
             auto names = list_subcommands(m_root);
-            if (names.empty())
-                std::cout << "No subcommands available.\n";
-            else
-            {
-                std::cout << "Subcommands:";
-                for (const auto &n : names) std::cout << " " << n;
-                std::cout << "\n";
-            }
+            std::cout << format_subcommand_list(names) << "\n";
             return CliResult<void>::Ok();
         }
 
-        bool found = false;
+        std::vector<std::string> matched;
         for (const auto &sub_ptr : m_root.subcommands())
         {
             if (!sub_ptr->is_enabled())
@@ -83,40 +130,35 @@ namespace pjh::cli
                 continue;
             if (sub_ptr->name().find(query) != std::string_view::npos)
             {
-                if (!found)
-                {
-                    std::cout << "Matching subcommands:";
-                    found = true;
-                }
-                std::cout << " " << sub_ptr->name();
+                matched.push_back(sub_ptr->name());
                 continue;
             }
             for (const auto &a : sub_ptr->aliases())
                 if (a.find(query) != std::string_view::npos)
                 {
-                    if (!found)
-                    {
-                        std::cout << "Matching subcommands:";
-                        found = true;
-                    }
-                    std::cout << " " << sub_ptr->name();
+                    matched.push_back(sub_ptr->name());
                     break;
                 }
         }
 
-        if (!found)
+        if (!matched.empty())
         {
-            auto suggestions = format_fuzzy_suggestions(m_root, query);
-            if (!suggestions.empty())
-                std::cout << "Did you mean:" << suggestions;
-            else
-            {
-                std::cout << "No matches.";
-                std::cout << " Try: "
-                          << HelpFormatter::format_usage(m_root, m_root.name());
-            }
+            std::cout << format_matched_subcommands(matched) << "\n";
+            return CliResult<void>::Ok();
         }
-        std::cout << "\n";
+
+        auto suggestions = collect_fuzzy_suggestions(m_root, query);
+        auto sug_str = format_suggestions(suggestions);
+        if (!sug_str.empty())
+        {
+            std::cout << "Did you mean:" << sug_str << "\n";
+        }
+        else
+        {
+            std::cout << format_no_match(
+                HelpFormatter::format_usage(m_root, m_root.name()))
+                      << "\n";
+        }
         return CliResult<void>::Ok();
     }
 
@@ -134,7 +176,7 @@ namespace pjh::cli
         {
             if (!target->is_branch())
             {
-                std::cout << "'" << target->name() << "' has no subcommands.\n";
+                std::cout << format_has_no_subcommands(target->name()) << "\n";
                 return CliResult<void>::Ok();
             }
 
@@ -142,16 +184,9 @@ namespace pjh::cli
             auto *sub = branch->find_subcommand(tokens[i]);
             if (!sub)
             {
-                auto suggestions = format_fuzzy_suggestions(*branch, tokens[i]);
-                if (!suggestions.empty())
-                {
-                    std::cout << "Unknown subcommand '" << tokens[i]
-                              << "'. Did you mean:" << suggestions << "\n";
-                }
-                else
-                {
-                    std::cout << "Unknown subcommand '" << tokens[i] << "'.\n";
-                }
+                auto suggestions = collect_fuzzy_suggestions(*branch, tokens[i]);
+                auto sug_str = format_suggestions(suggestions);
+                std::cout << format_unknown_subcommand(tokens[i], sug_str) << "\n";
                 return CliResult<void>::Ok();
             }
             target = sub;

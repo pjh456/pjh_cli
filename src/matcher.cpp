@@ -4,6 +4,7 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <string>
 #include <string_view>
@@ -71,12 +72,11 @@ namespace pjh::cli
         return names;
     }
 
-    std::vector<std::string> complete(
+    std::vector<CompletionCandidate> complete_candidates(
         const BaseCommand &cmd, std::string_view prefix, Visibility mode)
     {
-        std::vector<std::string> candidates;
+        std::vector<CompletionCandidate> candidates;
 
-        // Subcommand name completion (branch only)
         if (!cmd.is_leaf())
         {
             auto &branch = static_cast<const BranchCommand &>(cmd);
@@ -85,14 +85,13 @@ namespace pjh::cli
                     if (!detail::is_visible_and_enabled(*sub_ptr, mode))
                         continue;
                     if (sub_ptr->name().starts_with(prefix))
-                        candidates.push_back(sub_ptr->name());
+                        candidates.push_back({std::string(sub_ptr->name())});
                     for (const auto &a : sub_ptr->aliases())
                         if (a.starts_with(prefix))
-                            candidates.push_back(a);
+                            candidates.push_back({a});
                 }
         }
 
-        // Option completion (prefix starts with '-')
         if (!prefix.empty() && prefix[0] == '-')
         {
             if (prefix.size() >= 2 && prefix[1] == '-')
@@ -100,28 +99,43 @@ namespace pjh::cli
                 auto opt_prefix = prefix.substr(2);
                 for (const auto &opt_ptr : cmd.options())
                     if (opt_ptr->long_name().starts_with(opt_prefix))
-                        candidates.push_back(std::format("--{}", opt_ptr->long_name()));
+                        candidates.push_back(
+                            {std::format("--{}", opt_ptr->long_name())});
             }
             else if (prefix.size() == 1)
             {
                 for (const auto &opt_ptr : cmd.options())
                     if (opt_ptr->short_name() != 0)
-                        candidates.push_back(std::format("-{}", opt_ptr->short_name()));
+                        candidates.push_back(
+                            {std::format("-{}", opt_ptr->short_name())});
             }
             else
             {
                 char c = prefix[1];
                 for (const auto &opt_ptr : cmd.options())
                     if (opt_ptr->short_name() == c)
-                        candidates.push_back(std::format("-{}", opt_ptr->short_name()));
+                        candidates.push_back(
+                            {std::format("-{}", opt_ptr->short_name())});
             }
         }
 
-        std::ranges::stable_sort(candidates);
-        auto [first, last] = std::ranges::unique(candidates);
+        std::ranges::stable_sort(candidates, {}, &CompletionCandidate::display);
+        auto [first, last] = std::ranges::unique(
+            candidates, {}, &CompletionCandidate::display);
         candidates.erase(first, last);
 
         return candidates;
+    }
+
+    std::vector<std::string> complete(
+        const BaseCommand &cmd, std::string_view prefix, Visibility mode)
+    {
+        auto ccs = complete_candidates(cmd, prefix, mode);
+        std::vector<std::string> out;
+        out.reserve(ccs.size());
+        for (auto &cc : ccs)
+            out.push_back(std::move(cc.display));
+        return out;
     }
 
 }  // namespace pjh::cli
