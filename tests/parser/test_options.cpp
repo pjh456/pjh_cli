@@ -104,14 +104,17 @@ TEST_CASE("Parser equals form type conversion failure")
     CHECK(r.is_err());
 }
 
-TEST_CASE("Parser short mixed bool flag then valued option errors")
+TEST_CASE("Parser short mixed bool flag then valued option")
 {
     App app("test", "1.0", "Mixed short");
     app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
     app.option<fixed_string("port")>("--port", 'p', "Port").integer();
     Argv argv{"test", "-vp", "8080"};
     auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_err());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
 }
 
 TEST_CASE("Parser short mixed valued option then bool flag errors")
@@ -124,13 +127,64 @@ TEST_CASE("Parser short mixed valued option then bool flag errors")
     CHECK(r.is_err());
 }
 
-TEST_CASE("Parser short option with attached value errors")
+TEST_CASE("Parser compact short option -p8080")
 {
-    App app("test", "1.0", "Attached test");
+    App app("test", "1.0", "Compact test");
     app.option<fixed_string("port")>("--port", 'p', "Port").integer();
     Argv argv{"test", "-p8080"};
     auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto val = r.unwrap().get<int, fixed_string("port")>();
+    CHECK(val == 8080);
+}
+
+TEST_CASE("Parser compact short with flag group -vp consumes next token")
+{
+    App app("test", "1.0", "Compact group");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    Argv argv{"test", "-vp", "9090"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<int, fixed_string("port")>() == 9090);
+}
+
+TEST_CASE("Parser compact short -p8080 works alongside another option")
+{
+    App app("test", "1.0", "Compact alongside");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    Argv argv{"test", "-p8080", "-v"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+}
+
+TEST_CASE("Parser compact short errors when value is non-numeric for int")
+{
+    App app("test", "1.0", "Compact bad");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    Argv argv{"test", "-pabc"};
+    auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
+}
+
+TEST_CASE("Parser compact short with repeatable greedy")
+{
+    App app("test", "1.0", "Compact greedy");
+    app.option<fixed_string("files")>("--files", 'f', "Files").path().repeatable();
+    Argv argv{"test", "-fa.txt", "b.txt", "c.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<fs::path, fixed_string("files")>();
+    REQUIRE(all.size() == 3);
+    CHECK(all[0] == "a.txt");
+    CHECK(all[1] == "b.txt");
+    CHECK(all[2] == "c.txt");
 }
 
 TEST_CASE("Parser short valued option alone works")

@@ -133,9 +133,26 @@ namespace pjh::cli
 
             if (opt->has_value())
             {
-                if (arg.size() != 2)
-                    return CliFailure{CliError(
-                        std::format("-{} requires a value as a separate argument", c))};
+                // Compact form: -p8080 → value is everything after 'p'
+                if (j + 1 < arg.size())
+                {
+                    auto r = opt->parse_value(ctx, arg.substr(j + 1));
+                    if (r.is_err())
+                        return r;
+
+                    while (opt->is_repeatable() && i + 1 < args.size())
+                    {
+                        auto nxt = args[i + 1];
+                        if (!nxt.empty() && nxt[0] == '-')
+                            break;
+                        r = opt->parse_value(ctx, args[++i]);
+                        if (r.is_err())
+                            return r;
+                    }
+                    break;
+                }
+
+                // Separated form: -p 8080 or -vp 8080
                 if (i + 1 >= args.size())
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
