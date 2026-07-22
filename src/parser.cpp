@@ -91,7 +91,26 @@ namespace pjh::cli
             if (i + 1 >= args.size())
                 return CliFailure{
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
-            return opt->parse_value(ctx, args[++i]);
+
+            auto next = args[i + 1];
+            if (!next.empty() && next[0] == '-')
+                return CliFailure{
+                    ErrorFactory::missing_value(std::format("--{}", parsed.name))};
+
+            auto r = opt->parse_value(ctx, args[++i]);
+            if (r.is_err())
+                return r;
+
+            while (opt->is_repeatable() && i + 1 < args.size())
+            {
+                next = args[i + 1];
+                if (!next.empty() && next[0] == '-')
+                    break;
+                r = opt->parse_value(ctx, args[++i]);
+                if (r.is_err())
+                    return r;
+            }
+            return CliResult<void>::Ok();
         }
 
         apply_flag(opt, ctx);
@@ -119,9 +138,24 @@ namespace pjh::cli
                         std::format("-{} requires a value as a separate argument", c))};
                 if (i + 1 >= args.size())
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
+
+                auto next = args[i + 1];
+                if (!next.empty() && next[0] == '-')
+                    return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
+
                 auto r = opt->parse_value(ctx, args[++i]);
                 if (r.is_err())
                     return r;
+
+                while (opt->is_repeatable() && i + 1 < args.size())
+                {
+                    next = args[i + 1];
+                    if (!next.empty() && next[0] == '-')
+                        break;
+                    r = opt->parse_value(ctx, args[++i]);
+                    if (r.is_err())
+                        return r;
+                }
             }
             else
             {

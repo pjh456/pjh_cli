@@ -29,7 +29,8 @@ namespace pjh::cli
         std::string default_str;              ///< Human-readable default value string.
         bool is_negatable = false;            ///< Whether --no-xxx negation is enabled.
         bool is_counting = false;             ///< Whether it counts occurrences (-vvv).
-        std::string_view env_var;  ///< Environment variable name (empty if none).
+        bool is_repeatable = false;  ///< Whether it accepts repeated / multi values.
+        std::string_view env_var;    ///< Environment variable name (empty if none).
 
         OptionInfo() = default;
 
@@ -45,6 +46,7 @@ namespace pjh::cli
             default_str(opt.has_default() ? opt.default_value_str() : ""),
             is_negatable(opt.is_negatable()),
             is_counting(opt.is_counting()),
+            is_repeatable(opt.is_repeatable()),
             env_var(opt.env_var())
         {
         }

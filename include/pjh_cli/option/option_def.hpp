@@ -91,7 +91,8 @@ namespace pjh::cli
         /// @brief Whether this option supports --no-xxx negation.
         virtual bool is_negatable() const noexcept { return false; }
 
-        /// @brief Whether this option accepts repeated values.
+        /// @brief Whether this option accepts repeated values (--opt a --opt b).
+        ///        When true, also enables multi-value consumption (--opt a b c).
         bool is_repeatable() const noexcept { return m_repeatable; }
 
         /// @brief Parse a raw CLI token and store the typed value in @p ctx.
@@ -182,6 +183,7 @@ namespace pjh::cli
         }
 
         /// @brief Enable repeated values (--opt a --opt b).
+        ///        Also enables multi-value consumption (--opt a b c).
         /// @note Must be called before parse_value / apply_default.
         OptionDef &repeatable()
         {

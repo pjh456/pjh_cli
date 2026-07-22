@@ -59,6 +59,8 @@ namespace pjh::cli::detail
             auto label = opt.long_name().empty() ? std::string(1, opt.short_name())
                                                  : opt.long_name();
             left += " " + StringUtils::to_upper_copy(label);
+            if (opt.is_repeatable())
+                left += " [...]";
         }
         return left;
     }
