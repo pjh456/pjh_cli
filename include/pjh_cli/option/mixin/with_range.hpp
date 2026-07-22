@@ -93,12 +93,12 @@ namespace pjh::cli
                 return CliFailure{ErrorFactory::value_out_of_range(
                     this->m_long_name, raw, this->m_min.unwrap(),
                     this->m_max.is_some() ? this->m_max.unwrap()
-                                          : detail::range_upper<T>(v))};
+                                          : detail::range_upper<T>(this->m_min.unwrap()))};
             if (this->m_max.is_some() && v > this->m_max.unwrap())
                 return CliFailure{ErrorFactory::value_out_of_range(
                     this->m_long_name, raw,
                     this->m_min.is_some() ? this->m_min.unwrap()
-                                          : detail::range_lower<T>(v),
+                                          : detail::range_lower<T>(this->m_max.unwrap()),
                     this->m_max.unwrap())};
             return Base::validate_value(v, raw);
         }
