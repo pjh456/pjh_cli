@@ -93,7 +93,8 @@ namespace pjh::cli
 
         /// @brief Whether this option accepts repeated values (--opt a --opt b).
         ///        When true, also enables multi-value consumption (--opt a b c).
-        bool is_repeatable() const noexcept { return m_repeatable; }
+        ///        Default false. Overridden by WithRepeatable mixin.
+        virtual bool is_repeatable() const noexcept { return false; }
 
         /// @brief Parse a raw CLI token and store the typed value in @p ctx.
         /// @param ctx Parse context to write into.
@@ -182,15 +183,6 @@ namespace pjh::cli
             return *this;
         }
 
-        /// @brief Enable repeated values (--opt a --opt b).
-        ///        Also enables multi-value consumption (--opt a b c).
-        /// @note Must be called before parse_value / apply_default.
-        OptionDef &repeatable()
-        {
-            m_repeatable = true;
-            return *this;
-        }
-
         /// @brief Register a completer function for shell completion.
         OptionDef &completer(std::function<std::vector<std::string>()> fn)
         {
@@ -203,7 +195,7 @@ namespace pjh::cli
         template <typename T>
         CliResult<void> store_or_append(ParseContext &ctx, size_t hash, T value) const
         {
-            if (m_repeatable)
+            if (is_repeatable())
                 ctx.append_value(hash, std::move(value));
             else
                 ctx.set_value(hash, std::move(value));
@@ -216,7 +208,6 @@ namespace pjh::cli
         std::string m_description;
         bool m_has_value{};
         bool m_required{};
-        bool m_repeatable{};
         size_t m_key_hash{};
         ValueTag m_value_tag{};
         std::function<std::vector<std::string>()> m_completer;
