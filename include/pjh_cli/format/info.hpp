@@ -71,8 +71,8 @@ namespace pjh::cli
     /// @brief Structured metadata about a subcommand.
     struct SubcommandInfo
     {
-        std::string_view name;         ///< Subcommand name (e.g. "serve").
-        std::string_view description;  ///< Help text description.
+        std::string_view name;             ///< Subcommand name (e.g. "serve").
+        std::string_view description;      ///< Help text description.
         std::vector<std::string> aliases;  ///< Alternative names (empty if none).
     };
 
@@ -88,6 +88,43 @@ namespace pjh::cli
         std::vector<OptionInfo> options;          ///< Registered options.
         std::vector<ArgInfo> args;                ///< Positional arguments (leaf only).
         std::vector<SubcommandInfo> subcommands;  ///< Visible child subcommands.
+    };
+
+    // ── Display-level structs ──
+
+    /// @brief A single token in a usage line (pre-formatted display text).
+    struct UsageToken
+    {
+        std::string display;  ///< e.g. "--port PORT" or "[--verbose]" or "<src>"
+    };
+
+    /// @brief Structured representation of a usage line.
+    struct UsageInfo
+    {
+        std::string program_name;        ///< Program name for display.
+        std::vector<UsageToken> tokens;  ///< Tokens in display order.
+    };
+
+    /// @brief One row in a help section.
+    struct HelpLine
+    {
+        std::string left;   ///< Left column: option/arg/subcommand label.
+        std::string right;  ///< Right column: description + annotations.
+    };
+
+    /// @brief A named section in a help document (e.g. "Options", "Arguments").
+    struct HelpSection
+    {
+        std::string heading;          ///< Section heading text.
+        std::vector<HelpLine> lines;  ///< Rows in the section.
+    };
+
+    /// @brief Full structured help document, ready for rendering.
+    struct HelpDocument
+    {
+        UsageInfo usage;                    ///< Usage line data.
+        std::string description;            ///< Command description.
+        std::vector<HelpSection> sections;  ///< Sections in display order.
     };
 
     /// @brief Structured context from walking a partial input through the command tree.

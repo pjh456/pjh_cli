@@ -96,6 +96,23 @@ namespace pjh::cli
         /// @return Multi-line help string.
         static std::string format_help(const HelpInfo &info);
 
+        /// @brief Build a HelpDocument from structured HelpInfo.
+        ///
+        /// Pre-computes display labels and groups data into sections.
+        /// The returned document is ready for format_help(HelpDocument).
+        static HelpDocument build_document(const HelpInfo &info);
+
+        /// @brief Render a HelpDocument as a multi-line help string.
+        static std::string format_help(const HelpDocument &doc);
+
+        /// @brief Build a UsageInfo from HelpInfo.
+        ///
+        /// Pre-computes token display strings for the usage line.
+        static UsageInfo build_usage(const HelpInfo &info);
+
+        /// @brief Render a UsageInfo as a one-line usage string.
+        static std::string format_usage(const UsageInfo &info);
+
     private:
         /// @brief Write one line of a help section with padded left column.
         ///

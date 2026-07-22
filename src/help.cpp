@@ -66,163 +66,196 @@ namespace pjh::cli
             {
                 if (!detail::is_visible_and_enabled(*sub_ptr, visibility))
                     continue;
-                std::vector<std::string> aliases(sub_ptr->aliases().begin(), sub_ptr->aliases().end());
-                info.subcommands.push_back({sub_ptr->name(), sub_ptr->description(), std::move(aliases)});
+                std::vector<std::string> aliases(
+                    sub_ptr->aliases().begin(), sub_ptr->aliases().end());
+                info.subcommands.push_back(
+                    {sub_ptr->name(), sub_ptr->description(), std::move(aliases)});
             }
         }
 
         return info;
     }
 
-    std::string HelpFormatter::format_help(const HelpInfo &info)
+    // ── build_document ──
+
+    HelpDocument HelpFormatter::build_document(const HelpInfo &info)
+    {
+        HelpDocument doc;
+        doc.usage = build_usage(info);
+        doc.description = info.description;
+
+        auto make_section = [](std::string heading, auto &&add_lines) -> HelpSection
+        {
+            HelpSection sec;
+            sec.heading = std::move(heading);
+            add_lines(sec.lines);
+            return sec;
+        };
+
+        // Options
+        if (!info.options.empty())
+        {
+            doc.sections.push_back(make_section(
+                "Options",
+                [&](std::vector<HelpLine> &lines)
+                {
+                    for (const auto &opt : info.options)
+                    {
+                        HelpLine line;
+                        line.left = option_label(opt);
+                        line.right = std::string(opt.description);
+                        if (opt.is_required)
+                            line.right += " (required)";
+                        if (opt.has_default)
+                            line.right += " (default: " + opt.default_str + ")";
+                        lines.push_back(std::move(line));
+                    }
+                }));
+        }
+
+        // Arguments
+        if (!info.args.empty())
+        {
+            doc.sections.push_back(make_section(
+                "Arguments",
+                [&](std::vector<HelpLine> &lines)
+                {
+                    for (const auto &arg : info.args)
+                    {
+                        HelpLine line;
+                        line.left = std::string(arg.name);
+                        line.right = std::string(arg.description);
+                        if (arg.is_required)
+                            line.right += " (required)";
+                        lines.push_back(std::move(line));
+                    }
+                }));
+        }
+
+        // Subcommands
+        if (!info.subcommands.empty())
+        {
+            doc.sections.push_back(make_section(
+                "Subcommands",
+                [&](std::vector<HelpLine> &lines)
+                {
+                    for (const auto &sub : info.subcommands)
+                    {
+                        HelpLine line;
+                        line.left = std::string(sub.name);
+                        if (!sub.aliases.empty())
+                        {
+                            line.left += " (";
+                            for (size_t i = 0; i < sub.aliases.size(); i++)
+                            {
+                                if (i > 0)
+                                    line.left += ", ";
+                                line.left += sub.aliases[i];
+                            }
+                            line.left += ")";
+                        }
+                        line.right = std::string(sub.description);
+                        lines.push_back(std::move(line));
+                    }
+                }));
+        }
+
+        return doc;
+    }
+
+    // ── format_help(HelpDocument) ──
+
+    std::string HelpFormatter::format_help(const HelpDocument &doc)
     {
         std::ostringstream os;
 
-        auto format_section = [&os](
-                                  const std::string &header, const auto &items,
-                                  size_t width_limit, auto left_of, auto right_of)
-        {
-            if (items.empty())
-                return;
-            os << header << ":\n";
-            size_t max_left = 0;
-            for (const auto &item : items)
-                max_left = std::max(max_left, left_of(item).size());
-            size_t left_width = std::min(max_left, width_limit);
-            for (const auto &item : items)
-            {
-                std::string right(right_of(item));
-                append_help_line(os, left_of(item), right, left_width);
-            }
-            os << "\n";
-        };
+        // Usage line
+        os << format_usage(doc.usage) << "\n\n";
 
-        // Usage
+        // Description
+        if (!doc.description.empty())
+            os << doc.description << "\n\n";
+
+        // Sections
+        for (const auto &section : doc.sections)
+        {
+            os << section.heading << ":\n";
+            size_t max_left = 0;
+            size_t width_limit = (section.heading == "Options") ? size_t{32} : size_t{28};
+            for (const auto &line : section.lines)
+                max_left = std::max(max_left, line.left.size());
+            size_t left_width = std::min(max_left, width_limit);
+            for (const auto &line : section.lines)
+                append_help_line(os, line.left, line.right, left_width);
+            os << "\n";
+        }
+
+        return os.str();
+    }
+
+    // ── format_help(HelpInfo) — adapter ──
+
+    std::string HelpFormatter::format_help(const HelpInfo &info)
+    {
+        return format_help(build_document(info));
+    }
+
+    // ── build_usage ──
+
+    UsageInfo HelpFormatter::build_usage(const HelpInfo &info)
+    {
+        UsageInfo usage;
+        usage.program_name = info.program_name;
+
+        for (const auto &opt : info.options)
+        {
+            UsageToken tok;
+            tok.display = option_label(opt, "|");
+            if (!opt.is_required)
+                tok.display = "[" + tok.display + "]";
+            usage.tokens.push_back(std::move(tok));
+        }
+
+        for (const auto &arg : info.args)
+        {
+            UsageToken tok;
+            if (arg.is_required)
+                tok.display = "<" + std::string(arg.name) + ">";
+            else
+                tok.display = "[" + std::string(arg.name) + "]";
+            usage.tokens.push_back(std::move(tok));
+        }
+
+        if (!info.subcommands.empty())
+            usage.tokens.push_back({"<command>"});
+
+        return usage;
+    }
+
+    // ── format_usage(UsageInfo) ──
+
+    std::string HelpFormatter::format_usage(const UsageInfo &info)
+    {
+        std::ostringstream os;
         os << "Usage: ";
         if (!info.program_name.empty())
             os << info.program_name;
         else
             os << "app";
-
-        for (const auto &opt : info.options)
-        {
-            auto label = option_label(opt, "|");
-            if (opt.is_required)
-                os << " " << label;
-            else
-                os << " [" << label << "]";
-        }
-        for (const auto &arg : info.args)
-        {
-            if (arg.is_required)
-                os << " <" << arg.name << ">";
-            else
-                os << " [" << arg.name << "]";
-        }
-        if (!info.subcommands.empty())
-            os << " <command>";
-        os << "\n\n";
-
-        // Description
-        if (!info.description.empty())
-            os << info.description << "\n\n";
-
-        // Options section
-        format_section(
-            "Options", info.options, 32,
-            [](const OptionInfo &o) { return option_label(o); },
-            [](const OptionInfo &o)
-            {
-                std::string r(o.description);
-                if (o.is_required)
-                    r += " (required)";
-                if (o.has_default)
-                    r += " (default: " + o.default_str + ")";
-                return r;
-            });
-
-        // Arguments section
-        format_section(
-            "Arguments", info.args, 28,
-            [](const ArgInfo &a) { return std::string(a.name); },
-            [](const ArgInfo &a)
-            {
-                std::string r(a.description);
-                if (a.is_required)
-                    r += " (required)";
-                return r;
-            });
-
-        // Subcommands section
-        format_section(
-            "Subcommands", info.subcommands, 28,
-            [](const SubcommandInfo &s)
-            {
-                std::string label(s.name);
-                if (!s.aliases.empty())
-                {
-                    label += " (";
-                    for (size_t i = 0; i < s.aliases.size(); i++)
-                    {
-                        if (i > 0)
-                            label += ", ";
-                        label += s.aliases[i];
-                    }
-                    label += ")";
-                }
-                return label;
-            },
-            [](const SubcommandInfo &s) { return std::string(s.description); });
-
+        for (const auto &tok : info.tokens) os << " " << tok.display;
         return os.str();
     }
+
+    // ── format_usage(BaseCommand) — adapter ──
 
     std::string HelpFormatter::format_usage(
         const BaseCommand &cmd, std::string_view program_name)
     {
-        std::ostringstream os;
-        os << "Usage: ";
-
-        if (!program_name.empty())
-            os << program_name;
-        else if (!cmd.name().empty())
-            os << cmd.name();
-        else
-            os << "app";
-
-        for (const auto &opt_ptr : cmd.options())
-        {
-            auto label = detail::option_left_label(*opt_ptr, "|");
-            if (opt_ptr->is_required())
-                os << " " << label;
-            else
-                os << " [" << label << "]";
-        }
-
-        if (auto *leaf = cmd.as_leaf())
-        {
-            for (const auto &arg : leaf->args())
-            {
-                if (arg.m_required)
-                    os << " <" << arg.m_name << ">";
-                else
-                    os << " [" << arg.m_name << "]";
-            }
-        }
-
-        if (!cmd.is_leaf())
-        {
-            auto &branch = static_cast<const BranchCommand &>(cmd);
-            auto &subcommands = branch.subcommands();
-            bool has_visible = std::any_of(
-                subcommands.begin(), subcommands.end(), [](const auto &sub_ptr)
-                { return detail::is_visible_and_enabled(*sub_ptr, Visibility::Both); });
-            if (has_visible)
-                os << " <command>";
-        }
-
-        return os.str();
+        auto info = collect_help(cmd, program_name);
+        return format_usage(build_usage(info));
     }
+
+    // ── format_help(BaseCommand) — adapter ──
 
     std::string HelpFormatter::format_help(
         const BaseCommand &cmd, std::string_view program_name)
