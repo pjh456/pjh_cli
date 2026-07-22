@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 #include <cstdlib>
+#include <iostream>
 
 #ifdef _WIN32
 #define setenv(name, val, overwrite) _putenv_s(name, val)

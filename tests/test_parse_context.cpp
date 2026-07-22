@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <iostream>
 #include <initializer_list>
 #include <memory>
 #include <pjh_cli/app.hpp>

@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <string>
