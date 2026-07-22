@@ -1,16 +1,15 @@
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <memory>
-#include <mutex>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
@@ -209,21 +208,17 @@ namespace pjh::cli
             if (dr.is_err())
                 return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
 
+            auto *env_snap = chain[0]->env_snapshot();
+
             for (const auto &opt_ptr : c->options())
             {
-                if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
+                if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty() &&
+                    env_snap)
                 {
-                    static std::mutex env_mutex;
-                    std::string env_val;
+                    auto *env_val = env_snap->get(opt_ptr->env_var());
+                    if (env_val)
                     {
-                        std::lock_guard<std::mutex> lock(env_mutex);
-                        const char *raw = std::getenv(opt_ptr->env_var().c_str());
-                        if (raw)
-                            env_val = raw;
-                    }
-                    if (!env_val.empty())
-                    {
-                        auto r = opt_ptr->parse_value(ctx, env_val);
+                        auto r = opt_ptr->parse_value(ctx, *env_val);
                         if (r.is_err())
                             return CliResult<ParseContext>::Err(
                                 std::move(r).unwrap_err());

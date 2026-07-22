@@ -3,6 +3,7 @@
 
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 
@@ -34,6 +35,12 @@ namespace pjh::cli
         /// @brief The version string passed at construction.
         const std::string &version() const noexcept override { return m_version; }
 
+        /// @brief Environment snapshot taken at construction.
+        const detail::EnvSnapshot *env_snapshot() const noexcept override
+        {
+            return &m_env_snapshot;
+        }
+
         /// @brief Parse CLI arguments (exact subcommand matching).
         ///
         /// Delegates to Parser::parse_command() with max_fuzzy_distance = 0.
@@ -57,6 +64,7 @@ namespace pjh::cli
         CliResult<ParseContext> parse_fuzzy(int argc, char **argv);
 
     private:
+        detail::EnvSnapshot m_env_snapshot;
         std::string m_version;
     };
 

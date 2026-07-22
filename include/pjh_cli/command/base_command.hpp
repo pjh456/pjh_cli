@@ -23,6 +23,11 @@
 #include <unordered_map>
 #include <utility>
 
+namespace pjh::cli::detail
+{
+    class EnvSnapshot;
+}
+
 namespace pjh::cli
 {
 
@@ -143,6 +148,13 @@ namespace pjh::cli
 
         /// @brief Parent command (nullptr for the root / App instance).
         BaseCommand *parent() const noexcept { return m_parent; }
+
+        /// @brief Environment snapshot for env-var fallback.
+        /// @return Pointer to snapshot, or nullptr if not available.
+        virtual const detail::EnvSnapshot *env_snapshot() const noexcept
+        {
+            return nullptr;
+        }
 
         /// @brief Application version string (empty for non-root commands).
         ///        Overridden by App to return its version.
