@@ -194,6 +194,42 @@ namespace pjh::cli
         {
             return CliError(std::format("command '{}' is not available", name));
         }
+
+        /// @brief Multiple options from a mutually-exclusive group were provided.
+        /// @param names  The long option names (e.g. "--port", "--socket").
+        /// @return CliError with message listing the conflicting options.
+        static CliError conflicting_options(const std::vector<std::string> &names)
+        {
+            std::string msg;
+            for (size_t i = 0; i < names.size(); i++)
+            {
+                if (i > 0)
+                    msg += ", ";
+                msg += names[i];
+            }
+            return CliError(
+                std::format("conflicting options: {} cannot be used together", msg));
+        }
+
+        /// @brief None of the options in a required group were provided.
+        /// @param names       The long option names.
+        /// @param exactly_one True for ExactlyOne mode, false for AtLeastOne.
+        /// @return CliError with message saying which options are required.
+        static CliError required_option_group(
+            const std::vector<std::string> &names, bool exactly_one)
+        {
+            std::string msg;
+            for (size_t i = 0; i < names.size(); i++)
+            {
+                if (i > 0)
+                    msg += ", ";
+                msg += names[i];
+            }
+            return CliError(std::format(
+                "{} of {} is required",
+                exactly_one ? "exactly one" : "at least one",
+                msg));
+        }
     };
 
 }  // namespace pjh::cli

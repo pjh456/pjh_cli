@@ -229,6 +229,39 @@ namespace pjh::cli
                     return CliResult<ParseContext>::Err(
                         ErrorFactory::missing_required_option(opt_ptr->long_name()));
             }
+
+            // Group validation
+            for (auto &group : c->groups())
+            {
+                size_t count = 0;
+                for (auto h : group.key_hashes)
+                    if (ctx.has_value(h))
+                        count++;
+
+                switch (group.mode)
+                {
+                case GroupMode::ExactlyOne:
+                    if (count == 0)
+                        return CliResult<ParseContext>::Err(
+                            ErrorFactory::required_option_group(
+                                group.option_names, true));
+                    if (count > 1)
+                        return CliResult<ParseContext>::Err(
+                            ErrorFactory::conflicting_options(group.option_names));
+                    break;
+                case GroupMode::AtMostOne:
+                    if (count > 1)
+                        return CliResult<ParseContext>::Err(
+                            ErrorFactory::conflicting_options(group.option_names));
+                    break;
+                case GroupMode::AtLeastOne:
+                    if (count == 0)
+                        return CliResult<ParseContext>::Err(
+                            ErrorFactory::required_option_group(
+                                group.option_names, false));
+                    break;
+                }
+            }
         }
 
         if (auto *leaf = cmd->as_leaf())
