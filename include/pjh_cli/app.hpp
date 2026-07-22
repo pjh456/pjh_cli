@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "command/branch_command.hpp"
-#include "pjh_cli/parse_context.hpp"
-#include "pjh_cli/type.hpp"
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/parse_context.hpp>
+#include <pjh_cli/type.hpp>
 
 namespace pjh::cli
 {

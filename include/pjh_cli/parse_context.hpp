@@ -12,10 +12,10 @@
 #include <utility>
 #include <vector>
 
-#include "detail/concept.hpp"
-#include "error.hpp"
-#include "fixed_string.hpp"
-#include "type.hpp"
+#include <pjh_cli/detail/concept.hpp>
+#include <pjh_cli/error.hpp>
+#include <pjh_cli/fixed_string.hpp>
+#include <pjh_cli/type.hpp>
 
 namespace pjh::cli
 {

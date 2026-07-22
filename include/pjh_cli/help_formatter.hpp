@@ -4,8 +4,8 @@
 #include <string>
 #include <string_view>
 
-#include "command/base_command.hpp"
-#include "info.hpp"
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/info.hpp>
 
 namespace pjh::cli
 {

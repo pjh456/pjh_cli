@@ -5,10 +5,10 @@
 #include <string_view>
 #include <vector>
 
-#include "command/branch_command.hpp"
-#include "converter.hpp"
-#include "parse_context.hpp"
-#include "type.hpp"
+#include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/converter.hpp>
+#include <pjh_cli/parse_context.hpp>
+#include <pjh_cli/type.hpp>
 
 namespace pjh::cli
 {

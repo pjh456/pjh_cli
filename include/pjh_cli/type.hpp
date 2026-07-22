@@ -8,7 +8,7 @@
 #include <pjh_result.hpp>
 #include <string>
 
-#include "error.hpp"
+#include <pjh_cli/error.hpp>
 
 namespace pjh::cli
 {

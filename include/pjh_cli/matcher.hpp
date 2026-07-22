@@ -5,8 +5,8 @@
 #include <string_view>
 #include <vector>
 
-#include "command/base_command.hpp"
-#include "command/branch_command.hpp"
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/branch_command.hpp>
 
 namespace pjh::cli
 {

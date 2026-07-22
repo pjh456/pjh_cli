@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_LEAF_COMMAND_HPP
 #define INCLUDE_PJH_CLI_COMMAND_LEAF_COMMAND_HPP
 
-#include "../arg_def.hpp"
-#include "base_command.hpp"
+#include <pjh_cli/arg_def.hpp>
+#include <pjh_cli/command/base_command.hpp>
 
 namespace pjh::cli
 {

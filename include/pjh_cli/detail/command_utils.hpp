@@ -5,9 +5,9 @@
 #include <string>
 #include <string_view>
 
-#include "../command/base_command.hpp"
-#include "../option_def.hpp"
-#include "string_utils.hpp"
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/option_def.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 
 namespace pjh::cli::detail
 {

@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include "pjh_cli/app.hpp"
-#include "pjh_cli/fixed_string.hpp"
+#include <pjh_cli/app.hpp>
+#include <pjh_cli/fixed_string.hpp>
 #include "test_helpers.hpp"
 
 TEST_CASE("Parser bool flag")

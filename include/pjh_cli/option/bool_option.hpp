@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_BOOL_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_BOOL_OPTION_HPP
 
-#include "mixin/with_default.hpp"
-#include "mixin/with_negatable.hpp"
+#include <pjh_cli/option/mixin/with_default.hpp>
+#include <pjh_cli/option/mixin/with_negatable.hpp>
 
 namespace pjh::cli
 {

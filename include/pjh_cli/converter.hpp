@@ -7,9 +7,9 @@
 #include <string_view>
 #include <system_error>
 
-#include "detail/string_utils.hpp"
-#include "error.hpp"
-#include "type.hpp"
+#include <pjh_cli/detail/string_utils.hpp>
+#include <pjh_cli/error.hpp>
+#include <pjh_cli/type.hpp>
 
 namespace pjh::cli
 {

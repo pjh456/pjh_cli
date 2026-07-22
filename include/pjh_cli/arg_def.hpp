@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <string>
 
-#include "type.hpp"
+#include <pjh_cli/type.hpp>
 
 namespace pjh::cli
 {

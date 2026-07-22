@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 
-#include "base_command.hpp"
-#include "leaf_command.hpp"
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/leaf_command.hpp>
 
 namespace pjh::cli
 {

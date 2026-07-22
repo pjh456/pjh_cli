@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-#include "string_utils.hpp"
+#include <pjh_cli/detail/string_utils.hpp>
 
 namespace pjh::cli::detail
 {
