@@ -5,8 +5,8 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
-#include <pjh_cli/help_formatter.hpp>
-#include <pjh_cli/info.hpp>
+#include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <sstream>
 
 namespace pjh::cli

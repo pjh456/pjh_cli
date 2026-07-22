@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/info.hpp>
+#include <pjh_cli/format/info.hpp>
 
 namespace pjh::cli
 {

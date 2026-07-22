@@ -2,9 +2,9 @@
 #include <iostream>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
-#include <pjh_cli/help_formatter.hpp>
-#include <pjh_cli/matcher.hpp>
-#include <pjh_cli/parser.hpp>
+#include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/format/matcher.hpp>
+#include <pjh_cli/parse/parser.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -12,7 +12,7 @@
 
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-#include <pjh_cli/converter.hpp>
+#include <pjh_cli/core/converter.hpp>
 
 TEST_CASE("Converter int")
 {

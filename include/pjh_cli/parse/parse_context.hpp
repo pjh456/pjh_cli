@@ -13,9 +13,9 @@
 #include <vector>
 
 #include <pjh_cli/detail/concept.hpp>
-#include <pjh_cli/error.hpp>
-#include <pjh_cli/fixed_string.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

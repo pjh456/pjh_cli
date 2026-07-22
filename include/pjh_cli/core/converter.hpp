@@ -8,8 +8,8 @@
 #include <system_error>
 
 #include <pjh_cli/detail/string_utils.hpp>
-#include <pjh_cli/error.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

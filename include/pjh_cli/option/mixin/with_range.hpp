@@ -8,10 +8,10 @@
 #include <type_traits>
 #include <utility>
 
-#include <pjh_cli/converter.hpp>
-#include <pjh_cli/error.hpp>
-#include <pjh_cli/option_def.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/converter.hpp>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli::detail
 {

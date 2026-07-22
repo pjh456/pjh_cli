@@ -3,10 +3,10 @@
 
 #include <string_view>
 
-#include <pjh_cli/option_def.hpp>
-#include <pjh_cli/parse_context.hpp>
-#include <pjh_cli/error.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

@@ -3,7 +3,7 @@
 #include <format>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
-#include <pjh_cli/matcher.hpp>
+#include <pjh_cli/format/matcher.hpp>
 #include <string>
 #include <string_view>
 #include <vector>

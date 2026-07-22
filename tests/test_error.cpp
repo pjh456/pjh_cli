@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string_view>
 
-#include <pjh_cli/error.hpp>
+#include <pjh_cli/core/error.hpp>
 
 using namespace pjh::cli;
 

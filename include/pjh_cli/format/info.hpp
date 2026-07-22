@@ -5,10 +5,10 @@
 #include <string_view>
 #include <vector>
 
-#include <pjh_cli/arg_def.hpp>
+#include <pjh_cli/option/arg_def.hpp>
 #include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/option_def.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

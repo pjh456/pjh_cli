@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include <pjh_cli/fixed_string.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 
 TEST_CASE("fixed_string basic properties")
 {

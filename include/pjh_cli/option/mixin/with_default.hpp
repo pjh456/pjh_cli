@@ -8,8 +8,8 @@
 #include <string_view>
 #include <utility>
 
-#include <pjh_cli/option_def.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli::detail
 {

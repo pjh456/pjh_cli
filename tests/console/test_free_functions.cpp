@@ -5,12 +5,12 @@
 #include <vector>
 
 #include <pjh_cli/app.hpp>
-#include <pjh_cli/fixed_string.hpp>
-#include <pjh_cli/help_formatter.hpp>
-#include <pjh_cli/matcher.hpp>
-#include <pjh_cli/parse_context.hpp>
-#include <pjh_cli/parser.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/format/matcher.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parser.hpp>
+#include <pjh_cli/core/type.hpp>
 
 using namespace pjh::cli;
 

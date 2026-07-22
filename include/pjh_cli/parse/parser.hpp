@@ -6,9 +6,9 @@
 #include <vector>
 
 #include <pjh_cli/command/branch_command.hpp>
-#include <pjh_cli/converter.hpp>
-#include <pjh_cli/parse_context.hpp>
-#include <pjh_cli/type.hpp>
+#include <pjh_cli/core/converter.hpp>
+#include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/core/type.hpp>
 
 namespace pjh::cli
 {

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <type_traits>
 
-#include <pjh_cli/fixed_string.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 
 namespace pjh::cli::detail
 {

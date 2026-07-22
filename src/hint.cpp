@@ -1,8 +1,8 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
-#include <pjh_cli/hint.hpp>
-#include <pjh_cli/info.hpp>
+#include <pjh_cli/format/hint.hpp>
+#include <pjh_cli/format/info.hpp>
 #include <sstream>
 #include <string>
 #include <vector>

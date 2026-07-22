@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <pjh_cli.hpp>
-#include <pjh_cli/help_formatter.hpp>
+#include <pjh_cli/format/help_formatter.hpp>
 
 using namespace pjh::cli;
 
