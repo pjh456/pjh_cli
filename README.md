@@ -23,18 +23,45 @@ app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
 // Required option
 app.option<fixed_string("token")>("--token", "API token").str().required();
 
+// Counting flag (-vvv → 3)
+app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+
+// Enum option with string mapping
+enum class Color { red, green, blue };
+app.option<fixed_string("color")>("--color", 'c', "Color")
+    .enum_type<Color>()
+    .mapping({{"red", Color::red}, {"green", Color::green}})
+    .default_value(Color::red);
+
+// Negatable flag (--no-xxx)
+app.option<fixed_string("compress")>("--compress", "Compress output").boolean().negatable();
+
+// Repeatable option (--opt a --opt b)
+app.option<fixed_string("include")>("--include", 'I', "Include path").path().repeatable();
+
+// Numeric option with range validation
+app.option<fixed_string("level")>("--level", 'l', "Log level").integer().min(0).max(7);
+
+// Env-var fallback
+app.option<fixed_string("host")>("--host", "Host").str().env("MYAPP_HOST").required();
+
+// Option group (mutual exclusion / requirement)
+app.group<fixed_string("verbose"), fixed_string("quiet")>().at_most_one();
+
 auto r = app.parse(argc, argv);
 if (r.is_err()) { /* r.unwrap_err().what() */ return 1; }
 
 auto &ctx = r.unwrap();
 int port = ctx.get<int, fixed_string("port")>();
+auto color = ctx.get_enum<Color, fixed_string("color")>();
 ```
 
 ### Positional arguments
 
 ```cpp
-app.arg<std::string, 0>("source", "Source file").required();
-app.arg<std::string, 1>("dest", "Destination path").required();
+LeafCommand cmd("copy", "Copy files");
+cmd.arg<std::string, 0>("source", "Source file").required();
+cmd.arg<std::string, 1>("dest", "Destination path").required();
 
 // Access by compile-time index
 auto src = ctx.get<std::string, 0>();
@@ -43,19 +70,22 @@ auto src = ctx.get<std::string, 0>();
 ### Subcommands
 
 ```cpp
-auto &server = app.add_command("server", "Server management");
-server.add_command("start", "Start server");
-server.add_command("stop", "Stop server");
+auto &server = app.add_branch("server", "Server management");
+server.add_leaf("start", "Start server");
+server.add_leaf("stop", "Stop server");
 
 // Parse walks the tree; ctx.matched_path() returns "server start"
-auto &ctx = r.unwrap();
 std::cout << ctx.matched_path();
+
+// Structured path info
+MatchedPath path = ctx.matched_path_info();
+for (auto &name : path.commands) { /* "server", "start" */ }
 ```
 
 ### Actions
 
 ```cpp
-auto &cmd = app.add_command("greet", "Say hello");
+auto &cmd = app.add_leaf("greet", "Say hello");
 cmd.arg<std::string, 0>("name", "Who to greet").required();
 cmd.action([](ParseContext &ctx) -> CliResult<void>
 {
@@ -80,6 +110,21 @@ console.run();
 app.parse_fuzzy(argc, argv);
 ```
 
+### Interactive hints
+
+```cpp
+// Build a hint string showing remaining options and args
+auto hint = HintBuilder::format(app, partial_input);
+// e.g. "[INT:port] <src> <dst>"
+```
+
+### Aliases
+
+```cpp
+app.add_leaf("list", "List items").alias("ls").alias("show");
+// "ls" and "show" also match the list command
+```
+
 ## API Quick Reference
 
 `#include <pjh_cli.hpp>`
@@ -88,28 +133,56 @@ app.parse_fuzzy(argc, argv);
 |---|---|
 | `App(name, version, desc)` | Root command |
 | `cmd.option<Key>(long, short?)... .integer()/boolean()/str()` | Named option |
-| `cmd.option<Key>(long, short?, desc, default)` | Auto-dispatch option |
+| `cmd.option<Key>(long, short?, desc, default)` | Auto-dispatch option (T → type) |
+| `.count()` | Counting flag (-vvv) |
+| `.floating()` | Double-valued option |
+| `.path()` | Filesystem path option |
+| `.enum_type<E>().mapping({...})` | Enum option with string mapping |
+| `.negatable()` | Support --no-xxx negation |
+| `.repeatable()` | Accept multiple values (--opt a --opt b) |
+| `.env("VAR")` | Environment variable fallback |
+| `.min(v)` / `.max(v)` | Numeric range validation |
+| `.default_value(v)` | Manual default value |
 | `cmd.arg<T, Index>(name, desc)` | Positional argument |
-| `cmd.add_command(name, desc)` | Child subcommand |
+| `cmd.add_branch(name, desc)` | Child branch subcommand |
+| `cmd.add_leaf(name, desc)` | Child leaf subcommand |
 | `cmd.action(fn)` | Execute callback on match |
 | `cmd.enabled(pred)` | Runtime enable/disable |
 | `cmd.set_visibility(v)` | `Cli` / `Repl` / `Both` / `Hidden` |
 | `cmd.set_extra_args(p)` | `Ignore` / `Error` / `Store` |
+| `cmd.alias(name)` | Register an alias name |
 | `.required()` | Mark option/arg required |
 | `.completer(fn)` | Tab completion callback |
+| `cmd.group<Keys...>().exactly_one()` | Option group: exactly one required |
+| `cmd.group<Keys...>().at_most_one()` | Option group: zero or one |
+| `cmd.group<Keys...>().at_least_one()` | Option group: at least one required |
 | `app.parse(argc, argv)` | Batch parse |
 | `app.parse_fuzzy(argc, argv)` | Batch parse with typo correction |
 | `ctx.get<T, Key>()` | Get value (throws if absent) |
 | `ctx.has<Key>()` | Check key exists |
 | `ctx.try_get<T, Key>()` | Get → `Option<T>` (no throw) |
 | `ctx.get_or<T, Key>(fallback)` | Get or return fallback (no throw) |
+| `ctx.get_all<T, Key>()` | All values for repeatable option |
+| `ctx.get_enum<E, Key>()` | Get enum value |
+| `ctx.try_get_enum<E, Key>()` | Get enum → `Option<E>` |
+| `ctx.get_or_enum<E, Key>(fallback)` | Get enum or fallback |
+| `ctx.get_all_enum<E, Key>()` | All enum values for repeatable |
 | `ctx.matched_path()` | Matched subcommand path, e.g. `"server start"` |
-| `ctx.matched_command()` | Leaf command pointer |
+| `ctx.matched_path_info()` | MatchedPath{commands} struct |
+| `ctx.matched_command()` | Deepest matched command pointer |
 | `ctx.extra_args()` | Extra positional args (when policy is `Store`) |
-| `format_help(cmd)` | Formatted help string |
-| `format_usage(cmd)` | One-line usage string |
+| `ctx.help_requested()` | True if --help / -h was passed |
+| `ctx.version_requested()` | True if --version was passed |
+| `HelpFormatter::format_help(cmd)` | Formatted help string |
+| `HelpFormatter::format_usage(cmd)` | One-line usage string |
+| `HelpFormatter::collect_help(cmd)` | Structured HelpInfo data |
+| `HintBuilder::format(root, input)` | Interactive hint for partial input |
 | `list_subcommands(cmd)` | Visible subcommand names |
-| `complete(cmd, prefix)` | Tab completion candidates |
+| `complete(cmd, prefix)` | Tab completion candidates (strings) |
+| `complete_candidates(cmd, prefix)` | Tab completion candidates (struct) |
+| `InteractiveConsole(root, prompt)` | REPL console |
+| `console.run()` / `console.stop()` | Start / stop REPL loop |
+| `console.set_prompt(s)` | Override prompt string |
 
 ### Key types
 
@@ -122,6 +195,14 @@ app.parse_fuzzy(argc, argv);
 | `fixed_string("...")` | Compile-time string for NTTP keys |
 | `Visibility::Cli / Repl / Both / Hidden` | Visibility flags |
 | `ExtraArgsPolicy::Ignore / Error / Store` | Extra positional arg handling |
+| `GroupMode::ExactlyOne / AtMostOne / AtLeastOne` | Option group constraints |
+| `HelpInfo / OptionInfo / ArgInfo / SubcommandInfo` | Structured help metadata |
+| `UsageInfo / HelpDocument` | Pre-built help document |
+| `HintContext / HintInfo / HintConfig` | Interactive hint structures |
+| `SuggestionInfo / FuzzySuggestion` | Fuzzy match results |
+| `CompletionCandidate` | Completion candidate struct |
+| `MatchedPath` | Matched subcommand path struct |
+| `VersionInfo` | Program version struct |
 
 ## Build
 
@@ -129,6 +210,13 @@ app.parse_fuzzy(argc, argv);
 cmake -B build
 cmake --build build
 ```
+
+CMake options:
+
+| Option | Default | Description |
+|---|---|---|
+| `PJH_CLI_BUILD_TESTS` | `ON` (top-level) | Build tests with doctest |
+| `PJH_CLI_BUILD_EXAMPLES` | `OFF` | Build example programs |
 
 Include as a submodule:
 
