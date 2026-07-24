@@ -1,11 +1,11 @@
 #include <cstddef>
-#include <format>
 #include <iostream>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
+#include <pjh_cli/format/console_output.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
@@ -17,58 +17,6 @@
 
 namespace pjh::cli
 {
-    namespace
-    {
-        std::string format_suggestions(const SuggestionInfo &info)
-        {
-            std::string out;
-            for (auto &m : info.matches)
-                out += " " + m.name;
-            return out;
-        }
-
-        std::string format_no_subcommands()
-        {
-            return "No subcommands available.";
-        }
-
-        std::string format_subcommand_list(const std::vector<std::string> &names)
-        {
-            if (names.empty())
-                return format_no_subcommands();
-            std::string out = "Subcommands:";
-            for (auto &n : names)
-                out += " " + n;
-            return out;
-        }
-
-        std::string format_matched_subcommands(const std::vector<std::string> &names)
-        {
-            std::string out = "Matching subcommands:";
-            for (auto &n : names)
-                out += " " + n;
-            return out;
-        }
-
-        std::string format_no_match(const std::string &usage)
-        {
-            return std::format("No matches. Try: {}", usage);
-        }
-
-        std::string format_has_no_subcommands(const std::string &name)
-        {
-            return std::format("'{}' has no subcommands.", name);
-        }
-
-        std::string format_unknown_subcommand(
-            const std::string &name, std::string_view suggestions)
-        {
-            if (suggestions.empty())
-                return std::format("Unknown subcommand '{}'.", name);
-            return std::format(
-                "Unknown subcommand '{}'. Did you mean:{}", name, suggestions);
-        }
-    }
 
     InteractiveConsole::InteractiveConsole(BranchCommand &root, std::string prompt) :
         m_root(root), m_prompt(std::move(prompt))
@@ -117,7 +65,7 @@ namespace pjh::cli
         if (query.empty())
         {
             auto names = list_subcommands(m_root);
-            std::cout << format_subcommand_list(names) << "\n";
+            std::cout << ConsoleOutput::format_subcommand_list(names) << "\n";
             return CliResult<void>::Ok();
         }
 
@@ -143,19 +91,19 @@ namespace pjh::cli
 
         if (!matched.empty())
         {
-            std::cout << format_matched_subcommands(matched) << "\n";
+            std::cout << ConsoleOutput::format_matched_subcommands(matched) << "\n";
             return CliResult<void>::Ok();
         }
 
         auto suggestions = collect_fuzzy_suggestions(m_root, query);
-        auto sug_str = format_suggestions(suggestions);
+        auto sug_str = ConsoleOutput::format_suggestions(suggestions);
         if (!sug_str.empty())
         {
             std::cout << "Did you mean:" << sug_str << "\n";
         }
         else
         {
-            std::cout << format_no_match(
+            std::cout << ConsoleOutput::format_no_match(
                 HelpFormatter::format_usage(m_root, m_root.name()))
                       << "\n";
         }
@@ -176,7 +124,7 @@ namespace pjh::cli
         {
             if (!target->is_branch())
             {
-                std::cout << format_has_no_subcommands(target->name()) << "\n";
+                std::cout << ConsoleOutput::format_has_no_subcommands(target->name()) << "\n";
                 return CliResult<void>::Ok();
             }
 
@@ -185,8 +133,8 @@ namespace pjh::cli
             if (!sub)
             {
                 auto suggestions = collect_fuzzy_suggestions(*branch, tokens[i]);
-                auto sug_str = format_suggestions(suggestions);
-                std::cout << format_unknown_subcommand(tokens[i], sug_str) << "\n";
+                auto sug_str = ConsoleOutput::format_suggestions(suggestions);
+                std::cout << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str) << "\n";
                 return CliResult<void>::Ok();
             }
             target = sub;
