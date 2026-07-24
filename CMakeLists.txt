@@ -15,6 +15,8 @@ target_sources(pjh_cli
     src/help.cpp
     src/matcher.cpp
     src/console.cpp
+    src/console_output.cpp
+    src/console/query.cpp
     src/hint.cpp
 )
 target_include_directories(pjh_cli

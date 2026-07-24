@@ -27,6 +27,7 @@ set(PJH_CLI_TEST_SOURCES
     console/test_process_line_help.cpp
     console/test_process_line_parse.cpp
     console/test_free_functions.cpp
+    console/test_query_explorer.cpp
     test_error.cpp
     test_string_utils.cpp
     test_command_utils.cpp

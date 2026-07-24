@@ -1,15 +1,17 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_HPP
 
+#include <functional>
+#include <iostream>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/info.hpp>
-#include <iostream>
 #include <string>
 #include <vector>
 
 namespace pjh::cli
 {
+    struct QueryResult;
     /// @brief Interactive REPL console for navigating and executing commands.
     ///
     /// Reads lines from an input stream, dispatches them to:
@@ -39,12 +41,15 @@ namespace pjh::cli
         /// @param input   Input stream (default std::cin).
         /// @param output  Output stream (default std::cout).
         /// @param error   Error stream (default std::cerr).
+        /// @param query_fmt  Query result formatter (default: QueryOutput::format).
+        ///                Replace to customise how query results are rendered.
         explicit InteractiveConsole(
             BranchCommand &root,
             std::string prompt = "> ",
             std::istream &input = std::cin,
             std::ostream &output = std::cout,
-            std::ostream &error = std::cerr);
+            std::ostream &error = std::cerr,
+            std::function<std::string(const QueryResult &)> query_fmt = {});
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
@@ -101,6 +106,13 @@ namespace pjh::cli
         /// @brief Configurable error stream (defaults to std::cerr).
         std::ostream &m_error;
 
+        /// @brief Configurable query result formatter.
+        ///
+        /// Defaults to QueryOutput::format.  Override to change how
+        /// ?-query results are rendered without changing the exploration
+        /// logic (substring matching, fuzzy fallback).
+        std::function<std::string(const QueryResult &)> m_query_formatter;
+
         /// @brief Whether the REPL loop should continue running.
         bool m_running = false;
 
@@ -117,10 +129,9 @@ namespace pjh::cli
 
         /// @brief Handle `?` or `?query` — list or search subcommands.
         ///
-        /// If @p query is empty, prints all visible/REPL subcommand names.
-        /// If non-empty, searches by substring (case-sensitive, enabled/visible
-        /// only).  On no substring match, falls back to fuzzy (Levenshtein)
-        /// suggestions or prints a "No matches." fallback with a usage hint.
+        /// Delegates to QueryExplorer::explore() for data collection,
+        /// then renders through m_query_formatter to m_output.
+        /// Does not write to any stream directly.
         ///
         /// @param query  The search string (without the leading `?`).
         /// @return Ok() after printing results to m_output.

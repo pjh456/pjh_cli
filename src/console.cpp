@@ -1,8 +1,9 @@
 #include <cstddef>
-#include <iostream>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/console/query_explorer.hpp>
+#include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/console_output.hpp>
@@ -23,12 +24,16 @@ namespace pjh::cli
         std::string prompt,
         std::istream &input,
         std::ostream &output,
-        std::ostream &error) :
+        std::ostream &error,
+        std::function<std::string(const QueryResult &)> query_fmt) :
         m_root(root),
         m_prompt(std::move(prompt)),
         m_input(input),
         m_output(output),
-        m_error(error)
+        m_error(error),
+        m_query_formatter(
+            query_fmt ? std::move(query_fmt) : [](const QueryResult &r)
+                { return QueryOutput::format(r); })
     {
     }
 
@@ -64,58 +69,14 @@ namespace pjh::cli
         auto fuzzy = fuzzy_find_subcommands(branch, input, 3, Visibility::Repl);
         SuggestionInfo info;
         info.matches.reserve(fuzzy.size());
-        for (auto &f : fuzzy)
-            info.matches.push_back({f.command->name(), f.distance});
+        for (auto &f : fuzzy) info.matches.push_back({f.command->name(), f.distance});
         return info;
     }
 
     CliResult<void> InteractiveConsole::handle_query(const std::string &query)
     {
-        if (query.empty())
-        {
-            auto names = list_subcommands(m_root);
-            m_output << ConsoleOutput::format_subcommand_list(names) << "\n";
-            return CliResult<void>::Ok();
-        }
-
-        std::vector<std::string> matched;
-        for (const auto &sub_ptr : m_root.subcommands())
-        {
-            if (!sub_ptr->is_enabled())
-                continue;
-            if (sub_ptr->visibility() == Visibility::Hidden)
-                continue;
-            if (sub_ptr->name().find(query) != std::string_view::npos)
-            {
-                matched.push_back(sub_ptr->name());
-                continue;
-            }
-            for (const auto &a : sub_ptr->aliases())
-                if (a.find(query) != std::string_view::npos)
-                {
-                    matched.push_back(sub_ptr->name());
-                    break;
-                }
-        }
-
-        if (!matched.empty())
-        {
-            m_output << ConsoleOutput::format_matched_subcommands(matched) << "\n";
-            return CliResult<void>::Ok();
-        }
-
-        auto suggestions = collect_fuzzy_suggestions(m_root, query);
-        auto sug_str = ConsoleOutput::format_suggestions(suggestions);
-        if (!sug_str.empty())
-        {
-            m_output << "Did you mean:" << sug_str << "\n";
-        }
-        else
-        {
-            m_output << ConsoleOutput::format_no_match(
-                HelpFormatter::format_usage(m_root, m_root.name()))
-                      << "\n";
-        }
+        auto result = QueryExplorer::explore(m_root, query);
+        m_output << m_query_formatter(result) << "\n";
         return CliResult<void>::Ok();
     }
 
@@ -133,7 +94,8 @@ namespace pjh::cli
         {
             if (!target->is_branch())
             {
-                m_output << ConsoleOutput::format_has_no_subcommands(target->name()) << "\n";
+                m_output << ConsoleOutput::format_has_no_subcommands(target->name())
+                         << "\n";
                 return CliResult<void>::Ok();
             }
 
@@ -143,7 +105,8 @@ namespace pjh::cli
             {
                 auto suggestions = collect_fuzzy_suggestions(*branch, tokens[i]);
                 auto sug_str = ConsoleOutput::format_suggestions(suggestions);
-                m_output << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str) << "\n";
+                m_output << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str)
+                         << "\n";
                 return CliResult<void>::Ok();
             }
             target = sub;
