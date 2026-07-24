@@ -18,8 +18,17 @@
 namespace pjh::cli
 {
 
-    InteractiveConsole::InteractiveConsole(BranchCommand &root, std::string prompt) :
-        m_root(root), m_prompt(std::move(prompt))
+    InteractiveConsole::InteractiveConsole(
+        BranchCommand &root,
+        std::string prompt,
+        std::istream &input,
+        std::ostream &output,
+        std::ostream &error) :
+        m_root(root),
+        m_prompt(std::move(prompt)),
+        m_input(input),
+        m_output(output),
+        m_error(error)
     {
     }
 
@@ -30,9 +39,9 @@ namespace pjh::cli
 
         while (m_running)
         {
-            std::cout << m_prompt << " " << std::flush;
+            m_output << m_prompt << " " << std::flush;
 
-            if (!std::getline(std::cin, line))
+            if (!std::getline(m_input, line))
                 break;
 
             if (line.empty())
@@ -43,7 +52,7 @@ namespace pjh::cli
 
             auto r = process_line(line);
             if (r.is_err())
-                std::cerr << r.unwrap_err().what() << "\n";
+                m_error << r.unwrap_err().what() << "\n";
         }
     }
 
@@ -65,7 +74,7 @@ namespace pjh::cli
         if (query.empty())
         {
             auto names = list_subcommands(m_root);
-            std::cout << ConsoleOutput::format_subcommand_list(names) << "\n";
+            m_output << ConsoleOutput::format_subcommand_list(names) << "\n";
             return CliResult<void>::Ok();
         }
 
@@ -91,7 +100,7 @@ namespace pjh::cli
 
         if (!matched.empty())
         {
-            std::cout << ConsoleOutput::format_matched_subcommands(matched) << "\n";
+            m_output << ConsoleOutput::format_matched_subcommands(matched) << "\n";
             return CliResult<void>::Ok();
         }
 
@@ -99,11 +108,11 @@ namespace pjh::cli
         auto sug_str = ConsoleOutput::format_suggestions(suggestions);
         if (!sug_str.empty())
         {
-            std::cout << "Did you mean:" << sug_str << "\n";
+            m_output << "Did you mean:" << sug_str << "\n";
         }
         else
         {
-            std::cout << ConsoleOutput::format_no_match(
+            m_output << ConsoleOutput::format_no_match(
                 HelpFormatter::format_usage(m_root, m_root.name()))
                       << "\n";
         }
@@ -115,7 +124,7 @@ namespace pjh::cli
     {
         if (tokens.size() == 1)
         {
-            std::cout << HelpFormatter::format_help(m_root, m_root.name());
+            m_output << HelpFormatter::format_help(m_root, m_root.name());
             return CliResult<void>::Ok();
         }
 
@@ -124,7 +133,7 @@ namespace pjh::cli
         {
             if (!target->is_branch())
             {
-                std::cout << ConsoleOutput::format_has_no_subcommands(target->name()) << "\n";
+                m_output << ConsoleOutput::format_has_no_subcommands(target->name()) << "\n";
                 return CliResult<void>::Ok();
             }
 
@@ -134,13 +143,13 @@ namespace pjh::cli
             {
                 auto suggestions = collect_fuzzy_suggestions(*branch, tokens[i]);
                 auto sug_str = ConsoleOutput::format_suggestions(suggestions);
-                std::cout << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str) << "\n";
+                m_output << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str) << "\n";
                 return CliResult<void>::Ok();
             }
             target = sub;
         }
 
-        std::cout << HelpFormatter::format_help(*target, target->name());
+        m_output << HelpFormatter::format_help(*target, target->name());
         return CliResult<void>::Ok();
     }
 
@@ -170,7 +179,7 @@ namespace pjh::cli
 
         if (ctx.help_requested())
         {
-            std::cout << ctx.help_text() << "\n";
+            m_output << ctx.help_text() << "\n";
             return CliResult<void>::Ok();
         }
 

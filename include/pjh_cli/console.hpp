@@ -4,6 +4,7 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/info.hpp>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -11,10 +12,14 @@ namespace pjh::cli
 {
     /// @brief Interactive REPL console for navigating and executing commands.
     ///
-    /// Reads lines from stdin, dispatches them to:
+    /// Reads lines from an input stream, dispatches them to:
     ///   - `?` / `?query` — list or search subcommands
     ///   - `help` / `--help` / `-h [cmd...]` — display help
     ///   - everything else — parsed as CLI args and executed via action callbacks
+    ///
+    /// All three I/O streams are configurable at construction time (defaulting
+    /// to std::cin / std::cout / std::cerr), making the console embeddable in
+    /// GUI, WebSocket, server, or test contexts without global stream redirection.
     ///
     /// The console does not own the command tree; the caller must keep the
     /// root BranchCommand alive for the console's lifetime.
@@ -28,48 +33,86 @@ namespace pjh::cli
     class InteractiveConsole
     {
     public:
-        /// @param root   Root command (typically your App instance).  Must
-        ///               outlive the console.
-        /// @param prompt Prompt string shown before each input line.
-        explicit InteractiveConsole(BranchCommand &root, std::string prompt = "> ");
+        /// @param root    Root command (typically your App instance).  Must
+        ///                outlive the console.
+        /// @param prompt  Prompt string shown before each input line.
+        /// @param input   Input stream (default std::cin).
+        /// @param output  Output stream (default std::cout).
+        /// @param error   Error stream (default std::cerr).
+        explicit InteractiveConsole(
+            BranchCommand &root,
+            std::string prompt = "> ",
+            std::istream &input = std::cin,
+            std::ostream &output = std::cout,
+            std::ostream &error = std::cerr);
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
         ///
         /// Each iteration:
-        ///   1. Prints @p m_prompt.
-        ///   2. Reads a line from stdin.
+        ///   1. Prints @p m_prompt to m_output.
+        ///   2. Reads a line from m_input.
         ///   3. Skips empty lines.
         ///   4. Exits on "quit" / "exit" / "q".
-        ///   5. Calls process_line() and prints errors to stderr.
+        ///   5. Calls process_line() and prints errors to m_error.
         void run();
 
         /// @brief Signal the loop to exit gracefully on the next iteration.
+        ///
+        /// The currently running iteration completes normally, then the
+        /// next iteration sees m_running == false and exits.
         void stop();
 
-        /// @brief Current prompt string.
+        /// @brief Get the current prompt string.
+        /// @return Const reference to the prompt, e.g. `"> "`.
         const std::string &prompt() const noexcept { return m_prompt; }
 
         /// @brief Override the prompt string.
+        /// @param p  New prompt (e.g. `"$ "`).
         void set_prompt(std::string p) { m_prompt = std::move(p); }
 
         /// @brief Parse and execute a single line of input.
         ///
         /// Dispatches based on the first token:
-        ///   - `?query`  → handle_query()
-        ///   - `help` / `--help` / `-h`  → handle_help()
+        ///   - `?query`  → handle_query() — list or search subcommands
+        ///   - `help` / `--help` / `-h`  → handle_help() — display help
+        ///     for a subcommand chain
         ///   - default   → Parser::parse_command() with max_fuzzy 3,
         ///                  then execute the matched command's action callback
         ///
         /// @param line  Raw input line (may be empty, in which case Ok is returned).
-        /// @return Ok() or Err(CliError) from parse or from the action callback.
+        /// @return Ok() on success, or Err(CliError) if parsing or the
+        ///         action callback fails.
         CliResult<void> process_line(const std::string &line);
 
     private:
+        /// @brief Root of the command tree.  Must outlive this console.
         BranchCommand &m_root;
+
+        /// @brief Prompt displayed before each input line.
         std::string m_prompt;
+
+        /// @brief Configurable input stream (defaults to std::cin).
+        std::istream &m_input;
+
+        /// @brief Configurable output stream (defaults to std::cout).
+        std::ostream &m_output;
+
+        /// @brief Configurable error stream (defaults to std::cerr).
+        std::ostream &m_error;
+
+        /// @brief Whether the REPL loop should continue running.
         bool m_running = false;
+
+        /// @brief Ring buffer of previously entered lines (for history navigation).
+        ///
+        /// Currently declared but not wired into the REPL loop.
+        /// Planned for Phase D (IHistory interface).
         std::vector<std::string> m_history;
+
+        /// @brief Current index into m_history for up/down arrow navigation.
+        ///
+        /// A value of m_history.size() means "at the end" (current input).
         size_t m_history_index = 0;
 
         /// @brief Handle `?` or `?query` — list or search subcommands.
@@ -77,10 +120,10 @@ namespace pjh::cli
         /// If @p query is empty, prints all visible/REPL subcommand names.
         /// If non-empty, searches by substring (case-sensitive, enabled/visible
         /// only).  On no substring match, falls back to fuzzy (Levenshtein)
-        /// suggestions or prints "No matches." with a usage hint.
+        /// suggestions or prints a "No matches." fallback with a usage hint.
         ///
         /// @param query  The search string (without the leading `?`).
-        /// @return Ok() after printing results to stdout.
+        /// @return Ok() after printing results to m_output.
         CliResult<void> handle_query(const std::string &query);
 
         /// @brief Handle `help`, `--help`, or `-h [subcommand...]`.
@@ -92,13 +135,14 @@ namespace pjh::cli
         /// error if a subcommand is not found.
         ///
         /// @param tokens  Tokenised input line (tokens[0] is "help"/"--help"/"-h").
-        /// @return Ok() after printing help text or error messages to stdout.
+        /// @return Ok() after printing help text or error messages to m_output.
         CliResult<void> handle_help(const std::vector<std::string> &tokens);
 
         /// @brief Fuzzy-find subcommand names under @p branch.
         ///
-        /// Uses fuzzy_find_subcommands() with max_distance = 3 and
-        /// Visibility::Repl.
+        /// Wraps fuzzy_find_subcommands() with max_distance = 3 and
+        /// Visibility::Repl, then maps the result into SuggestionInfo
+        /// suitable for ConsoleOutput::format_suggestions().
         ///
         /// @param branch  The parent branch to search under.
         /// @param input   User input to match (mangled or abbreviated name).
