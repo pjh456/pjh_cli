@@ -2,11 +2,11 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/console/help_navigator.hpp>
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
-#include <pjh_cli/format/console_output.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
@@ -25,7 +25,8 @@ namespace pjh::cli
         std::istream &input,
         std::ostream &output,
         std::ostream &error,
-        std::function<std::string(const QueryResult &)> query_fmt) :
+        std::function<std::string(const QueryResult &)> query_fmt,
+        std::function<std::string(const HelpNavigationResult &)> help_fmt) :
         m_root(root),
         m_prompt(std::move(prompt)),
         m_input(input),
@@ -33,7 +34,10 @@ namespace pjh::cli
         m_error(error),
         m_query_formatter(
             query_fmt ? std::move(query_fmt) : [](const QueryResult &r)
-                { return QueryOutput::format(r); })
+                { return QueryOutput::format(r); }),
+        m_help_formatter(
+            help_fmt ? std::move(help_fmt) : [](const HelpNavigationResult &r)
+                { return HelpNavigationOutput::format(r); })
     {
     }
 
@@ -63,16 +67,6 @@ namespace pjh::cli
 
     void InteractiveConsole::stop() { m_running = false; }
 
-    SuggestionInfo InteractiveConsole::collect_fuzzy_suggestions(
-        BranchCommand &branch, std::string_view input)
-    {
-        auto fuzzy = fuzzy_find_subcommands(branch, input, 3, Visibility::Repl);
-        SuggestionInfo info;
-        info.matches.reserve(fuzzy.size());
-        for (auto &f : fuzzy) info.matches.push_back({f.command->name(), f.distance});
-        return info;
-    }
-
     CliResult<void> InteractiveConsole::handle_query(const std::string &query)
     {
         auto result = QueryExplorer::explore(m_root, query);
@@ -83,36 +77,8 @@ namespace pjh::cli
     CliResult<void> InteractiveConsole::handle_help(
         const std::vector<std::string> &tokens)
     {
-        if (tokens.size() == 1)
-        {
-            m_output << HelpFormatter::format_help(m_root, m_root.name());
-            return CliResult<void>::Ok();
-        }
-
-        BaseCommand *target = &m_root;
-        for (size_t i = 1; i < tokens.size(); i++)
-        {
-            if (!target->is_branch())
-            {
-                m_output << ConsoleOutput::format_has_no_subcommands(target->name())
-                         << "\n";
-                return CliResult<void>::Ok();
-            }
-
-            auto *branch = target->as_branch();
-            auto *sub = branch->find_subcommand(tokens[i]);
-            if (!sub)
-            {
-                auto suggestions = collect_fuzzy_suggestions(*branch, tokens[i]);
-                auto sug_str = ConsoleOutput::format_suggestions(suggestions);
-                m_output << ConsoleOutput::format_unknown_subcommand(tokens[i], sug_str)
-                         << "\n";
-                return CliResult<void>::Ok();
-            }
-            target = sub;
-        }
-
-        m_output << HelpFormatter::format_help(*target, target->name());
+        auto result = HelpNavigator::navigate(m_root, tokens);
+        m_output << m_help_formatter(result);
         return CliResult<void>::Ok();
     }
 

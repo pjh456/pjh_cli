@@ -12,6 +12,7 @@
 namespace pjh::cli
 {
     struct QueryResult;
+    struct HelpNavigationResult;
     /// @brief Interactive REPL console for navigating and executing commands.
     ///
     /// Reads lines from an input stream, dispatches them to:
@@ -49,7 +50,8 @@ namespace pjh::cli
             std::istream &input = std::cin,
             std::ostream &output = std::cout,
             std::ostream &error = std::cerr,
-            std::function<std::string(const QueryResult &)> query_fmt = {});
+            std::function<std::string(const QueryResult &)> query_fmt = {},
+            std::function<std::string(const HelpNavigationResult &)> help_fmt = {});
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
@@ -113,6 +115,13 @@ namespace pjh::cli
         /// logic (substring matching, fuzzy fallback).
         std::function<std::string(const QueryResult &)> m_query_formatter;
 
+        /// @brief Configurable help navigation formatter.
+        ///
+        /// Defaults to HelpNavigationOutput::format.  Override to change
+        /// how help text, "unknown subcommand", and "has no subcommands"
+        /// messages are rendered without changing the navigation logic.
+        std::function<std::string(const HelpNavigationResult &)> m_help_formatter;
+
         /// @brief Whether the REPL loop should continue running.
         bool m_running = false;
 
@@ -139,27 +148,13 @@ namespace pjh::cli
 
         /// @brief Handle `help`, `--help`, or `-h [subcommand...]`.
         ///
-        /// Without arguments, prints full help for the root command.
-        /// With arguments, walks the subcommand chain: each token is resolved
-        /// via find_subcommand() or fuzzy fallback with "Did you mean:"
-        /// suggestions.  Prints the final matched command's help, or an
-        /// error if a subcommand is not found.
+        /// Delegates to HelpNavigator::navigate() for data collection,
+        /// then renders through m_help_formatter to m_output.
+        /// Does not write to any stream directly.
         ///
         /// @param tokens  Tokenised input line (tokens[0] is "help"/"--help"/"-h").
         /// @return Ok() after printing help text or error messages to m_output.
         CliResult<void> handle_help(const std::vector<std::string> &tokens);
-
-        /// @brief Fuzzy-find subcommand names under @p branch.
-        ///
-        /// Wraps fuzzy_find_subcommands() with max_distance = 3 and
-        /// Visibility::Repl, then maps the result into SuggestionInfo
-        /// suitable for ConsoleOutput::format_suggestions().
-        ///
-        /// @param branch  The parent branch to search under.
-        /// @param input   User input to match (mangled or abbreviated name).
-        /// @return SuggestionInfo with matches sorted by distance.
-        static SuggestionInfo collect_fuzzy_suggestions(
-            BranchCommand &branch, std::string_view input);
     };
 
 }  // namespace pjh::cli
