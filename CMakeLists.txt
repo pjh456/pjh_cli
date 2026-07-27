@@ -19,6 +19,7 @@ target_sources(pjh_cli
     src/console/query.cpp
     src/console/help_navigator.cpp
     src/console/in_memory_history.cpp
+    src/console/ring_buffer_history.cpp
     src/hint.cpp
 )
 target_include_directories(pjh_cli

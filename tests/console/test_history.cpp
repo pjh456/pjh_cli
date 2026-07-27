@@ -6,6 +6,7 @@
 #include <pjh_cli/console/history.hpp>
 #include <pjh_cli/console/in_memory_history.hpp>
 #include <pjh_cli/console/noop_history.hpp>
+#include <pjh_cli/console/ring_buffer_history.hpp>
 #include <pjh_result.hpp>
 #include <sstream>
 #include <string>
@@ -294,4 +295,167 @@ TEST_CASE("InteractiveConsole with NoOpHistory")
     auto r = console.process_line("cmd");
     CHECK(r.is_ok());
     CHECK(called == 1);
+}
+
+// ── RingBufferHistory tests ──
+
+TEST_CASE("RingBufferHistory zero max_size throws")
+{
+    CHECK_THROWS_AS(RingBufferHistory(0), std::invalid_argument);
+}
+
+TEST_CASE("RingBufferHistory empty")
+{
+    RingBufferHistory h(5);
+    CHECK(h.size() == 0);
+    CHECK(h.prev().is_none());
+    CHECK(h.next().is_none());
+}
+
+TEST_CASE("RingBufferHistory push less than capacity")
+{
+    RingBufferHistory h(5);
+    h.push("a");
+    h.push("b");
+    h.push("c");
+    CHECK(h.size() == 3);
+
+    auto v = h.prev();
+    CHECK(v.is_some());
+    CHECK(v.unwrap() == "c");
+}
+
+TEST_CASE("RingBufferHistory push exactly capacity")
+{
+    RingBufferHistory h(3);
+    h.push("a");
+    h.push("b");
+    h.push("c");
+    CHECK(h.size() == 3);
+
+    auto v = h.prev();
+    CHECK(v.unwrap() == "c");
+    v = h.prev();
+    CHECK(v.unwrap() == "b");
+    v = h.prev();
+    CHECK(v.unwrap() == "a");
+}
+
+TEST_CASE("RingBufferHistory push exceeds capacity drops oldest")
+{
+    RingBufferHistory h(3);
+    h.push("a");
+    h.push("b");
+    h.push("c");
+    h.push("d");
+    h.push("e");
+    CHECK(h.size() == 3);
+
+    // "a" and "b" should have been dropped
+    auto v = h.prev();
+    CHECK(v.unwrap() == "e");
+    v = h.prev();
+    CHECK(v.unwrap() == "d");
+    v = h.prev();
+    CHECK(v.unwrap() == "c");
+    CHECK(h.prev().is_none());
+}
+
+TEST_CASE("RingBufferHistory cursor after push beyond capacity")
+{
+    RingBufferHistory h(2);
+    h.push("a");
+    h.push("b");
+    h.push("c");
+    CHECK(h.size() == 2);
+
+    // "a" dropped, cursor reset to end
+    auto v = h.prev();
+    CHECK(v.unwrap() == "c");
+    v = h.next();
+    CHECK(v.is_none());
+}
+
+TEST_CASE("RingBufferHistory prev and next navigation")
+{
+    RingBufferHistory h(5);
+    h.push("x");
+    h.push("y");
+    h.push("z");
+
+    (void)h.prev();  // z
+    (void)h.prev();  // y
+    (void)h.prev();  // x
+
+    // At oldest, next goes forward
+    auto v = h.next();
+    CHECK(v.is_some());
+    CHECK(v.unwrap() == "y");
+
+    v = h.next();
+    CHECK(v.unwrap() == "z");
+
+    v = h.next();
+    CHECK(v.is_none());
+}
+
+TEST_CASE("RingBufferHistory dedup consecutive duplicates")
+{
+    RingBufferHistory h(5);
+    h.push("dup");
+    h.push("dup");
+    h.push("unique");
+    CHECK(h.size() == 2);
+}
+
+TEST_CASE("RingBufferHistory clear")
+{
+    RingBufferHistory h(5);
+    h.push("a");
+    h.push("b");
+    h.clear();
+    CHECK(h.size() == 0);
+    CHECK(h.prev().is_none());
+}
+
+TEST_CASE("RingBufferHistory reset_cursor")
+{
+    RingBufferHistory h(5);
+    h.push("a");
+    h.push("b");
+
+    (void)h.prev();
+    (void)h.prev();
+    CHECK(h.prev().is_none());
+
+    h.reset_cursor();
+    auto v = h.prev();
+    CHECK(v.is_some());
+    CHECK(v.unwrap() == "b");
+}
+
+TEST_CASE("InteractiveConsole with RingBufferHistory")
+{
+    App app("test", "1.0", "RingBuf");
+    std::vector<std::string> calls;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            calls.push_back("ok");
+            return CliResult<void>::Ok();
+        });
+
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<RingBufferHistory>(3);
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {},
+                               std::move(hist));
+
+    CHECK(console.process_line("a").is_ok());
+    CHECK(console.process_line("b").is_ok());
+    CHECK(console.process_line("c").is_ok());
+    CHECK(console.process_line("d").is_ok());
+
+    CHECK(raw->size() == 3);
+    CHECK(calls.size() == 4);
 }
