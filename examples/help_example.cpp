@@ -2,6 +2,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <string_view>
 
@@ -40,7 +41,7 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
-    std::cout << "command: " << ctx.matched_path() << "\n";
+    std::cout << "command: " << MatchedPathResolver::to_path_string(ctx.matched_command()) << "\n";
 
     auto v = ctx.try_get<int, fixed_string("verbose")>();
     if (v.is_some())

@@ -12,7 +12,7 @@ target_sources(pjh_cli
     src/command.cpp
     src/app.cpp
     src/parser.cpp
-    src/parse_context.cpp
+    src/matched_path_resolver.cpp
     src/option_consumer.cpp
     src/subcommand_resolver.cpp
     src/parse_finalizer.cpp

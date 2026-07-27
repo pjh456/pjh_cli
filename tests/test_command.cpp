@@ -8,6 +8,7 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
@@ -222,7 +223,7 @@ TEST_CASE("ParseContext")
     CHECK(!ctx.has_value(key_hash(fixed_string("missing"))));
 
     ctx.set_matched_command(&app);
-    CHECK(ctx.matched_path() == "test");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "test");
 
     auto cmd_ctx = app.create_context();
     CHECK(!cmd_ctx.has<fixed_string("port")>());

@@ -8,6 +8,7 @@
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -221,7 +222,7 @@ TEST_CASE("parse_fuzzy typo tolerant")
     Argv argv{"test", "servr"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    CHECK(r.unwrap().matched_path() == "server");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "server");
 }
 
 TEST_CASE("parse_fuzzy ambiguous")

@@ -6,6 +6,7 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
 #include <vector>
 
@@ -33,7 +34,7 @@ TEST_CASE("Parser subcommand matching")
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
     CHECK(ctx.get<int, fixed_string("port")>() == 8080);
-    CHECK(ctx.matched_path() == "serve");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "serve");
 }
 
 TEST_CASE("Parser deep subcommand nesting")
@@ -47,7 +48,7 @@ TEST_CASE("Parser deep subcommand nesting")
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
     CHECK(ctx.get<std::string, fixed_string("name")>() == "v2");
-    CHECK(ctx.matched_path() == "db migrate");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "db migrate");
 }
 
 TEST_CASE("Parser disabled subcommand skipped")
@@ -69,7 +70,7 @@ TEST_CASE("Parser subcommand with no args")
     Argv argv{"test", "status"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    CHECK(r.unwrap().matched_path() == "status");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "status");
 }
 
 TEST_CASE("Parser parse_fuzzy with store extra args")
@@ -82,7 +83,7 @@ TEST_CASE("Parser parse_fuzzy with store extra args")
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.matched_path() == "server");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "server");
     CHECK(ctx.get<std::string, 0>() == "data.txt");
     auto extra = ctx.extra_args();
     CHECK(extra.size() == 1);
@@ -244,7 +245,7 @@ TEST_CASE("Parser parent boolean flag consumed before subcommand")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.matched_path() == "son");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "son");
     CHECK(ctx.get<bool, fixed_string("flag")>() == true);
 }
 
@@ -258,7 +259,7 @@ TEST_CASE("Parser parent valued option consumed before subcommand")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.matched_path() == "son");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "son");
     CHECK(ctx.get<bool, fixed_string("flag")>() == true);
 }
 
@@ -273,7 +274,7 @@ TEST_CASE("Parser parent options before leaf subcommand with arg")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.matched_path() == "son");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "son");
     CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
     CHECK(ctx.get<std::string, 0>() == "data.txt");
 }
@@ -307,7 +308,7 @@ TEST_CASE("Parser alias exact match")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
-    CHECK(r.unwrap().matched_path() == "serve");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "serve");
 }
 
 TEST_CASE("Parser alias both names work")
@@ -321,17 +322,17 @@ TEST_CASE("Parser alias both names work")
     Argv argv1{"test", "list", "--all"};
     auto r1 = app.parse(argv1.argc(), argv1.argv());
     CHECK(r1.is_ok());
-    CHECK(r1.unwrap().matched_path() == "list");
+    CHECK(MatchedPathResolver::to_path_string(r1.unwrap().matched_command()) == "list");
 
     Argv argv2{"test", "ls", "--all"};
     auto r2 = app.parse(argv2.argc(), argv2.argv());
     CHECK(r2.is_ok());
-    CHECK(r2.unwrap().matched_path() == "list");
+    CHECK(MatchedPathResolver::to_path_string(r2.unwrap().matched_command()) == "list");
 
     Argv argv3{"test", "show"};
     auto r3 = app.parse(argv3.argc(), argv3.argv());
     CHECK(r3.is_ok());
-    CHECK(r3.unwrap().matched_path() == "list");
+    CHECK(MatchedPathResolver::to_path_string(r3.unwrap().matched_command()) == "list");
 }
 
 TEST_CASE("Parser alias on branch subcommand")
@@ -344,7 +345,7 @@ TEST_CASE("Parser alias on branch subcommand")
     Argv argv{"test", "db", "migrate"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    CHECK(r.unwrap().matched_path() == "database migrate");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "database migrate");
 }
 
 TEST_CASE("Parser alias with fuzzy match")
@@ -356,5 +357,5 @@ TEST_CASE("Parser alias with fuzzy match")
     Argv argv{"test", "stert"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    CHECK(r.unwrap().matched_path() == "serve");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "serve");
 }

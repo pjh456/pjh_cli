@@ -5,6 +5,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -171,6 +172,6 @@ TEST_CASE("BoolOption negatable in subcommand")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK(ctx.matched_path() == "cmd");
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "cmd");
     CHECK(ctx.get<bool, fixed_string("verbose")>() == false);
 }

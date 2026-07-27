@@ -2,6 +2,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 
 using namespace pjh::cli;
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
         }
         auto &ctx = r.unwrap();
         for (const auto &sub_ptr : app.subcommands())
-            if (ctx.matched_path() == sub_ptr->name())
+            if (MatchedPathResolver::to_path_string(ctx.matched_command()) == sub_ptr->name())
             {
                 auto e = sub_ptr->execute(ctx);
                 if (e.is_err())

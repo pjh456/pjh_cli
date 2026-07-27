@@ -1,6 +1,7 @@
 #include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 
 using namespace pjh::cli;
 
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
-    std::cout << "path: " << ctx.matched_path();
+    std::cout << "path: " << MatchedPathResolver::to_path_string(ctx.matched_command());
 
     if (ctx.has<fixed_string("dryrun")>())
         std::cout << ", dry-run";

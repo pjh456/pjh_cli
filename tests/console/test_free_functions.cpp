@@ -6,6 +6,7 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string>
@@ -42,7 +43,7 @@ TEST_CASE("parse_command fuzzy free function")
     std::vector<std::string_view> args{"servr"};
     auto r = Parser::parse_command(app, args, 3);
     CHECK(r.is_ok());
-    CHECK(r.unwrap().matched_path() == "server");
+    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "server");
 }
 
 TEST_CASE("const execute")
