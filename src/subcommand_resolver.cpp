@@ -1,6 +1,7 @@
 #include <memory>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/format/matcher.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
 
 namespace pjh::cli
@@ -64,7 +65,7 @@ namespace pjh::cli
             return CliResult<SubcommandResult>::Ok(SubcommandResult{});
 
         ParseContext child_ctx;
-        child_ctx.set_parent(std::make_shared<ParseContext>(std::move(ctx)));
+        ParseContextWriter::set_parent(child_ctx, std::make_shared<ParseContext>(std::move(ctx)));
         SubcommandResult r;
         r.matched = true;
         r.cmd = sub;

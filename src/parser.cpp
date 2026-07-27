@@ -5,6 +5,7 @@
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
@@ -24,8 +25,8 @@ namespace pjh::cli
         if (double_dash || (a != "--help" && a != "-h"))
             return pjh::result::Option<ParseContext>::None();
 
-        ctx.set_help_text(HelpFormatter::format_help(*cmd, cmd->name()));
-        ctx.set_matched_command(cmd);
+        ParseContextWriter::set_help_text(ctx, HelpFormatter::format_help(*cmd, cmd->name()));
+        ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
 
@@ -41,9 +42,9 @@ namespace pjh::cli
             return pjh::result::Option<ParseContext>::None();
 
         VersionInfo vi{std::string(root.name()), root.version()};
-        ctx.set_version_text(
+        ParseContextWriter::set_version_text(ctx,
             std::format("{} version {}\n", vi.program_name, vi.version));
-        ctx.set_matched_command(&root);
+        ParseContextWriter::set_matched_command(ctx, &root);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
 
@@ -59,7 +60,7 @@ namespace pjh::cli
         case ExtraArgsPolicy::Error:
             return CliFailure{ErrorFactory::parse_error(a, static_cast<int>(pos))};
         case ExtraArgsPolicy::Store:
-            ctx.add_extra_arg(std::string(a));
+            ParseContextWriter::add_extra_arg(ctx, std::string(a));
             break;
         default:
             break;

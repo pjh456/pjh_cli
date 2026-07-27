@@ -7,6 +7,7 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/concept.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -192,9 +193,9 @@ namespace pjh::cli
         CliResult<void> store_or_append(ParseContext &ctx, size_t hash, T value) const
         {
             if (is_repeatable())
-                ctx.append_value(hash, std::move(value));
+                ParseContextWriter::append_value(ctx, hash, std::move(value));
             else
-                ctx.set_value(hash, std::move(value));
+                ParseContextWriter::set_value(ctx, hash, std::move(value));
             return CliResult<void>::Ok();
         }
 

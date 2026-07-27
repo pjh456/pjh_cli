@@ -5,6 +5,7 @@
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string_view>
 
 namespace pjh::cli
@@ -57,18 +58,18 @@ namespace pjh::cli
         {
             if constexpr (std::same_as<T, std::string>)
             {
-                ctx.set_value<std::string>(hash, std::string(s));
+                ParseContextWriter::set_value<std::string>(ctx, hash, std::string(s));
             }
             else if constexpr (std::same_as<T, std::filesystem::path>)
             {
-                ctx.set_value<std::filesystem::path>(hash, std::filesystem::path(s));
+                ParseContextWriter::set_value<std::filesystem::path>(ctx, hash, std::filesystem::path(s));
             }
             else
             {
                 auto r = Converter<T>::from_string(s);
                 if (r.is_err())
                     return CliResult<void>::Err(std::move(r).unwrap_err());
-                ctx.set_value<T>(hash, r.unwrap());
+                ParseContextWriter::set_value<T>(ctx, hash, r.unwrap());
             }
             return CliResult<void>::Ok();
         }

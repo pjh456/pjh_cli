@@ -9,6 +9,7 @@
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
@@ -201,9 +202,9 @@ TEST_CASE("ParseContext")
     App app("test", "1.0", "Test");
 
     ParseContext ctx;
-    ctx.set_value<int>(key_hash(fixed_string("port")), 8080);
-    ctx.set_value<std::string>(key_hash(fixed_string("host")), std::string("localhost"));
-    ctx.set_value<int>(key_hash(static_cast<size_t>(0)), 42);
+    ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("port")), 8080);
+    ParseContextWriter::set_value<std::string>(ctx, key_hash(fixed_string("host")), std::string("localhost"));
+    ParseContextWriter::set_value<int>(ctx, key_hash(static_cast<size_t>(0)), 42);
 
     auto port = ctx.get<int, fixed_string("port")>();
     CHECK(port == 8080);
@@ -219,10 +220,10 @@ TEST_CASE("ParseContext")
     CHECK(ctx.has<0>());
     CHECK(!ctx.has<999>());
 
-    CHECK(ctx.has_value(key_hash(fixed_string("port"))));
-    CHECK(!ctx.has_value(key_hash(fixed_string("missing"))));
+    CHECK(ParseContextWriter::has_value(ctx, key_hash(fixed_string("port"))));
+    CHECK(!ParseContextWriter::has_value(ctx, key_hash(fixed_string("missing"))));
 
-    ctx.set_matched_command(&app);
+    ParseContextWriter::set_matched_command(ctx, &app);
     CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "test");
 
     auto cmd_ctx = app.create_context();
@@ -241,7 +242,7 @@ TEST_CASE("Command apply defaults")
     int xval = ctx2.get<int, fixed_string("x")>();
     CHECK(xval == 100);
 
-    ctx2.set_value<int>(key_hash(fixed_string("x")), 200);
+    ParseContextWriter::set_value<int>(ctx2, key_hash(fixed_string("x")), 200);
     int xval2 = ctx2.get<int, fixed_string("x")>();
     CHECK(xval2 == 200);
 }

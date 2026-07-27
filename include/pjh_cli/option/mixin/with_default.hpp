@@ -90,7 +90,7 @@ namespace pjh::cli
 
         CliResult<void> apply_default(ParseContext &ctx) const override
         {
-            if (m_default.is_some() && !ctx.has_value(this->m_key_hash))
+            if (m_default.is_some() && !ParseContextWriter::has_value(ctx, this->m_key_hash))
             {
                 auto vr = this->validate_value(m_default.unwrap(), "");
                 if (vr.is_err())

@@ -8,6 +8,7 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -46,7 +47,7 @@ namespace pjh::cli
     {
         for (const auto &opt_ptr : m_options)
         {
-            if (!opt_ptr->has_default() || ctx.has_value(opt_ptr->key_hash()))
+            if (!opt_ptr->has_default() || ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                 continue;
             auto r = opt_ptr->apply_default(ctx);
             if (r.is_err())

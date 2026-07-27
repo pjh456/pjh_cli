@@ -7,8 +7,6 @@
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
-
-
 #include <pjh_cli/detail/concept.hpp>
 #include <pjh_result.hpp>
 #include <string>
@@ -21,6 +19,7 @@
 namespace pjh::cli
 {
     class BaseCommand;
+    class ParseContextWriter;
 
     /// @brief Container for parsed option and argument values.
     ///
@@ -51,6 +50,8 @@ namespace pjh::cli
         using IdVecMap = IdMap<std::vector<T>>;
 
     public:
+        friend class ParseContextWriter;
+
         /// @brief Retrieve a typed value by compile-time key.
         /// @tparam T Target type (must satisfy BuiltinType).
         /// @tparam Key fixed_string literal or size_t.
@@ -161,35 +162,6 @@ namespace pjh::cli
             return out;
         }
 
-        /// @brief Store a single value (used internally by parser).
-        /// @tparam T Value type.
-        /// @param hash  Runtime key hash.
-        /// @param value The value to store.
-        template <detail::BuiltinType T>
-        void set_value(size_t hash, T value)
-        {
-            scalar_map<T>()[hash] = std::move(value);
-            m_present.insert(hash);
-        }
-
-        /// @brief Check if a value exists by runtime hash (used internally).
-        /// @param hash Runtime key hash.
-        /// @return true if the key (or a parent) is present.
-        bool has_value(size_t hash) const noexcept { return has_in_chain(hash); }
-
-        /// @brief Get a typed value by runtime hash (used internally).
-        /// @tparam T Value type.
-        /// @param hash         Runtime key hash.
-        /// @param default_val  Fallback when key is absent.
-        /// @return Stored value or @p default_val.
-        template <detail::BuiltinType T>
-        T get_value(size_t hash, T default_val) const
-        {
-            if (auto *p = find_scalar<T>(hash))
-                return *p;
-            return default_val;
-        }
-
         /// @brief Extra positional arguments collected under
         ///        ExtraArgsPolicy::Store.
         /// @return Vector of raw string tokens, in order.
@@ -213,32 +185,11 @@ namespace pjh::cli
         /// @return Multi-line help string, non-empty when help_requested().
         const std::string &help_text() const noexcept { return m_help_text; }
 
-        /// @brief Set the pre-formatted help text (used internally by Parser).
-        /// @param text Output from HelpFormatter::format_help().
-        void set_help_text(std::string text) { m_help_text = std::move(text); }
-
         /// @brief True if --version was encountered during parsing.
         bool version_requested() const noexcept { return !m_version_text.empty(); }
 
         /// @brief Pre-formatted version string from --version handling.
         const std::string &version_text() const noexcept { return m_version_text; }
-
-        /// @brief Set the version text (used internally by Parser).
-        void set_version_text(std::string text) { m_version_text = std::move(text); }
-
-        /// @brief Set the deepest matched command (used internally by Parser).
-        void set_matched_command(BaseCommand *cmd) { m_matched_cmd = cmd; }
-
-        /// @brief Append a value for a repeatable option (used internally).
-        /// @tparam T Value type.
-        /// @param hash  Runtime key hash.
-        /// @param value Value to append.
-        template <detail::BuiltinType T>
-        void append_value(size_t hash, T value)
-        {
-            vector_map<T>()[hash].push_back(std::move(value));
-            m_present.insert(hash);
-        }
 
         /// @brief Retrieve all values for a repeatable option.
         /// @tparam T Target type.
@@ -253,21 +204,6 @@ namespace pjh::cli
             if (auto *p = find_vector<T>(h))
                 return *p;
             throw LogicError("value not found for key");
-        }
-
-        /// @brief Append an unrecognised positional arg (used internally by Parser).
-        /// @param s The raw token string.
-        void add_extra_arg(std::string s) { m_extra_args.push_back(std::move(s)); }
-
-        /// @brief Link a parent context for scoped lookup.
-        ///
-        /// When a subcommand creates a child ParseContext, the parent
-        /// is set so that has() / get() on the child can fall through
-        /// to parent option values.
-        /// @param parent Shared pointer to the parent context.
-        void set_parent(std::shared_ptr<ParseContext> parent) noexcept
-        {
-            m_parent = std::move(parent);
         }
 
     private:

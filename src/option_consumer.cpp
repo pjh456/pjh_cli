@@ -5,6 +5,7 @@
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 
 namespace
 {
@@ -27,12 +28,12 @@ namespace pjh::cli
     {
         if (opt->is_counting())
         {
-            int cur = ctx.get_value<int>(opt->key_hash(), 0);
-            ctx.set_value<int>(opt->key_hash(), cur + 1);
+            int cur = ParseContextWriter::get_value<int>(ctx, opt->key_hash(), 0);
+            ParseContextWriter::set_value<int>(ctx, opt->key_hash(), cur + 1);
         }
         else
         {
-            ctx.set_value<bool>(opt->key_hash(), true);
+            ParseContextWriter::set_value<bool>(ctx, opt->key_hash(), true);
         }
     }
 
@@ -58,7 +59,7 @@ namespace pjh::cli
                 auto *neg = cmd.find_option_by_long(parsed.negated_name);
                 if (neg && neg->is_negatable())
                 {
-                    ctx.set_value<bool>(neg->key_hash(), false);
+                    ParseContextWriter::set_value<bool>(ctx, neg->key_hash(), false);
                     return CliResult<void>::Ok();
                 }
             }

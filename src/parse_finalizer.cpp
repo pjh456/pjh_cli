@@ -3,6 +3,7 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
+#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 
 namespace pjh::cli
@@ -40,7 +41,7 @@ namespace pjh::cli
         {
             for (const auto &opt_ptr : c->options())
             {
-                if (!ctx.has_value(opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
+                if (!ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
                 {
                     auto *env_val = env_snap->get(opt_ptr->env_var());
                     if (env_val)
@@ -66,7 +67,7 @@ namespace pjh::cli
         {
             for (const auto &opt_ptr : c->options())
             {
-                if (opt_ptr->is_required() && !ctx.has_value(opt_ptr->key_hash()))
+                if (opt_ptr->is_required() && !ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                     return CliFailure{
                         ErrorFactory::missing_required_option(opt_ptr->long_name())};
             }
@@ -88,7 +89,7 @@ namespace pjh::cli
             {
                 size_t count = 0;
                 for (auto h : group.key_hashes)
-                    if (ctx.has_value(h))
+                    if (ParseContextWriter::has_value(ctx, h))
                         count++;
 
                 switch (group.mode)
@@ -130,7 +131,7 @@ namespace pjh::cli
         {
             for (const auto &arg : leaf->args())
             {
-                if (arg.m_required && !ctx.has_value(arg.m_key_hash))
+                if (arg.m_required && !ParseContextWriter::has_value(ctx, arg.m_key_hash))
                     return CliFailure{ErrorFactory::missing_required_arg(arg.m_name)};
             }
         }
@@ -145,7 +146,7 @@ namespace pjh::cli
     CliResult<ParseContext> ParseFinalizer::finalize(
         BaseCommand *cmd, ParseContext ctx)
     {
-        ctx.set_matched_command(cmd);
+        ParseContextWriter::set_matched_command(ctx, cmd);
 
         std::vector<BaseCommand *> chain;
         for (auto *c = cmd; c; c = c->parent()) chain.push_back(c);
