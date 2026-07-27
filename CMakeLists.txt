@@ -12,6 +12,11 @@ target_sources(pjh_cli
     src/command.cpp
     src/app.cpp
     src/parser.cpp
+    src/parse_context.cpp
+    src/option_consumer.cpp
+    src/subcommand_resolver.cpp
+    src/parse_finalizer.cpp
+    src/value_writer.cpp
     src/help.cpp
     src/matcher.cpp
     src/console.cpp

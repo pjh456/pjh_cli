@@ -8,8 +8,6 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/format/info.hpp>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -147,54 +145,6 @@ namespace pjh::cli
                 if (a == name)
                     return sub.get();
         return nullptr;
-    }
-
-    // ── ParseContext ──
-
-    std::vector<BaseCommand *> ParseContext::matched_commands()
-    {
-        if (!m_matched_cmd)
-            return {};
-        std::vector<BaseCommand *> result;
-        for (auto *c = m_matched_cmd; c; c = c->parent()) result.push_back(c);
-        std::reverse(result.begin(), result.end());
-        if (result.size() > 1)
-            result.erase(result.begin());
-        return result;
-    }
-
-    std::vector<const BaseCommand *> ParseContext::matched_commands() const
-    {
-        if (!m_matched_cmd)
-            return {};
-        std::vector<const BaseCommand *> result;
-        for (auto *c = m_matched_cmd; c; c = c->parent()) result.push_back(c);
-        std::reverse(result.begin(), result.end());
-        if (result.size() > 1)
-            result.erase(result.begin());
-        return result;
-    }
-
-    MatchedPath ParseContext::matched_path_info() const
-    {
-        auto cmds = matched_commands();
-        MatchedPath out;
-        out.commands.reserve(cmds.size());
-        for (auto *c : cmds)
-            out.commands.push_back(c->name());
-        return out;
-    }
-
-    std::string ParseContext::matched_path() const
-    {
-        auto info = matched_path_info();
-        if (info.commands.empty())
-            return {};
-        std::ostringstream os;
-        os << info.commands[0];
-        for (size_t i = 1; i < info.commands.size(); ++i)
-            os << ' ' << info.commands[i];
-        return os.str();
     }
 
 }  // namespace pjh::cli
