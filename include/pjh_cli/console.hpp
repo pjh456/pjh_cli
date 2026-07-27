@@ -52,7 +52,8 @@ namespace pjh::cli
         ///                   help/unknown-subcommand messages are rendered.
         /// @param history    Command history implementation (default:
         ///                   InMemoryHistory).  Pass nullptr to disable history,
-        ///                   or a custom IHistory subclass to override storage.
+        ///                   or a NoOpHistory / custom IHistory subclass to
+        ///                   override storage.
         explicit InteractiveConsole(
             BranchCommand &root,
             std::string prompt = "> ",
@@ -137,8 +138,9 @@ namespace pjh::cli
 
         /// @brief Command history storage.
         ///
-        /// Defaults to InMemoryHistory.  Set to nullptr to disable history,
-        /// or inject a custom IHistory subclass to override storage backend.
+        /// Defaults to InMemoryHistory.  Use NoOpHistory or nullptr to
+        /// disable history injection, or inject a custom IHistory subclass
+        /// to override storage backend.
         /// push() is called in process_line() after every non-help, non-query
         /// line has been executed (regardless of success or failure).
         std::unique_ptr<IHistory> m_history;

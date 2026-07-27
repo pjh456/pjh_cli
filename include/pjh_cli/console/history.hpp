@@ -3,7 +3,6 @@
 
 #include <pjh_result.hpp>
 #include <string>
-#include <vector>
 
 namespace pjh::cli
 {
@@ -12,7 +11,8 @@ namespace pjh::cli
     ///
     /// Used by InteractiveConsole to persist previously entered command
     /// lines for up/down-arrow navigation.  The default implementation
-    /// (InMemoryHistory) stores lines in a ring-like vector.
+    /// (InMemoryHistory in <pjh_cli/console/in_memory_history.hpp>) stores
+    /// lines in a ring-like vector.
     class IHistory
     {
     public:
@@ -49,28 +49,6 @@ namespace pjh::cli
 
         /// @brief Number of stored history entries.
         virtual size_t size() const noexcept = 0;
-    };
-
-    /// @brief Default in-memory history implementation backed by a vector.
-    ///
-    /// Stores lines in insertion order.  Consecutive duplicate lines are
-    /// automatically deduplicated.  The navigation cursor starts at
-    /// "past end" and moves with prev() / next() calls.
-    ///
-    /// Thread safety: not thread-safe (same as InteractiveConsole).
-    class InMemoryHistory : public IHistory
-    {
-    public:
-        void push(std::string line) override;
-        auto prev() -> pjh::result::Option<std::string> override;
-        auto next() -> pjh::result::Option<std::string> override;
-        void reset_cursor() override;
-        void clear() override;
-        size_t size() const noexcept override;
-
-    private:
-        std::vector<std::string> m_lines;
-        size_t m_cursor = 0;
     };
 
 }  // namespace pjh::cli

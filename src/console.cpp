@@ -4,6 +4,7 @@
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/help_navigator.hpp>
 #include <pjh_cli/console/history.hpp>
+#include <pjh_cli/console/in_memory_history.hpp>
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>

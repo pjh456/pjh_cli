@@ -4,6 +4,8 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/history.hpp>
+#include <pjh_cli/console/in_memory_history.hpp>
+#include <pjh_cli/console/noop_history.hpp>
 #include <pjh_result.hpp>
 #include <sstream>
 #include <string>
@@ -239,4 +241,57 @@ TEST_CASE("InteractiveConsole history persists across multiple lines")
 
     CHECK(raw->size() == 3);
     CHECK(calls.size() == 3);
+}
+
+// ── NoOpHistory tests ──
+
+TEST_CASE("NoOpHistory always empty")
+{
+    NoOpHistory h;
+    CHECK(h.size() == 0);
+    CHECK(h.prev().is_none());
+    CHECK(h.next().is_none());
+}
+
+TEST_CASE("NoOpHistory push does nothing")
+{
+    NoOpHistory h;
+    h.push("anything");
+    h.push("else");
+    CHECK(h.size() == 0);
+    CHECK(h.prev().is_none());
+}
+
+TEST_CASE("NoOpHistory clear is safe")
+{
+    NoOpHistory h;
+    h.clear();
+    CHECK(h.size() == 0);
+}
+
+TEST_CASE("NoOpHistory reset_cursor is safe")
+{
+    NoOpHistory h;
+    h.reset_cursor();
+    CHECK(h.prev().is_none());
+}
+
+TEST_CASE("InteractiveConsole with NoOpHistory")
+{
+    App app("test", "1.0", "NoOp");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+
+    std::stringstream input, output, error;
+    InteractiveConsole console(app, "> ", input, output, error, {}, {},
+                               std::make_unique<NoOpHistory>());
+
+    auto r = console.process_line("cmd");
+    CHECK(r.is_ok());
+    CHECK(called == 1);
 }

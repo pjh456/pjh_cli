@@ -1,11 +1,9 @@
-#include <pjh_cli/console/history.hpp>
+#include <pjh_cli/console/in_memory_history.hpp>
 #include <utility>
 
 namespace pjh::cli
 {
     using Option = pjh::result::Option<std::string>;
-
-    // ── InMemoryHistory ──
 
     void InMemoryHistory::push(std::string line)
     {
