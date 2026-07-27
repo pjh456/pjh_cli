@@ -3,7 +3,9 @@
 
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/console/history.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <string>
@@ -13,6 +15,7 @@ namespace pjh::cli
 {
     struct QueryResult;
     struct HelpNavigationResult;
+
     /// @brief Interactive REPL console for navigating and executing commands.
     ///
     /// Reads lines from an input stream, dispatches them to:
@@ -36,14 +39,20 @@ namespace pjh::cli
     class InteractiveConsole
     {
     public:
-        /// @param root    Root command (typically your App instance).  Must
-        ///                outlive the console.
-        /// @param prompt  Prompt string shown before each input line.
-        /// @param input   Input stream (default std::cin).
-        /// @param output  Output stream (default std::cout).
-        /// @param error   Error stream (default std::cerr).
+        /// @param root       Root command (typically your App instance).  Must
+        ///                   outlive the console.
+        /// @param prompt     Prompt string shown before each input line.
+        /// @param input      Input stream (default std::cin).
+        /// @param output     Output stream (default std::cout).
+        /// @param error      Error stream (default std::cerr).
         /// @param query_fmt  Query result formatter (default: QueryOutput::format).
-        ///                Replace to customise how query results are rendered.
+        ///                   Replace to customise how query results are rendered.
+        /// @param help_fmt   Help navigation formatter (default:
+        ///                   HelpNavigationOutput::format).  Replace to customise how
+        ///                   help/unknown-subcommand messages are rendered.
+        /// @param history    Command history implementation (default:
+        ///                   InMemoryHistory).  Pass nullptr to disable history,
+        ///                   or a custom IHistory subclass to override storage.
         explicit InteractiveConsole(
             BranchCommand &root,
             std::string prompt = "> ",
@@ -51,7 +60,8 @@ namespace pjh::cli
             std::ostream &output = std::cout,
             std::ostream &error = std::cerr,
             std::function<std::string(const QueryResult &)> query_fmt = {},
-            std::function<std::string(const HelpNavigationResult &)> help_fmt = {});
+            std::function<std::string(const HelpNavigationResult &)> help_fmt = {},
+            std::unique_ptr<IHistory> history = {});
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
@@ -125,16 +135,13 @@ namespace pjh::cli
         /// @brief Whether the REPL loop should continue running.
         bool m_running = false;
 
-        /// @brief Ring buffer of previously entered lines (for history navigation).
+        /// @brief Command history storage.
         ///
-        /// Currently declared but not wired into the REPL loop.
-        /// Planned for Phase D (IHistory interface).
-        std::vector<std::string> m_history;
-
-        /// @brief Current index into m_history for up/down arrow navigation.
-        ///
-        /// A value of m_history.size() means "at the end" (current input).
-        size_t m_history_index = 0;
+        /// Defaults to InMemoryHistory.  Set to nullptr to disable history,
+        /// or inject a custom IHistory subclass to override storage backend.
+        /// push() is called in process_line() after every non-help, non-query
+        /// line has been executed (regardless of success or failure).
+        std::unique_ptr<IHistory> m_history;
 
         /// @brief Handle `?` or `?query` — list or search subcommands.
         ///

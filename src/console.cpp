@@ -3,6 +3,7 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/help_navigator.hpp>
+#include <pjh_cli/console/history.hpp>
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>
@@ -26,7 +27,8 @@ namespace pjh::cli
         std::ostream &output,
         std::ostream &error,
         std::function<std::string(const QueryResult &)> query_fmt,
-        std::function<std::string(const HelpNavigationResult &)> help_fmt) :
+        std::function<std::string(const HelpNavigationResult &)> help_fmt,
+        std::unique_ptr<IHistory> history) :
         m_root(root),
         m_prompt(std::move(prompt)),
         m_input(input),
@@ -37,7 +39,8 @@ namespace pjh::cli
                 { return QueryOutput::format(r); }),
         m_help_formatter(
             help_fmt ? std::move(help_fmt) : [](const HelpNavigationResult &r)
-                { return HelpNavigationOutput::format(r); })
+                { return HelpNavigationOutput::format(r); }),
+        m_history(history ? std::move(history) : std::make_unique<InMemoryHistory>())
     {
     }
 
@@ -115,7 +118,11 @@ namespace pjh::cli
         auto *cmd = ctx.matched_command();
         if (!cmd)
             return CliFailure{ErrorFactory::no_command_matched()};
-        return cmd->execute(ctx);
+
+        auto exec = cmd->execute(ctx);
+        if (m_history)
+            m_history->push(line);
+        return exec;
     }
 
 }  // namespace pjh::cli
