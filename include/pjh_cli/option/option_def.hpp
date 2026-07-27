@@ -17,7 +17,7 @@
 namespace pjh::cli
 {
     class ParseContext;
-    class BaseCommand;
+    class BaseCommand;  // for OptionDef's return types
 
     // ── Forward declarations for typed subclasses ──
 
@@ -206,77 +206,6 @@ namespace pjh::cli
         size_t m_key_hash{};
         ValueTag m_value_tag{};
         std::function<std::vector<std::string>()> m_completer;
-    };
-
-    // ── OptionBuilder (declaration; definitions in command.hpp) ──
-
-    /// @brief Builder returned by BaseCommand::option<Key>().
-    ///
-    /// Holds common registration fields and provides type-dispatch methods
-    /// (.integer(), .boolean(), .str(), …) that create the corresponding
-    /// typed subclass and add it to the command.  The methods are defined in
-    /// `base_command.hpp` so that BaseCommand::add_option() is visible.
-    /// @tparam Key Compile-time fixed_string identifier.
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    class OptionBuilder
-    {
-        BaseCommand &m_cmd;
-        std::string m_long_name;
-        std::string m_description;
-        char m_short_name = 0;
-
-    public:
-        /// @brief Construct a builder for the given command and option name.
-        /// @param cmd        Target command to register the option on.
-        /// @param long_name  Long option name (with or without "--" prefix).
-        /// @param description Help text description.
-        OptionBuilder(BaseCommand &cmd, std::string long_name, std::string description) :
-            m_cmd(cmd),
-            m_long_name(std::move(long_name)),
-            m_description(std::move(description))
-        {
-        }
-
-        /// @brief Set the short option character.
-        /// @param c Single-character short form (e.g. 'v'), or 0 for none.
-        void set_short_name(char c) noexcept { m_short_name = c; }
-
-        /// @brief Create the option as an integer-valued type.
-        /// @return Reference to the newly created IntOption.
-        IntOption &integer();
-
-        /// @brief Create the option as a counting flag (-vvv → 3).
-        /// @return Reference to the newly created CountOption.
-        CountOption &count();
-
-        /// @brief Create the option as a boolean flag type.
-        /// @return Reference to the newly created BoolOption.
-        BoolOption &boolean();
-
-        /// @brief Create the option as a string-valued type.
-        /// @return Reference to the newly created StrOption.
-        StrOption &str();
-
-        /// @brief Create the option as a double-valued floating-point type.
-        /// @return Reference to the newly created FloatOption.
-        FloatOption &floating();
-
-        /// @brief Create the option as a filesystem path type.
-        /// @return Reference to the newly created PathOption.
-        PathOption &path();
-
-        /// @brief Create the option as an enum-valued type.
-        /// @tparam E Enum type whose string-to-value mapping is provided
-        ///           at registration time via `.mapping()`.
-        /// @return Reference to the newly created EnumOption<E>.
-        template <typename E>
-            requires std::is_enum_v<E>
-        EnumOption<E> &enum_type();
-
-    private:
-        template <typename Opt, ValueTag Tag>
-        Opt &make_option(bool has_val);
     };
 
     // ── Virtual method default implementations ──

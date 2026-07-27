@@ -10,5 +10,6 @@
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/option/path_option.hpp>
 #include <pjh_cli/option/str_option.hpp>
+#include <pjh_cli/option/option_builder.hpp>
 
 #endif  // INCLUDE_PJH_CLI_OPTION_HPP

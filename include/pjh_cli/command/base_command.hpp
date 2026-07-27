@@ -17,6 +17,9 @@
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/option/path_option.hpp>
 #include <pjh_cli/option/str_option.hpp>
+#include <pjh_cli/option/group.hpp>
+#include <pjh_cli/option/option_builder.hpp>
+#include <pjh_cli/option/option_group_builder.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
@@ -77,53 +80,6 @@ namespace pjh::cli
         Error,   ///< Return CliError on any extra positional argument.
         Store,   ///< Append to ParseContext::extra_args() for runtime inspection.
     };
-
-    /// @brief Constraint mode for option groups.
-    enum class GroupMode : unsigned
-    {
-        ExactlyOne,  ///< Exactly one option in the group must be set.
-        AtMostOne,   ///< Zero or one option in the group may be set.
-        AtLeastOne,  ///< At least one option in the group must be set.
-    };
-
-    /// @brief A group of options with a mutual-exclusion or requirement constraint.
-    struct OptionGroup
-    {
-        std::vector<size_t> key_hashes;  ///< Compile-time key hashes of group members.
-        std::vector<std::string>
-            option_names;  ///< Long option names (for error messages).
-        GroupMode mode;    ///< Constraint type.
-    };
-
-    template <auto... Keys>
-    class OptionGroupBuilder;
-
-    namespace detail
-    {
-        /// @brief Dispatch an OptionBuilder to the correct typed subclass and
-        ///        set a default value.
-        ///
-        /// Used by the convenience option<Key>(name, desc, T) overloads that
-        /// infer the option type from the default value argument type.
-        /// @tparam T Computed from the default value argument (bool → BoolOption,
-        ///           int → IntOption, string → StrOption, etc.).
-        /// @tparam Builder OptionBuilder<Key> deduced at call site.
-        template <typename T, typename Builder>
-            requires detail::BuiltinType<T>
-        OptionDef &dispatch_default(Builder &builder, T default_value)
-        {
-            if constexpr (std::same_as<T, bool>)
-                return builder.boolean().default_value(default_value);
-            else if constexpr (std::same_as<T, int>)
-                return builder.integer().default_value(default_value);
-            else if constexpr (std::same_as<T, double>)
-                return builder.floating().default_value(default_value);
-            else if constexpr (std::same_as<T, std::string>)
-                return builder.str().default_value(default_value);
-            else if constexpr (std::same_as<T, std::filesystem::path>)
-                return builder.path().default_value(default_value);
-        }
-    }  // namespace detail
 
     /// @brief Base node in the command tree.
     ///
@@ -376,10 +332,17 @@ namespace pjh::cli
             m_options.push_back(std::move(opt));
         }
 
+        /// @brief Look up an option by its key hash.
+        const OptionDef *find_option_by_hash(size_t hash) const noexcept
+        {
+            for (const auto &opt : m_options)
+                if (opt->key_hash() == hash)
+                    return opt.get();
+            return nullptr;
+        }
+
     private:
         friend class BranchCommand;
-        template <auto...>
-        friend class OptionGroupBuilder;
 
         /// @brief Set the parent pointer.
         void set_parent(BaseCommand *parent) noexcept { m_parent = parent; }
@@ -406,144 +369,11 @@ namespace pjh::cli
         std::function<CliResult<void>(ParseContext &)> m_action;
         std::vector<std::string> m_aliases;
         std::vector<OptionGroup> m_groups;
-
-        /// @brief Look up an option's long name by its key hash.
-        const OptionDef *find_option_by_hash(size_t hash) const noexcept
-        {
-            for (const auto &opt : m_options)
-                if (opt->key_hash() == hash)
-                    return opt.get();
-            return nullptr;
-        }
-    };
-
-    // ── OptionBuilder method definitions ──
-
-    /// @brief Common factory: strip leading "--", create typed option,
-    ///        register on command.
-    /// @tparam Opt Concrete option type (e.g. IntOption).
-    /// @tparam Tag Matching ValueTag.
-    /// @param has_val Whether the option consumes a value token.
-    /// @return Reference to the newly registered option.
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    template <typename Opt, ValueTag Tag>
-    Opt &OptionBuilder<Key>::make_option(bool has_val)
-    {
-        auto name = m_long_name;
-        if (name.size() > 2 && name[0] == '-' && name[1] == '-')
-            name = name.substr(2);
-
-        auto ptr = std::make_unique<Opt>();
-        ptr->set_long_name(std::move(name));
-        ptr->set_short_name(m_short_name);
-        ptr->set_description(std::move(m_description));
-        ptr->set_has_value(has_val);
-        ptr->set_value_tag(Tag);
-        ptr->set_key_hash(key_hash(Key));
-
-        auto &ref = *ptr;
-        m_cmd.add_option(std::move(ptr));
-        return ref;
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    IntOption &OptionBuilder<Key>::integer()
-    {
-        return make_option<IntOption, ValueTag::Int>(true);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    CountOption &OptionBuilder<Key>::count()
-    {
-        return make_option<CountOption, ValueTag::Int>(false);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    BoolOption &OptionBuilder<Key>::boolean()
-    {
-        return make_option<BoolOption, ValueTag::Bool>(false);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    StrOption &OptionBuilder<Key>::str()
-    {
-        return make_option<StrOption, ValueTag::String>(true);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    FloatOption &OptionBuilder<Key>::floating()
-    {
-        return make_option<FloatOption, ValueTag::Double>(true);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    PathOption &OptionBuilder<Key>::path()
-    {
-        return make_option<PathOption, ValueTag::Path>(true);
-    }
-
-    template <auto Key>
-        requires detail::OptionKey<decltype(Key)>
-    template <typename E>
-        requires std::is_enum_v<E>
-    EnumOption<E> &OptionBuilder<Key>::enum_type()
-    {
-        return make_option<EnumOption<E>, ValueTag::Int>(true);
-    }
-
-    // ── OptionGroupBuilder ──
-
-    template <auto... Keys>
-    class OptionGroupBuilder
-    {
-        BaseCommand &m_cmd;
-
-        void commit(GroupMode mode)
-        {
-            OptionGroup g;
-            g.mode = mode;
-            g.key_hashes = {key_hash(Keys)...};
-            g.option_names.reserve(g.key_hashes.size());
-            for (auto h : g.key_hashes)
-            {
-                auto *opt = m_cmd.find_option_by_hash(h);
-                g.option_names.push_back(opt ? "--" + opt->long_name() : "?");
-            }
-            m_cmd.register_group(std::move(g));
-        }
-
-    public:
-        explicit OptionGroupBuilder(BaseCommand &cmd) : m_cmd(cmd) {}
-
-        /// @brief Exactly one option in the group must be provided.
-        OptionGroupBuilder &exactly_one()
-        {
-            commit(GroupMode::ExactlyOne);
-            return *this;
-        }
-
-        /// @brief Zero or one option in the group may be provided.
-        OptionGroupBuilder &at_most_one()
-        {
-            commit(GroupMode::AtMostOne);
-            return *this;
-        }
-
-        /// @brief At least one option in the group must be provided.
-        OptionGroupBuilder &at_least_one()
-        {
-            commit(GroupMode::AtLeastOne);
-            return *this;
-        }
     };
 
 }  // namespace pjh::cli
+
+#include <pjh_cli/option/option_builder_impl.hpp>
+#include <pjh_cli/option/option_group_builder_impl.hpp>
 
 #endif
