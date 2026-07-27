@@ -11,7 +11,7 @@
 #include <cwchar>
 #include <windows.h>
 #else
-extern char **environ;
+extern "C" char **environ;
 #endif
 
 namespace pjh::cli::detail
