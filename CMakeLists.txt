@@ -4,7 +4,9 @@ project(pjh_cli LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(thirdparty/pjh_result EXCLUDE_FROM_ALL)
+if(NOT TARGET pjh_result)
+    add_subdirectory(thirdparty/pjh_result EXCLUDE_FROM_ALL)
+endif()
 
 add_library(pjh_cli)
 target_sources(pjh_cli
