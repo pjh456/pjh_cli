@@ -6,9 +6,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(FetchContent)
 
+find_package(pjh_result CONFIG QUIET)
 if(NOT TARGET pjh_result)
-    add_subdirectory(thirdparty/pjh_result EXCLUDE_FROM_ALL)
+    FetchContent_Declare(pjh_result
+        GIT_REPOSITORY https://github.com/pjh456/pjh_result.git
+        GIT_TAG main)
+    FetchContent_MakeAvailable(pjh_result)
 endif()
 
 add_library(pjh_cli)
