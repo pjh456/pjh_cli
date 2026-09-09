@@ -14,9 +14,17 @@
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 using namespace pjh::cli;
+
+// Contract pin: subcommands() is a read-only view.  A mutable return type would
+// let callers insert/erase/reorder children and desync parent()/find_subcommand().
+static_assert(
+    std::is_const_v<
+        std::remove_reference_t<decltype(std::declval<BranchCommand &>().subcommands())>>,
+    "BranchCommand::subcommands() must return a const reference");
 
 TEST_CASE("Command construction")
 {
@@ -151,6 +159,26 @@ TEST_CASE("Subcommand tree basic")
     CHECK(stop.name() == "stop");
 
     CHECK(serve.subcommands().size() == 2);
+}
+
+TEST_CASE("subcommands() is a read-only view with intact parent and name index")
+{
+    App app("test", "1.0", "Read-only view");
+    auto &serve = app.add_branch("serve", "Serve");
+    auto &start = serve.add_branch("start", "Start");
+    auto &stop = serve.add_leaf("stop", "Stop");
+
+    const BranchCommand &view = serve;
+    CHECK(view.subcommands().size() == 2);
+    CHECK(view.subcommands()[0]->name() == "start");  // registration order
+    CHECK(view.subcommands()[1]->name() == "stop");
+    for (const auto &child : view.subcommands())
+    {
+        CHECK(child->parent() == &serve);
+        CHECK(serve.find_subcommand(child->name()) == child.get());
+    }
+    CHECK(start.parent() == &serve);
+    CHECK(stop.parent() == &serve);
 }
 
 TEST_CASE("find_subcommand")

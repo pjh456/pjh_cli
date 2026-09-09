@@ -13,6 +13,8 @@ namespace pjh::cli
     /// A BranchCommand holds child subcommands (branches or leaves) but has
     /// no positional arguments of its own.  It is the only kind of command
     /// that can call add_branch() / add_leaf(), which return typed references.
+    /// The child list is exposed read-only; mutation happens only through
+    /// add_branch() / add_leaf().
     ///
     /// App inherits BranchCommand and represents the root of the tree.
     class BranchCommand : public BaseCommand
@@ -42,13 +44,19 @@ namespace pjh::cli
         /// @brief Const overload.
         const BaseCommand *find_subcommand(std::string_view name) const noexcept;
 
-        /// @brief Direct child subcommands.
-        std::deque<std::unique_ptr<BaseCommand>> &subcommands() noexcept
-        {
-            return m_subcommands;
-        }
-
-        /// @brief Const overload of subcommands().
+        /// @brief Read-only view of the direct child subcommands.
+        ///
+        /// Children are created exclusively through add_branch() / add_leaf(),
+        /// which set the parent link and the name index.  The returned reference
+        /// is read-only: inserting, erasing, or reordering through it would
+        /// bypass that bookkeeping and orphan children (or leave dangling index
+        /// entries).  Iteration order is registration order.
+        ///
+        /// Note: element access yields a non-const BaseCommand* (the container
+        /// is read-only, the pointee is not); child configuration still goes
+        /// through BaseCommand's public setters.
+        ///
+        /// @return Const reference to the owned child list.
         const std::deque<std::unique_ptr<BaseCommand>> &subcommands() const noexcept
         {
             return m_subcommands;
