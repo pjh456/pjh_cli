@@ -43,6 +43,51 @@ namespace pjh::cli::detail
                !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
     }
 
+    /// @brief True for a UTF-8 continuation byte (10xxxxxx).
+    /// @param b  Byte to classify.
+    /// @return true if @p b is a UTF-8 continuation byte.
+    constexpr bool is_utf8_continuation_byte(unsigned char b) noexcept
+    {
+        return (b & 0xC0) == 0x80;
+    }
+
+    /// @brief Byte offset of the start of the UTF-8 code point ending at @p end.
+    ///
+    /// Walks back over continuation bytes and then over the lead byte, so the
+    /// returned offset is always <= @p end.  Malformed input (a lone
+    /// continuation byte or a run of them) degrades to the nearest byte
+    /// boundary; the walk never reads outside `[0, s.size()]`.
+    ///
+    /// @param s    Byte string; need not be valid UTF-8.
+    /// @param end  One-past-end offset, clamped to `[0, s.size()]`.
+    /// @return Byte offset of the code-point start at or before @p end.
+    inline std::size_t utf8_prev_code_point(std::string_view s, std::size_t end) noexcept
+    {
+        if (end > s.size())
+            end = s.size();
+        std::size_t i = end;
+        while (i > 0 && is_utf8_continuation_byte(static_cast<unsigned char>(s[i - 1])))
+            --i;
+        return i > 0 ? i - 1 : 0;
+    }
+
+    /// @brief Number of UTF-8 code points in @p s.
+    ///
+    /// Counts every non-continuation byte (lead bytes and stray bytes); each
+    /// continuation byte contributes nothing.  For ASCII this equals
+    /// `s.size()`, so callers can use it unconditionally.
+    ///
+    /// @param s  Byte string; need not be valid UTF-8.
+    /// @return Best-effort code-point count.
+    inline std::size_t utf8_code_point_count(std::string_view s) noexcept
+    {
+        std::size_t n = 0;
+        for (char c : s)
+            if (!is_utf8_continuation_byte(static_cast<unsigned char>(c)))
+                ++n;
+        return n;
+    }
+
     /// @brief General-purpose string manipulation utilities.
     ///
     /// Pure functions, no mutable state.  All methods operate on

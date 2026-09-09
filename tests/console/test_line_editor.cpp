@@ -414,3 +414,112 @@ TEST_CASE("LineEditor history recall redraws buffer")
     CHECK(term.written.find("> second") != std::string::npos);
     CHECK(term.written.find("> x") == std::string::npos);
 }
+
+// ──────────────────────────────────────────
+//  UTF-8 editing (task 39)
+// ──────────────────────────────────────────
+
+TEST_CASE("LineEditor backspace removes a whole CJK code point")
+{
+    ScriptedTerminal term;
+    chars(term, "\xE4\xB8\xAD\xE6\x96\x87");  // 中文
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "\xE4\xB8\xAD");  // 中, valid UTF-8
+    CHECK(term.written == "> \xE4\xB8\xAD\n");
+}
+
+TEST_CASE("LineEditor backspace removes mixed ASCII and CJK by code point")
+{
+    ScriptedTerminal term;
+    chars(term, std::string("ab") + "\xE4\xB8\xAD");  // ab中
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "a");
+}
+
+TEST_CASE("LineEditor backspace with lone continuation byte is graceful")
+{
+    ScriptedTerminal term;
+    chars(term, "\x80");  // malformed byte still arrives as a Character
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line.empty());
+}
+
+TEST_CASE("LineEditor history recall of a CJK entry redraws it intact")
+{
+    InMemoryHistory h;
+    h.push("\xE4\xB8\xAD\xE6\x96\x87");  // 中文
+
+    ScriptedTerminal term;
+    chars(term, "x");
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "\xE4\xB8\xAD\xE6\x96\x87");
+    // The recalled entry must be written back as valid UTF-8 after the draft
+    // "x" is erased (erase_last(1) here; the over-erase case is the next test).
+    CHECK(term.written == "> \xE4\xB8\xAD\xE6\x96\x87\n");
+}
+
+TEST_CASE("LineEditor history recall over CJK draft erases code points")
+{
+    InMemoryHistory h;
+    h.push("hello");
+
+    ScriptedTerminal term;
+    chars(term, "\xE4\xB8\xAD\xE6\x96\x87");  // 中文
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "hello");
+    // On a real terminal, byte-wise erase_last(6) on "> 中文" backs the cursor
+    // six cells into the prompt (only four cells exist); code-point
+    // erase_last(2) leaves the prompt and rewrites.  The assertion discriminates
+    // byte vs code-point counts once ScriptedTerminal is updated per §3.5.
+    CHECK(term.written == "> hello\n");
+}
+
+TEST_CASE("LineEditor Tab completes a CJK candidate then backspace removes it")
+{
+    ScriptedTerminal term;
+    chars(term, "\xE4\xB8");  // partial 中
+    term.keys.push_back({KeyEvent::Code::Tab, 0});
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});  // trailing space
+    term.keys.push_back({KeyEvent::Code::Backspace, 0});  // the completed 中
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    CompletionFn complete = [](std::string_view line, std::size_t)
+    {
+        CompletionResult out;
+        if (line == "\xE4\xB8")
+            out.candidates.push_back({"\xE4\xB8\xAD"});  // 中
+        out.prefix_len = line.size();
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line.empty());  // both the appended space and 中 are removed whole
+}

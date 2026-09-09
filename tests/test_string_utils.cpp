@@ -147,3 +147,43 @@ TEST_CASE("is_option_flag distinguishes option tokens from values")
     CHECK_FALSE(is_option_flag("word"));
     CHECK_FALSE(is_option_flag(""));
 }
+
+// 中 = E4 B8 AD, 文 = E6 96 87, emoji 😀 = F0 9F 98 80.
+
+TEST_CASE("utf8_prev_code_point walks back over continuation bytes")
+{
+    const std::string s = "\xE4\xB8\xAD";  // 中
+    CHECK(utf8_prev_code_point(s, s.size()) == 0);
+    CHECK(utf8_prev_code_point(s, 1) == 0);
+    CHECK(utf8_prev_code_point("abc", 3) == 2);
+    CHECK(utf8_prev_code_point("abc", 1) == 0);
+    CHECK(utf8_prev_code_point("", 0) == 0);
+}
+
+TEST_CASE("utf8_prev_code_point handles mixed and 4-byte sequences")
+{
+    const std::string mixed = std::string("a") + "\xE4\xB8\xAD";  // a中
+    CHECK(utf8_prev_code_point(mixed, mixed.size()) == 1);
+    CHECK(utf8_prev_code_point(mixed, 1) == 0);
+    const std::string emoji = "\xF0\x9F\x98\x80";  // 😀
+    CHECK(utf8_prev_code_point(emoji, emoji.size()) == 0);
+}
+
+TEST_CASE("utf8_prev_code_point is safe on malformed input")
+{
+    const std::string lone = "\x80";     // stray continuation byte
+    const std::string run = "\x80\x80";  // two stray bytes
+    CHECK(utf8_prev_code_point(lone, lone.size()) == 0);
+    CHECK(utf8_prev_code_point(run, run.size()) == 0);
+    CHECK(utf8_prev_code_point("a", 99) == 0);  // end clamps to size
+}
+
+TEST_CASE("utf8_code_point_count counts code points not bytes")
+{
+    CHECK(utf8_code_point_count("") == 0);
+    CHECK(utf8_code_point_count("abc") == 3);
+    CHECK(utf8_code_point_count("\xE4\xB8\xAD") == 1);              // 中
+    CHECK(utf8_code_point_count("\xE4\xB8\xAD\xE6\x96\x87") == 2);  // 中文
+    CHECK(utf8_code_point_count(std::string("a") + "\xE4\xB8\xAD") == 2);
+    CHECK(utf8_code_point_count("\x80\x80") == 0);  // stray continuations
+}

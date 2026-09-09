@@ -50,8 +50,18 @@ namespace pjh::cli
         /// @param text  Text to emit.
         virtual void write(std::string_view text) = 0;
 
-        /// @brief Remove @p count characters already written on the current line.
-        /// @param count  Number of characters to erase.
+        /// @brief Remove @p count display characters already written on the
+        ///        current line.
+        ///
+        /// @param count  Number of UTF-8 code points to erase (not bytes).
+        ///               Each is rendered with one `"\b \b"` sequence, so a
+        ///               double-width glyph occupies two columns and is only
+        ///               partially cleared by one unit (see @note).
+        ///
+        /// @note Counts code points, not terminal columns; no Unicode width
+        ///       table is consulted.  Callers must pass
+        ///       `detail::utf8_code_point_count(text)` for a full-buffer
+        ///       redraw.  ASCII input is unaffected.
         virtual void erase_last(std::size_t count) = 0;
 
         /// @brief Restore cooked terminal mode (line discipline + echo).

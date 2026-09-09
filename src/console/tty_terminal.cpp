@@ -91,6 +91,8 @@ namespace
 
         void erase_last(std::size_t count) override
         {
+            // One erase sequence per display character (code point); the
+            // caller passes a code-point count, not a byte count.
             for (std::size_t i = 0; i < count; ++i) m_output << "\b \b";
             m_output << std::flush;
         }
@@ -186,6 +188,8 @@ namespace
 
         void erase_last(std::size_t count) override
         {
+            // One erase sequence per display character (code point); the
+            // caller passes a code-point count, not a byte count.
             for (std::size_t i = 0; i < count; ++i) m_output << "\b \b";
             m_output << std::flush;
         }

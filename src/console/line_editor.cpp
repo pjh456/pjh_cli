@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <pjh_cli/console/history.hpp>
 #include <pjh_cli/console/line_editor.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <string>
 #include <string_view>
@@ -52,7 +53,7 @@ namespace pjh::cli
             case KeyEvent::Code::Backspace:
                 if (!buffer.empty())
                 {
-                    buffer.pop_back();
+                    buffer.resize(detail::utf8_prev_code_point(buffer, buffer.size()));
                     m_terminal.erase_last(1);
                 }
                 break;
@@ -161,7 +162,7 @@ namespace pjh::cli
     {
         if (buffer == text)
             return;
-        m_terminal.erase_last(buffer.size());
+        m_terminal.erase_last(detail::utf8_code_point_count(buffer));
         buffer.assign(text);
         m_terminal.write(buffer);
     }

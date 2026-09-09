@@ -5,6 +5,7 @@
 #include <deque>
 #include <iostream>
 #include <pjh_cli/console/line_editor.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -60,10 +61,9 @@ public:
 
     void erase_last(std::size_t count) override
     {
-        if (count >= written.size())
-            written.clear();
-        else
-            written.resize(written.size() - count);
+        for (std::size_t i = 0; i < count && !written.empty(); ++i)
+            written.resize(
+                pjh::cli::detail::utf8_prev_code_point(written, written.size()));
     }
 
     void suspend() override { ++suspend_calls; }
