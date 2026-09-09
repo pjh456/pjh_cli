@@ -1,5 +1,6 @@
 #include <iostream>
 #include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/command_builder.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parser.hpp>

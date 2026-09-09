@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_APP_HPP
 
 #include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/command/command_builder.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/parse/parse_context.hpp>

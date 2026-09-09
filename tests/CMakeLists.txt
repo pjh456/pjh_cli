@@ -12,6 +12,7 @@ set(PJH_CLI_TEST_SOURCES
     test_converter.cpp
     test_builtin_traits.cpp
     test_command.cpp
+    test_command_builder.cpp
     test_matcher.cpp
     test_parse_context.cpp
     option/test_bool_option.cpp

@@ -1,9 +1,9 @@
 /// @file
 /// Method definitions for OptionBuilder<Key>.
 ///
-/// This file is included at the bottom of base_command.hpp so that
-/// BaseCommand::add_option() is fully visible when the templates are
-/// instantiated.
+/// Self-contained with respect to the typed option classes it constructs.
+/// `command/command_builder.hpp` includes base_command.hpp first so that
+/// BaseCommand::add_option() is complete when these templates are parsed.
 
 #ifndef INCLUDE_PJH_CLI_OPTION_BUILDER_IMPL_HPP
 #define INCLUDE_PJH_CLI_OPTION_BUILDER_IMPL_HPP
@@ -11,7 +11,14 @@
 #include <filesystem>
 #include <memory>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/option/bool_option.hpp>
+#include <pjh_cli/option/count_option.hpp>
+#include <pjh_cli/option/enum_option.hpp>
+#include <pjh_cli/option/float_option.hpp>
+#include <pjh_cli/option/int_option.hpp>
 #include <pjh_cli/option/option_builder.hpp>
+#include <pjh_cli/option/path_option.hpp>
+#include <pjh_cli/option/str_option.hpp>
 
 namespace pjh::cli
 {

@@ -1,7 +1,7 @@
 /// @file
 /// Method definitions for OptionGroupBuilder<Keys...>.
 ///
-/// This file is included at the bottom of base_command.hpp so that
+/// `command/command_builder.hpp` includes base_command.hpp first so that
 /// BaseCommand::find_option_by_hash() and register_group() are fully visible.
 
 #ifndef INCLUDE_PJH_CLI_OPTION_GROUP_BUILDER_IMPL_HPP
