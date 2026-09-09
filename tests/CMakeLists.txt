@@ -52,3 +52,9 @@ target_link_libraries(pjh_cli_tests PRIVATE Threads::Threads)
 
 include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 doctest_discover_tests(pjh_cli_tests)
+
+# Build-independent include-direction guard (see cmake/check_layering.cmake).
+add_test(NAME layering_guard
+    COMMAND ${CMAKE_COMMAND}
+            "-DPJH_CLI_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+            -P "${PROJECT_SOURCE_DIR}/cmake/check_layering.cmake")

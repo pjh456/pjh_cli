@@ -42,6 +42,9 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Layering guard
+        run: cmake -DPJH_CLI_SOURCE_DIR="${{ github.workspace }}" -P cmake/check_layering.cmake
+
       - name: Compiler cache
         uses: hendrikmuhs/ccache-action@v1.2
         with:

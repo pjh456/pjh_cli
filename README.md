@@ -364,3 +364,28 @@ target_link_libraries(myapp PRIVATE pjh::cli)
 Both modes expose the same target name `pjh::cli`. The package config calls
 `find_dependency(pjh_result 0.1.0)`, so an installed `pjh_result` must be discoverable
 when `find_package(pjh_cli)` runs.
+
+## Layering guard
+
+`cmake/check_layering.cmake` mechanically enforces the layer DAG documented in
+`codebase/ARCHITECTURE.md`: every `#include <pjh_cli/...>` in `include/pjh_cli/**`
+and `src/**` must be a same-layer or downward edge. It scans include directives
+only (no compiler, network, or extra tool), fails closed on unclassified files,
+and runs in well under a second:
+
+```sh
+cmake -DPJH_CLI_SOURCE_DIR="$PWD" -P cmake/check_layering.cmake
+```
+
+It is also registered as the `layering_guard` CTest test, so the standard test
+command covers it:
+
+```sh
+ctest --test-dir build -R layering_guard --output-on-failure
+```
+
+The only cross-layer exceptions are the four value-storage carve-outs
+`command|option -> parse/parse_context(_writer)` listed in the script. A new
+source file must be classified in the script's `_src_map`; a new intentional
+exception is a single `layer|target` line in `_allowed` and must be documented
+in the same change.
