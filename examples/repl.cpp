@@ -3,7 +3,6 @@
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
-#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <vector>
 
@@ -43,37 +42,9 @@ int main(int argc, char **argv)
             return CliResult<void>::Ok();
         });
 
-    // Batch mode: execute and exit
+    // Batch mode: one-shot parse + dispatch + execute + exit code
     if (argc > 1)
-    {
-        auto r = app.parse_fuzzy(argc, argv);
-        if (r.is_err())
-        {
-            std::cerr << r.unwrap_err().what() << "\n";
-            return 1;
-        }
-        auto &ctx = r.unwrap();
-        if (ctx.help_requested())
-        {
-            std::cout << ctx.help_text();
-            return 0;
-        }
-        if (ctx.version_requested())
-        {
-            std::cout << ctx.version_text();
-            return 0;
-        }
-        for (const auto &sub_ptr : app.subcommands())
-            if (MatchedPathResolver::to_path_string(ctx.matched_command()) ==
-                sub_ptr->name())
-            {
-                auto e = sub_ptr->execute(ctx);
-                if (e.is_err())
-                    std::cerr << e.unwrap_err().what() << "\n";
-                return 0;
-            }
-        return 0;
-    }
+        return app.run_fuzzy(argc, argv);
 
     // Interactive mode (Tab completes subcommands, options, and --mode values)
     InteractiveConsole console(app, "calc>");

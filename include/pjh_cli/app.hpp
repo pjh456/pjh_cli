@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_APP_HPP
 #define INCLUDE_PJH_CLI_APP_HPP
 
+#include <iosfwd>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/command_builder.hpp>
 #include <pjh_cli/core/type.hpp>
@@ -12,6 +13,18 @@
 
 namespace pjh::cli
 {
+    /// @brief Exit code returned by App::run() / App::run_fuzzy() on success,
+    ///        or after printing help/version.
+    inline constexpr int kExitSuccess = 0;
+
+    /// @brief Exit code returned when the matched action failed with an
+    ///        ErrorKind::Runtime error.
+    inline constexpr int kExitRuntimeError = 1;
+
+    /// @brief Exit code returned when parsing/validation failed with an
+    ///        ErrorKind::Parse error (unknown option, missing value, …).
+    inline constexpr int kExitParseError = 2;
+
     /// @brief Application entry point — the root branch command.
     ///
     /// Represents the entire CLI application.  Owns the top-level command
@@ -25,6 +38,8 @@ namespace pjh::cli
     ///   auto &clone = app.add_leaf("clone", "Clone a repository");
     ///   clone.arg<std::string, 0>("url", "Repository URL").required();
     ///   auto r = app.parse(argc, argv);
+    ///   // or one-shot: parse + dispatch help/version + execute + exit code
+    ///   return app.run(argc, argv);
     /// @endcode
     class App final : public BranchCommand
     {
@@ -111,6 +126,51 @@ namespace pjh::cli
         /// @param argv Argument vector from main().
         /// @return Ok(ParseContext) on success, or Err(CliError) on parse failure.
         CliResult<ParseContext> parse_fuzzy(int argc, char **argv);
+
+        /// @brief One-shot batch entry: parse, dispatch help/version, execute
+        ///        the matched action, print errors, and return a process exit
+        ///        code.
+        ///
+        /// Equivalent to the manual block every caller used to write:
+        /// @code
+        ///   auto r = app.parse(argc, argv);
+        ///   if (r.is_err()) { std::cerr << r.unwrap_err().what() << "\n"; return 1; }
+        ///   auto &ctx = r.unwrap();
+        ///   if (ctx.help_requested())    { std::cout << ctx.help_text();    return 0; }
+        ///   if (ctx.version_requested()) { std::cout << ctx.version_text(); return 0; }
+        ///   auto e = ctx.matched_command()->execute(ctx);
+        ///   if (e.is_err()) { std::cerr << e.unwrap_err().what() << "\n"; return 1; }
+        ///   return 0;
+        /// @endcode
+        ///
+        /// help_text() / version_text() are written to @p out exactly as
+        /// produced by the parser (the injectable help formatter set via
+        /// set_help_formatter() is honoured through parse()).  Errors are
+        /// written to @p err as `what() << "\n"`; runtime action errors have
+        /// no "Parse Error: " prefix (ErrorKind).  Does not call std::exit
+        /// and does not catch exceptions.
+        ///
+        /// @param argc Argument count from main().
+        /// @param argv Argument vector from main().
+        /// @param out  Stream for help/version output.
+        /// @param err  Stream for error messages.
+        /// @return kExitSuccess (0) on success or help/version;
+        ///         kExitRuntimeError (1) when the action returned an
+        ///         ErrorKind::Runtime error; kExitParseError (2) on a
+        ///         parse/validation failure.
+        [[nodiscard]] int run(int argc, char **argv);
+
+        /// @copydetails run(int, char **)
+        [[nodiscard]] int run(
+            int argc, char **argv, std::ostream &out, std::ostream &err);
+
+        /// @brief run() with fuzzy subcommand matching (distance 3).
+        /// @copydetails run(int, char **)
+        [[nodiscard]] int run_fuzzy(int argc, char **argv);
+
+        /// @copydetails run_fuzzy(int, char **)
+        [[nodiscard]] int run_fuzzy(
+            int argc, char **argv, std::ostream &out, std::ostream &err);
 
     private:
         detail::EnvSnapshot m_env_snapshot;

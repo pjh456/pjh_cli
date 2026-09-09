@@ -10,24 +10,12 @@ int main(int argc, char **argv)
 
     app.option<fixed_string("name")>("--name", 'n', "Who to greet", std::string("world"));
 
-    auto r = app.parse(argc, argv);
-    if (r.is_err())
-    {
-        std::cerr << r.unwrap_err().what() << "\n";
-        return 1;
-    }
-
-    auto &ctx = r.unwrap();
-    if (ctx.help_requested())
-    {
-        std::cout << ctx.help_text();
-        return 0;
-    }
-    if (ctx.version_requested())
-    {
-        std::cout << ctx.version_text();
-        return 0;
-    }
-    std::cout << "Hello, " << ctx.get<std::string, fixed_string("name")>() << "!\n";
-    return 0;
+    app.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            std::cout << "Hello, " << ctx.get<std::string, fixed_string("name")>()
+                      << "!\n";
+            return CliResult<void>::Ok();
+        });
+    return app.run(argc, argv);
 }

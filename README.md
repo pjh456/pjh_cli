@@ -100,7 +100,9 @@ value on a flag or count option (`-v=1`) is rejected, mirroring the long
 `parse()` / `parse_fuzzy()` never print help or version and never exit. When
 `--help` / `-h` or `--version` is seen, parsing stops early and the returned `Ok`
 context has `help_requested()` / `version_requested()` set (with pre-formatted
-`help_text()` / `version_text()`).
+`help_text()` / `version_text()`). Callers of `parse()` must dispatch on those
+predicates themselves; `app.run()` / `app.run_fuzzy()` perform the dispatch
+automatically (see One-shot execution below).
 
 `--help` / `-h` / `--version` are reserved and take precedence over user options.
 Registering a long option named `help` or `version`, or a short option `-h`,
@@ -142,6 +144,36 @@ injected navigation formatter.
 
 `format_help` annotates options with `(env: VAR)`, `(negatable)`, `(counting)`,
 and `(repeatable)` in the Options table.
+
+### One-shot execution (run / run_fuzzy)
+
+```cpp
+int main(int argc, char **argv)
+{
+    App app("hello", "1.0.0", "Minimal greeting example");
+    app.option<fixed_string("name")>("--name", 'n', "Who to greet",
+                                     std::string("world"));
+    app.action(
+        [](ParseContext &ctx) -> CliResult<void>
+        {
+            std::cout << "Hello, " << ctx.get<std::string, fixed_string("name")>()
+                      << "!\n";
+            return CliResult<void>::Ok();
+        });
+    return app.run(argc, argv);
+}
+```
+
+`run()` parses (exact subcommand matching; `run_fuzzy()` corrects typos within
+distance 3), prints `help_text()` / `version_text()` to the output stream on
+`--help` / `--version`, executes the matched action, prints any error to the
+error stream as `what() << "\n"`, and returns an exit code: `0` on success or
+help/version, `1` when the action failed with an `ErrorKind::Runtime` error,
+`2` on a parse/validation failure (`ErrorKind::Parse`).  It never calls
+`std::exit` and never catches exceptions; `parse()` remains the low-level API
+and `run()` is opt-in.  The no-argument overloads use `std::cout` / `std::cerr`;
+`run(argc, argv, out, err)` / `run_fuzzy(argc, argv, out, err)` route through
+injected streams.
 
 ### Positional arguments
 
@@ -312,6 +344,8 @@ via that form.
 | `cmd.group<Keys...>().at_least_one()` | Option group: at least one required |
 | `app.parse(argc, argv)` | Batch parse |
 | `app.parse_fuzzy(argc, argv)` | Batch parse with typo correction |
+| `app.run(argc, argv)` | One-shot: parse + help/version dispatch + action + exit code (`0`/`1`/`2` by `ErrorKind`) |
+| `app.run_fuzzy(argc, argv)` | One-shot with typo correction; `run(argc, argv, out, err)` routes to injected streams |
 | `ctx.get<T, Key>()` | Get value (throws if absent) |
 | `ctx.has<Key>()` | Check key exists |
 | `ctx.try_get<T, Key>()` | Get → `Option<T>` (no throw) |
