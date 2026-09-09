@@ -412,7 +412,6 @@ via that form.
 | `CompletionCandidate` | Completion candidate struct |
 | `KeyEvent / ITerminal / LineEditor` | Injectable raw-mode line editor (`console/line_editor.hpp`) |
 | `MatchedPath` | Matched subcommand path struct |
-| `VersionInfo` | Program version struct |
 
 ## Build
 

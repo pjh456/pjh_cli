@@ -172,22 +172,6 @@ TEST_CASE("HelpNavigationOutput unknown with fuzzy")
 
 // ── Custom formatter tests ──
 
-TEST_CASE("HelpNavigationOutput with custom formatter")
-{
-    App app("test", "1.0", "Custom");
-    app.add_leaf("serve", "Start");
-
-    std::vector<std::string> tokens{"help", "serve"};
-    auto custom = [](const HelpNavigationResult &r) -> std::string
-    {
-        CHECK(r.kind == HelpNavigationKind::SubcommandHelp);
-        return std::string("[custom] ") + r.resolved->name() + " help";
-    };
-
-    auto output = HelpNavigationOutput::format(app, tokens, custom);
-    CHECK(output == "[custom] serve help");
-}
-
 TEST_CASE("InteractiveConsole with custom help formatter")
 {
     App app("test", "1.0", "Console custom help");

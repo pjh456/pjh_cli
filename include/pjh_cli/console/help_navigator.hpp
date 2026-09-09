@@ -4,7 +4,6 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/format/info.hpp>
-#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -47,9 +46,6 @@ namespace pjh::cli
             const std::vector<std::string> &tokens);
     };
 
-    using HelpNavigationFormatter =
-        std::function<std::string(const HelpNavigationResult &)>;
-
     class HelpNavigationOutput
     {
     public:
@@ -60,11 +56,6 @@ namespace pjh::cli
         static std::string format(
             const BranchCommand &root,
             const std::vector<std::string> &tokens);
-
-        static std::string format(
-            const BranchCommand &root,
-            const std::vector<std::string> &tokens,
-            const HelpNavigationFormatter &custom_fmt);
     };
 
 } // namespace pjh::cli

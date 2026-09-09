@@ -157,21 +157,6 @@ TEST_CASE("QueryOutput format no match")
     CHECK(output.find("No matches.") != std::string_view::npos);
 }
 
-TEST_CASE("QueryOutput with custom formatter")
-{
-    App app("test", "1.0", "Test");
-    app.add_leaf("server", "Server");
-
-    auto custom = [](const QueryResult &r)
-    {
-        CHECK(r.kind == QueryKind::Matched);
-        return "custom:" + r.names[0];
-    };
-
-    auto output = QueryOutput::format(app, "serv", custom);
-    CHECK(output == "custom:server");
-}
-
 TEST_CASE("InteractiveConsole with custom query formatter")
 {
     App app("test", "1.0", "Test");

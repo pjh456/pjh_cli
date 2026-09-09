@@ -198,15 +198,6 @@ namespace pjh::cli
         std::vector<FuzzySuggestion> matches;
     };
 
-    // ── Version info ──
-
-    /// @brief Structured program version information.
-    struct VersionInfo
-    {
-        std::string program_name;
-        std::string version;
-    };
-
 }  // namespace pjh::cli
 
 #endif

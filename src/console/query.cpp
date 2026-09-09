@@ -97,13 +97,4 @@ namespace pjh::cli
         return format(QueryExplorer::explore(root, query));
     }
 
-    std::string QueryOutput::format(
-        const BranchCommand &root,
-        std::string_view query,
-        const QueryFormatter &custom_fmt)
-    {
-        auto result = QueryExplorer::explore(root, query);
-        return custom_fmt(result);
-    }
-
 }  // namespace pjh::cli

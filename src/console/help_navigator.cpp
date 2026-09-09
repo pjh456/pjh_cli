@@ -92,13 +92,4 @@ namespace pjh::cli
         return format(HelpNavigator::navigate(root, tokens));
     }
 
-    std::string HelpNavigationOutput::format(
-        const BranchCommand &root,
-        const std::vector<std::string> &tokens,
-        const HelpNavigationFormatter &custom_fmt)
-    {
-        auto result = HelpNavigator::navigate(root, tokens);
-        return custom_fmt(result);
-    }
-
 } // namespace pjh::cli
