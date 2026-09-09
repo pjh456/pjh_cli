@@ -67,8 +67,7 @@ namespace pjh::cli
         {
         case HelpNavigationKind::RootHelp:
         case HelpNavigationKind::SubcommandHelp:
-            return HelpFormatter::format_help(
-                *result.resolved, result.resolved->name());
+            return HelpFormatter::format_help(*result.resolved);
 
         case HelpNavigationKind::NonBranch:
             return ConsoleOutput::format_has_no_subcommands(

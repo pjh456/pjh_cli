@@ -25,7 +25,7 @@ namespace pjh::cli
         if (double_dash || (a != "--help" && a != "-h"))
             return pjh::result::Option<ParseContext>::None();
 
-        ParseContextWriter::set_help_text(ctx, HelpFormatter::format_help(*cmd, cmd->name()));
+        ParseContextWriter::set_help_text(ctx, HelpFormatter::format_help(*cmd));
         ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }

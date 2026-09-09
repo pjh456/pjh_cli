@@ -103,6 +103,7 @@ TEST_CASE("HelpNavigationOutput root help")
     std::vector<std::string> tokens{"help"};
     auto output = HelpNavigationOutput::format(app, tokens);
 
+    CHECK(output.starts_with("Usage: test <command>"));
     CHECK(output.find("Usage:") != std::string_view::npos);
     CHECK(output.find("serve") != std::string_view::npos);
 }
@@ -115,8 +116,21 @@ TEST_CASE("HelpNavigationOutput subcommand help")
     std::vector<std::string> tokens{"help", "serve"};
     auto output = HelpNavigationOutput::format(app, tokens);
 
+    CHECK(output.starts_with("Usage: test serve"));
     CHECK(output.find("Usage:") != std::string_view::npos);
     CHECK(output.find("serve") != std::string_view::npos);
+}
+
+TEST_CASE("HelpNavigationOutput nested subcommand shows full path")
+{
+    App app("test", "1.0", "Nested out");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+
+    std::vector<std::string> tokens{"help", "container", "start"};
+    auto output = HelpNavigationOutput::format(app, tokens);
+
+    CHECK(output.starts_with("Usage: test container start"));
 }
 
 TEST_CASE("HelpNavigationOutput non-branch message")

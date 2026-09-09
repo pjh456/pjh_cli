@@ -44,7 +44,9 @@ namespace pjh::cli
         /// subcommands, `<command>` is appended.
         ///
         /// @param cmd           The command to render.
-        /// @param program_name  Display name for the program (empty → cmd.name()).
+        /// @param program_name  Display name for the program.  When empty, the
+        ///                      full command path (root name + ancestors +
+        ///                      cmd.name()) is derived from the tree.
         /// @return Single-line string ending with no newline.
         static std::string format_usage(
             const BaseCommand &cmd, std::string_view program_name = "");
@@ -54,7 +56,9 @@ namespace pjh::cli
         /// Convenience wrapper that calls collect_help() then format_help(HelpInfo).
         ///
         /// @param cmd           The command to render.
-        /// @param program_name  Display name.
+        /// @param program_name  Display name.  When empty, the full command
+        ///                      path (root name + ancestors + cmd.name()) is
+        ///                      derived from the tree.
         /// @return Multi-line help string.
         static std::string format_help(
             const BaseCommand &cmd, std::string_view program_name = "");
@@ -66,7 +70,10 @@ namespace pjh::cli
         /// visibility + enabled predicates).
         ///
         /// @param cmd         The command to inspect.
-        /// @param program_name  Display name.
+        /// @param program_name  Display name.  Stored as a view into the
+        ///                      caller's buffer, which must outlive the
+        ///                      returned HelpInfo.  An empty value is stored
+        ///                      as-is; this function does not derive a path.
         /// @param visibility  Visibility filter (default Both).
         /// @return A HelpInfo struct whose string_view members alias the command
         ///         tree's strings — valid as long as the tree lives.
@@ -114,6 +121,17 @@ namespace pjh::cli
         static std::string format_usage(const UsageInfo &info);
 
     private:
+        /// @brief Full command path from the root to @p cmd, space-joined.
+        ///
+        /// Walks parent() links up to the root and joins non-empty canonical
+        /// names from root to leaf.  Used as the default program name when the
+        /// BaseCommand adapters receive an empty @c program_name.
+        ///
+        /// @param cmd  The command whose path to derive.
+        /// @return Space-joined path, e.g. "myapp server start"; empty when
+        ///         no ancestor (including @p cmd) has a name.
+        static std::string command_path(const BaseCommand &cmd);
+
         /// @brief Write one line of a help section with padded left column.
         ///
         /// Output: `"  <left>  <right>\n"` where `<left>` is padded to

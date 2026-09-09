@@ -200,6 +200,17 @@ TEST_CASE("format_help with subcommands")
     CHECK(help.find("serve") != std::string_view::npos);
 }
 
+TEST_CASE("format_help derives full path when program name omitted")
+{
+    App app("test", "1.0", "App");
+    auto &container = app.add_branch("container", "Container");
+    auto &start = container.add_leaf("start", "Start");
+
+    CHECK(HelpFormatter::format_help(start).starts_with("Usage: test container start"));
+    CHECK(HelpFormatter::format_usage(start).starts_with("Usage: test container start"));
+    CHECK(HelpFormatter::format_help(start, "custom").starts_with("Usage: custom"));
+}
+
 TEST_CASE("parse_fuzzy exact match")
 {
     App app("test", "1.0", "Fuzzy parse");

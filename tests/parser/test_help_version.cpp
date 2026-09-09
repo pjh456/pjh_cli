@@ -58,6 +58,29 @@ TEST_CASE("Parser subcommand --help targets subcommand")
     auto help = ctx.help_text();
     CHECK(help.find("serve") != std::string::npos);
     CHECK(help.find("Start server") != std::string::npos);
+    CHECK(help.starts_with("Usage: test serve"));
+}
+
+TEST_CASE("Parser nested subcommand --help shows full path")
+{
+    App app("test", "1.0", "Nested help test");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    Argv argv{"test", "container", "start", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto help = r.unwrap().help_text();
+    CHECK(help.starts_with("Usage: test container start"));
+}
+
+TEST_CASE("Parser alias --help shows canonical command path")
+{
+    App app("test", "1.0", "Alias help test");
+    app.add_leaf("server", "Server").alias("srv");
+    Argv argv{"test", "srv", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().help_text().starts_with("Usage: test server"));
 }
 
 TEST_CASE("Parser --help skips finalization")

@@ -8,6 +8,8 @@
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 namespace pjh::cli
 {
@@ -74,6 +76,25 @@ namespace pjh::cli
         }
 
         return info;
+    }
+
+    std::string HelpFormatter::command_path(const BaseCommand &cmd)
+    {
+        std::vector<std::string_view> parts;
+        for (const BaseCommand *c = &cmd; c != nullptr; c = c->parent())
+        {
+            if (!c->name().empty())
+                parts.push_back(c->name());
+        }
+
+        std::string out;
+        for (auto it = parts.rbegin(); it != parts.rend(); ++it)
+        {
+            if (!out.empty())
+                out += ' ';
+            out += *it;
+        }
+        return out;
     }
 
     // ── build_document ──
@@ -251,7 +272,9 @@ namespace pjh::cli
     std::string HelpFormatter::format_usage(
         const BaseCommand &cmd, std::string_view program_name)
     {
-        auto info = collect_help(cmd, program_name);
+        std::string resolved =
+            program_name.empty() ? command_path(cmd) : std::string(program_name);
+        auto info = collect_help(cmd, resolved);
         return format_usage(build_usage(info));
     }
 
@@ -260,7 +283,9 @@ namespace pjh::cli
     std::string HelpFormatter::format_help(
         const BaseCommand &cmd, std::string_view program_name)
     {
-        return format_help(collect_help(cmd, program_name));
+        std::string resolved =
+            program_name.empty() ? command_path(cmd) : std::string(program_name);
+        return format_help(collect_help(cmd, resolved));
     }
 
 }  // namespace pjh::cli

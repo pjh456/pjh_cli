@@ -46,6 +46,32 @@ TEST_CASE("process_line -h")
     CHECK(sf.output.str().find("Usage:") != std::string_view::npos);
 }
 
+TEST_CASE("process_line help subcommand shows full path")
+{
+    App app("test", "1.0", "Repl help path");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("help container start");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().starts_with("Usage: test container start"));
+}
+
+TEST_CASE("process_line subcommand --help shows full path")
+{
+    App app("test", "1.0", "Repl parse help path");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("container start --help");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().starts_with("Usage: test container start"));
+}
+
 TEST_CASE("process_line query list all")
 {
     App app("test", "1.0", "Query all");
