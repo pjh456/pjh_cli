@@ -87,7 +87,8 @@ namespace pjh::cli
         std::ostream &error,
         std::function<std::string(const QueryResult &)> query_fmt,
         std::function<std::string(const HelpNavigationResult &)> help_fmt,
-        std::unique_ptr<IHistory> history) :
+        std::unique_ptr<IHistory> history,
+        ErrorFormatterFn error_fmt) :
         m_root(root),
         m_prompt(std::move(prompt)),
         m_input(input),
@@ -99,6 +100,7 @@ namespace pjh::cli
         m_help_formatter(
             help_fmt ? std::move(help_fmt) : [](const HelpNavigationResult &r)
                 { return HelpNavigationOutput::format(r); }),
+        m_error_formatter(std::move(error_fmt)),
         m_history(history ? std::move(history) : std::make_unique<InMemoryHistory>())
     {
     }
@@ -135,7 +137,7 @@ namespace pjh::cli
                 return;
             auto r = process_line(line);
             if (r.is_err())
-                m_error << r.unwrap_err().what() << "\n";
+                print_error(r.unwrap_err());
         }
 
         while (m_running)
@@ -153,11 +155,19 @@ namespace pjh::cli
 
             auto r = process_line(line);
             if (r.is_err())
-                m_error << r.unwrap_err().what() << "\n";
+                print_error(r.unwrap_err());
         }
     }
 
     void InteractiveConsole::stop() { m_running = false; }
+
+    void InteractiveConsole::print_error(const CliError &err)
+    {
+        if (m_error_formatter)
+            m_error << m_error_formatter(err) << "\n";
+        else
+            m_error << err.what() << "\n";  // byte-identical default
+    }
 
     CliResult<void> InteractiveConsole::handle_query(const std::string &query)
     {

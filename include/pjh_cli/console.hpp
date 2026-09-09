@@ -17,6 +17,14 @@ namespace pjh::cli
     struct QueryResult;
     struct HelpNavigationResult;
 
+    /// @brief Renderer for a failed REPL line.
+    ///
+    /// Receives the full CliError, so a formatter can branch on kind()
+    /// (Parse vs Runtime) and inspect info().  The returned string is written
+    /// to the console's error stream followed by a newline.  An empty
+    /// formatter selects the built-in CliError::what() rendering.
+    using ErrorFormatterFn = std::function<std::string(const CliError &)>;
+
     /// @brief Interactive REPL console for navigating and executing commands.
     ///
     /// Reads lines from an input stream, dispatches them to:
@@ -29,6 +37,12 @@ namespace pjh::cli
     /// a `cmd --help` line is parsed and rendered by the root command's
     /// help_formatter() (App::set_help_formatter), empty selecting the built-in
     /// renderer.
+    ///
+    /// Failed lines are written to the error stream through an injectable error
+    /// formatter (set_error_formatter() or the trailing @p error_fmt constructor
+    /// argument).  It receives the full CliError, so it can branch on
+    /// ErrorKind::Parse / ErrorKind::Runtime; empty selects the built-in
+    /// CliError::what() rendering.
     ///
     /// All three I/O streams are configurable at construction time (defaulting
     /// to std::cin / std::cout / std::cerr), making the console embeddable in
@@ -76,6 +90,11 @@ namespace pjh::cli
         ///                   InMemoryHistory).  Pass nullptr to disable history,
         ///                   or a NoOpHistory / custom IHistory subclass to
         ///                   override storage.
+        /// @param error_fmt  Error formatter for failed lines (default: empty =
+        ///                   CliError::what()).  Receives the CliError so it can
+        ///                   branch on ErrorKind (Parse vs Runtime).  Trailing after
+        ///                   history for source compatibility; set_error_formatter()
+        ///                   is the ergonomic install path.
         explicit InteractiveConsole(
             BranchCommand &root,
             std::string prompt = "> ",
@@ -84,7 +103,8 @@ namespace pjh::cli
             std::ostream &error = std::cerr,
             std::function<std::string(const QueryResult &)> query_fmt = {},
             std::function<std::string(const HelpNavigationResult &)> help_fmt = {},
-            std::unique_ptr<IHistory> history = {});
+            std::unique_ptr<IHistory> history = {},
+            ErrorFormatterFn error_fmt = {});
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
@@ -143,6 +163,23 @@ namespace pjh::cli
             m_terminal = std::move(terminal);
         }
 
+        /// @brief Install a custom error formatter (empty = CliError::what()).
+        ///
+        /// Read on every failed line, so installing or clearing it while run() is
+        /// active takes effect on the next error.  Pass {} to restore the built-in
+        /// CliError::what() rendering.
+        /// @param formatter  Renderer, or {} for the built-in default.
+        void set_error_formatter(ErrorFormatterFn formatter)
+        {
+            m_error_formatter = std::move(formatter);
+        }
+
+        /// @brief The current error formatter (empty = built-in CliError::what()).
+        const ErrorFormatterFn &error_formatter() const noexcept
+        {
+            return m_error_formatter;
+        }
+
         /// @brief Parse and execute a single line of input.
         ///
         /// Dispatches based on the first token:
@@ -192,6 +229,12 @@ namespace pjh::cli
         /// `cmd --help` path uses the root command's help_formatter().
         std::function<std::string(const HelpNavigationResult &)> m_help_formatter;
 
+        /// @brief Configurable error formatter (empty = CliError::what()).
+        ///
+        /// Applied to every failed line in run(); the formatter receives the full
+        /// CliError and may branch on kind().  Empty selects what().
+        ErrorFormatterFn m_error_formatter;
+
         /// @brief Whether the REPL loop should continue running.
         ///
         /// Saved and restored per run() invocation by a function-local RAII
@@ -224,6 +267,14 @@ namespace pjh::cli
         /// @param query  The search string (without the leading `?`).
         /// @return Ok() after printing results to m_output.
         CliResult<void> handle_query(const std::string &query);
+
+        /// @brief Render a failed line to m_error through m_error_formatter.
+        ///
+        /// Writes m_error_formatter ? m_error_formatter(err) : err.what(),
+        /// followed by a newline.  Never called by process_line(): run() owns
+        /// error printing so process_line stays a pure producer.
+        /// @param err  Error returned by process_line().
+        void print_error(const CliError &err);
 
         /// @brief Handle `help`, `--help`, or `-h [subcommand...]`.
         ///

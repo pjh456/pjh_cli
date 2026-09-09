@@ -221,6 +221,13 @@ navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)
 the outer loop resumes when the nested loop exits; `stop()` stops the innermost
 active loop.
 
+Failed REPL lines are rendered by an injectable error formatter
+(`console.set_error_formatter(...)` or the trailing `error_fmt` constructor
+argument).  It receives the full `CliError`, so it can branch on
+`ErrorKind::Parse` / `ErrorKind::Runtime` and read `info()`.  The default is
+`CliError::what()`, and `console.set_error_formatter({})` restores it.  Batch
+examples keep using `what()` directly.
+
 ### Fuzzy matching
 
 ```cpp

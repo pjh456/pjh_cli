@@ -295,3 +295,111 @@ TEST_CASE("set_terminal during process_line keeps the guarded terminal alive")
     CHECK(t1_alive_during_action);
     CHECK_FALSE(*t1_alive);  // released when process_line returned
 }
+
+TEST_CASE("run default error formatter prints what")
+{
+    App app("test", "1.0", "Default err fmt");
+    app.action(
+        [](ParseContext &) -> CliResult<void>
+        { return CliResult<void>::Err(ErrorFactory::runtime_error("boom")); });
+    StreamFixture sf;
+    sf.input << "anything\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(sf.error.str() == "boom\n");
+}
+
+TEST_CASE("run custom error formatter receives runtime kind")
+{
+    App app("test", "1.0", "Runtime err fmt");
+    app.action(
+        [](ParseContext &) -> CliResult<void>
+        { return CliResult<void>::Err(ErrorFactory::runtime_error("boom")); });
+    StreamFixture sf;
+    sf.input << "anything\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    ErrorKind seen = ErrorKind::Parse;
+    int calls = 0;
+    console.set_error_formatter(
+        [&seen, &calls](const CliError &e)
+        {
+            ++calls;
+            seen = e.kind();
+            return std::string("ERR[") +
+                   (e.kind() == ErrorKind::Runtime ? "rt" : "parse") + "]: " + e.what();
+        });
+    console.run();
+    CHECK(calls == 1);
+    CHECK(seen == ErrorKind::Runtime);
+    CHECK(sf.error.str() == "ERR[rt]: boom\n");
+}
+
+TEST_CASE("run custom error formatter receives parse kind")
+{
+    App app("test", "1.0", "Parse err fmt");
+    StreamFixture sf;
+    sf.input << "--bogus\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    ErrorKind seen = ErrorKind::Runtime;
+    console.set_error_formatter(
+        [&seen](const CliError &e)
+        {
+            seen = e.kind();
+            return std::string("PARSE RENDERED");
+        });
+    console.run();
+    CHECK(seen == ErrorKind::Parse);
+    CHECK(sf.error.str() == "PARSE RENDERED\n");
+}
+
+TEST_CASE("run custom error formatter applies on terminal path")
+{
+    App app("test", "1.0", "Tty err fmt");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.set_error_formatter([](const CliError &) { return std::string("TTY ERR"); });
+    auto term = std::make_unique<ScriptedTerminal>();
+    for (char c : std::string("--bogus"))
+        term->keys.push_back({KeyEvent::Code::Character, c});
+    term->keys.push_back({KeyEvent::Code::Enter, 0});
+    term->keys.push_back({KeyEvent::Code::Eof, 0});
+    console.set_terminal(std::move(term));
+    console.run();
+    CHECK(sf.error.str() == "TTY ERR\n");
+}
+
+TEST_CASE("set_error_formatter empty restores default rendering")
+{
+    App app("test", "1.0", "Clear err fmt");
+    app.action(
+        [](ParseContext &) -> CliResult<void>
+        { return CliResult<void>::Err(ErrorFactory::runtime_error("boom")); });
+    StreamFixture sf;
+    sf.input << "anything\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.set_error_formatter([](const CliError &) { return std::string("CUSTOM"); });
+    console.set_error_formatter({});
+    console.run();
+    CHECK(sf.error.str() == "boom\n");
+}
+
+TEST_CASE("error_formatter accessor reflects injection")
+{
+    App app("test", "1.0", "Err fmt accessor");
+    InteractiveConsole console(app, "> ");
+    CHECK_FALSE(console.error_formatter());
+    console.set_error_formatter([](const CliError &) { return std::string("x"); });
+    CHECK(console.error_formatter());
+}
+
+TEST_CASE("InteractiveConsole constructor accepts error formatter")
+{
+    App app("test", "1.0", "Ctor err fmt");
+    StreamFixture sf;
+    InteractiveConsole console(
+        app, "> ", sf.input, sf.output, sf.error, {}, {}, nullptr,
+        [](const CliError &) { return std::string("CTOR ERR"); });
+    sf.input << "--bogus\n";
+    console.run();
+    CHECK(sf.error.str() == "CTOR ERR\n");
+}
