@@ -118,6 +118,18 @@ MatchedPath path = ctx.matched_path_info();
 for (auto &name : path.commands) { /* "server", "start" */ }
 ```
 
+### Ancestor options after descent
+
+An option declared on a parent command (including the root `App`) is accepted
+after a subcommand and readable from the leaf context: if the root declares
+`--port`, then `app server --port 8080` sets it even though `server` does not
+declare it.  Resolution walks the current command and its ancestors with the
+nearest declaration winning; the value is stored in the declaring command's
+context, so repeatable/counting ancestor options accumulate across descent
+(`app --tag a server --tag b` yields `{a, b}`).  Siblings and descendants stay
+invisible and unknown tokens still error.  Help and completion still list only
+the current node's options.
+
 ### Actions
 
 ```cpp

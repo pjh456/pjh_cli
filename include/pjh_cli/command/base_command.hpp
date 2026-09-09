@@ -160,11 +160,17 @@ namespace pjh::cli
         }
 
         /// @brief Look up an option by its long name.
+        ///
+        /// Current-node query only; parse-time resolution across the ancestor
+        /// chain lives in OptionConsumer.
         /// @param name Long option name without "--" prefix (e.g. "verbose").
         /// @return Pointer to OptionDef, or nullptr if not found.
         const OptionDef *find_option_by_long(std::string_view name) const noexcept;
 
         /// @brief Look up an option by its short character.
+        ///
+        /// Current-node query only; parse-time resolution across the ancestor
+        /// chain lives in OptionConsumer.
         /// @param c Single-character short option, e.g. 'v'.
         /// @return Pointer to OptionDef, or nullptr if not found.
         const OptionDef *find_option_by_short(char c) const noexcept;

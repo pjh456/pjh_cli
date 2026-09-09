@@ -63,6 +63,19 @@ namespace pjh::cli
             return default_val;
         }
 
+        /// @brief Borrow the parent context one level up the descent chain.
+        ///
+        /// Returns nullptr at the root.  Used by OptionConsumer to route a
+        /// value to the context of the command that declares the option, so
+        /// repeatable/counting ancestor options accumulate regardless of where
+        /// the token appears on the command line.
+        /// @param ctx Context whose parent is requested.
+        /// @return Non-owning pointer to the parent, or nullptr at the root.
+        static ParseContext *parent_of(ParseContext &ctx) noexcept
+        {
+            return ctx.m_parent.get();
+        }
+
         /// @brief Link a parent context for scoped subcommand lookup.
         static void set_parent(
             ParseContext &ctx, std::shared_ptr<ParseContext> parent) noexcept

@@ -19,6 +19,50 @@ namespace
         const auto *branch = cmd.as_branch();
         return branch != nullptr && branch->find_subcommand(tok) != nullptr;
     }
+
+    /// @brief A resolved option plus how many parent hops away its declaring
+    ///        command is (0 == the current command).
+    struct OptionMatch
+    {
+        const pjh::cli::OptionDef *opt = nullptr;
+        size_t depth = 0;
+    };
+
+    /// @brief Find @p name on @p cmd or its nearest ancestor declaring it.
+    OptionMatch find_option_long_in_chain(
+        const pjh::cli::BaseCommand &cmd, std::string_view name) noexcept
+    {
+        size_t depth = 0;
+        for (const auto *c = &cmd; c != nullptr; c = c->parent(), ++depth)
+            if (const auto *opt = c->find_option_by_long(name))
+                return {opt, depth};
+        return {};
+    }
+
+    /// @brief Find short option @p ch on @p cmd or its nearest ancestor.
+    OptionMatch find_option_short_in_chain(
+        const pjh::cli::BaseCommand &cmd, char ch) noexcept
+    {
+        size_t depth = 0;
+        for (const auto *c = &cmd; c != nullptr; c = c->parent(), ++depth)
+            if (const auto *opt = c->find_option_by_short(ch))
+                return {opt, depth};
+        return {};
+    }
+
+    /// @brief Return the context @p depth parents above @p ctx; @p ctx if the
+    ///        chain is shorter than expected (defensive).
+    pjh::cli::ParseContext &owner_context(
+        pjh::cli::ParseContext &ctx, size_t depth) noexcept
+    {
+        auto *c = &ctx;
+        while (depth > 0 && c != nullptr)
+        {
+            c = pjh::cli::ParseContextWriter::parent_of(*c);
+            --depth;
+        }
+        return c != nullptr ? *c : ctx;
+    }
 }
 
 namespace pjh::cli
@@ -56,26 +100,29 @@ namespace pjh::cli
     {
         auto parsed = detail::Tokenizer::parse_long_option(arg);
 
-        auto *opt = cmd.find_option_by_long(parsed.name);
+        auto match = find_option_long_in_chain(cmd, parsed.name);
+        auto *opt = match.opt;
         if (!opt)
         {
             if (parsed.is_negation)
             {
-                auto *neg = cmd.find_option_by_long(parsed.negated_name);
-                if (neg && neg->is_negatable())
+                auto neg = find_option_long_in_chain(cmd, parsed.negated_name);
+                if (neg.opt && neg.opt->is_negatable())
                 {
                     if (parsed.has_equals)
                     {
                         return CliFailure{ErrorFactory::option_does_not_accept_value(
                             std::format("--{}", parsed.name))};
                     }
-                    ParseContextWriter::set_value<bool>(ctx, neg->key_hash(), false);
+                    ParseContextWriter::set_value<bool>(
+                        owner_context(ctx, neg.depth), neg.opt->key_hash(), false);
                     return CliResult<void>::Ok();
                 }
             }
             return CliFailure{
                 ErrorFactory::unknown_option(std::format("--{}", parsed.name))};
         }
+        auto &owner = owner_context(ctx, match.depth);
 
         if (opt->has_value())
         {
@@ -84,7 +131,7 @@ namespace pjh::cli
                 if (parsed.value.empty())
                     return CliFailure{
                         ErrorFactory::missing_value(std::format("--{}", parsed.name))};
-                return opt->parse_value(ctx, parsed.value);
+                return opt->parse_value(owner, parsed.value);
             }
             if (i + 1 >= args.size())
                 return CliFailure{
@@ -95,7 +142,7 @@ namespace pjh::cli
                 return CliFailure{
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
-            auto r = opt->parse_value(ctx, args[++i]);
+            auto r = opt->parse_value(owner, args[++i]);
             if (r.is_err())
                 return r;
 
@@ -104,7 +151,7 @@ namespace pjh::cli
                 next = args[i + 1];
                 if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                     break;
-                r = opt->parse_value(ctx, args[++i]);
+                r = opt->parse_value(owner, args[++i]);
                 if (r.is_err())
                     return r;
             }
@@ -117,7 +164,7 @@ namespace pjh::cli
                 std::format("--{}", parsed.name))};
         }
 
-        apply_flag(opt, ctx);
+        apply_flag(opt, owner);
         return CliResult<void>::Ok();
     }
 
@@ -136,15 +183,17 @@ namespace pjh::cli
         for (size_t j = 1; j < arg.size(); j++)
         {
             char c = arg[j];
-            auto *opt = cmd.find_option_by_short(c);
+            auto match = find_option_short_in_chain(cmd, c);
+            auto *opt = match.opt;
             if (!opt)
                 return CliFailure{ErrorFactory::unknown_option(std::format("-{}", c))};
+            auto &owner = owner_context(ctx, match.depth);
 
             if (opt->has_value())
             {
                 if (j + 1 < arg.size())
                 {
-                    auto r = opt->parse_value(ctx, arg.substr(j + 1));
+                    auto r = opt->parse_value(owner, arg.substr(j + 1));
                     if (r.is_err())
                         return r;
 
@@ -153,7 +202,7 @@ namespace pjh::cli
                         auto nxt = args[i + 1];
                         if (detail::is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
                             break;
-                        r = opt->parse_value(ctx, args[++i]);
+                        r = opt->parse_value(owner, args[++i]);
                         if (r.is_err())
                             return r;
                     }
@@ -167,7 +216,7 @@ namespace pjh::cli
                 if (detail::is_option_flag(next))
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
-                auto r = opt->parse_value(ctx, args[++i]);
+                auto r = opt->parse_value(owner, args[++i]);
                 if (r.is_err())
                     return r;
 
@@ -176,14 +225,14 @@ namespace pjh::cli
                     next = args[i + 1];
                     if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                         break;
-                    r = opt->parse_value(ctx, args[++i]);
+                    r = opt->parse_value(owner, args[++i]);
                     if (r.is_err())
                         return r;
                 }
             }
             else
             {
-                apply_flag(opt, ctx);
+                apply_flag(opt, owner);
             }
         }
         return CliResult<void>::Ok();

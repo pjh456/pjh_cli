@@ -4,6 +4,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/core/error.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
@@ -98,5 +99,16 @@ TEST_CASE("process_line negative number positional after subcommand")
 
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("run -5");
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("process_line ancestor option after subcommand descent")
+{
+    App app("test", "1.0", "Ancestor repl");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.add_leaf("son", "Son");
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line("son --verbose");
     CHECK(r.is_ok());
 }

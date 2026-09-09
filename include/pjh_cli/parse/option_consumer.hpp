@@ -11,9 +11,13 @@ namespace pjh::cli
 {
     /// @brief Consumes option tokens (--opt / -x) from the argument list.
     ///
-    /// Looks up option definitions on the current command, extracts values
-    /// (from = syntax, next token, or compact form), handles negation
-    /// (--no-xxx), and writes the parsed value into the ParseContext.
+    /// Looks up option definitions on the current command or its nearest
+    /// ancestor declaring the option (nearest declaration wins); siblings and
+    /// descendants are never consulted.  Extracts values (from = syntax, next
+    /// token, or compact form), handles negation (--no-xxx), and writes the
+    /// parsed value into the declaring command's ParseContext so repeatable and
+    /// counting ancestor options accumulate regardless of where the token
+    /// appears.
     ///
     /// Both consume_long() and consume_short() accept a mutable index @p i
     /// that is advanced when a separate value token is consumed, so the
@@ -28,7 +32,9 @@ namespace pjh::cli
         /// @brief Consume a single long-option token (--opt or --opt=val).
         ///
         /// Tokenizes through detail::Tokenizer::parse_long_option() to split
-        /// the name, value, and negation state.  Looks up the option on @p cmd.
+        /// the name, value, and negation state.  Looks up the option on @p cmd
+        /// or its nearest ancestor declaring it; the value is stored in the
+        /// declaring command's context.
         /// If the option expects a value:
         ///   - =value form: value is taken from after the '='
         ///   - next-token form: the next argument is consumed via @p i
@@ -38,8 +44,8 @@ namespace pjh::cli
         /// For flag/count options, apply_flag() is called.
         /// For repeatable options, greedily consumes following non-flag tokens.
         ///
-        /// @param cmd   Current command whose options are consulted.
-        /// @param ctx   Parse context to write into.
+        /// @param cmd   Current command whose options and ancestors are consulted.
+        /// @param ctx   Parse context to write into (owner context is derived).
         /// @param arg   The raw token (e.g. "--port=8080").
         /// @param i     Current index into @p args; advanced when a separate
         ///              value token is consumed.
@@ -64,8 +70,8 @@ namespace pjh::cli
         /// For repeatable valued options, greedily consumes following
         /// non-flag tokens after the value.
         ///
-        /// @param cmd   Current command whose options are consulted.
-        /// @param ctx   Parse context to write into.
+        /// @param cmd   Current command whose options and ancestors are consulted.
+        /// @param ctx   Parse context to write into (owner context is derived).
         /// @param arg   The raw token (e.g. "-abc" or "-p").
         /// @param i     Current index into @p args; advanced when a separate
         ///              value token is consumed.

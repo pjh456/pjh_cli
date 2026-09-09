@@ -433,3 +433,186 @@ TEST_CASE("Repeatable greedy deep nesting stops at every subcommand boundary")
     REQUIRE(arm.size() == 1);
     CHECK(arm[0] == "L1");
 }
+
+// ──────────────────────────────────────────
+//  Ancestor options after subcommand descent
+// ──────────────────────────────────────────
+
+TEST_CASE("Ancestor long option after subcommand descent")
+{
+    App app("test", "1.0", "Ancestor long after");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--port", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "son");
+    CHECK(ctx.get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("Ancestor short option after subcommand descent")
+{
+    App app("test", "1.0", "Ancestor short after");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "-p", "8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("Ancestor boolean flag after subcommand descent")
+{
+    App app("test", "1.0", "Ancestor flag after");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+}
+
+TEST_CASE("Ancestor negatable flag after subcommand descent")
+{
+    App app("test", "1.0", "Ancestor negate after");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--no-verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
+}
+
+TEST_CASE("Root option after deep nesting descent")
+{
+    App app("test", "1.0", "Deep ancestor after");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    auto &mid = app.add_branch("mid", "Middle");
+    mid.add_leaf("leaf", "Leaf");
+    Argv argv{"test", "mid", "leaf", "--port", "9"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(
+        MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "mid leaf");
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 9);
+}
+
+TEST_CASE("Intermediate branch option after deeper descent")
+{
+    App app("test", "1.0", "Mid ancestor after");
+    auto &mid = app.add_branch("mid", "Middle");
+    mid.option<fixed_string("leg")>("--leg", 'l', "Leg").str();
+    mid.add_leaf("leaf", "Leaf");
+    Argv argv{"test", "mid", "leaf", "--leg", "L0"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("leg")>() == "L0");
+}
+
+TEST_CASE("Repeatable ancestor option accumulates across descent")
+{
+    App app("test", "1.0", "Ancestor repeat after");
+    app.option<fixed_string("tag")>("--tag", 't', "Tag").str().repeatable();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "--tag", "a", "son", "--tag", "b"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto all = r.unwrap().get_all<std::string, fixed_string("tag")>();
+    REQUIRE(all.size() == 2);
+    CHECK(all[0] == "a");
+    CHECK(all[1] == "b");
+}
+
+TEST_CASE("Counting ancestor option accumulates across descent")
+{
+    App app("test", "1.0", "Ancestor count after");
+    app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "-v", "son", "-v"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("v")>() == 2);
+}
+
+TEST_CASE("Nearest declaration wins when names collide")
+{
+    App app("test", "1.0", "Nearest wins");
+    app.option<fixed_string("root_opt")>("--opt", "Root opt").integer();
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("child_opt")>("--opt", "Child opt").integer();
+    Argv argv{"test", "son", "--opt", "7"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<int, fixed_string("child_opt")>() == 7);
+    CHECK_FALSE(ctx.has<fixed_string("root_opt")>());
+}
+
+TEST_CASE("Sibling option is not visible after descent")
+{
+    App app("test", "1.0", "Sibling invisible");
+    app.add_leaf("a", "A");
+    auto &b = app.add_leaf("b", "B");
+    b.option<fixed_string("bopt")>("--bopt", "B opt").boolean();
+    Argv argv{"test", "a", "--bopt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--bopt'"));
+}
+
+TEST_CASE("Unknown option after descent still errors")
+{
+    App app("test", "1.0", "Unknown after");
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--bogus"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--bogus'"));
+}
+
+// ──────────────────────────────────────────
+//  Ancestor options: finalization interaction
+// ──────────────────────────────────────────
+
+TEST_CASE("Required ancestor option satisfied after descent")
+{
+    App app("test", "1.0", "Required ancestor after");
+    app.option<fixed_string("token")>("--token", "Token").str().required();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--token", "t0"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("token")>() == "t0");
+}
+
+TEST_CASE("Required ancestor option still enforced when absent after descent")
+{
+    App app("test", "1.0", "Required ancestor absent");
+    app.option<fixed_string("token")>("--token", "Token").str().required();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: missing required option: '--token'"));
+}
+
+TEST_CASE("Ancestor option conversion error after descent")
+{
+    App app("test", "1.0", "Ancestor convert after");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--port", "notanint"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("--port") != std::string_view::npos);
+}
