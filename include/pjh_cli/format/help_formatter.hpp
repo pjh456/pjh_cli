@@ -92,7 +92,7 @@ namespace pjh::cli
         ///   description
         ///
         ///   Options:
-        ///     -p, --port PORT     Port number (default: 8080) (env: APP_PORT)
+        ///     -p, --port PORT     Port number (env: APP_PORT) (default: 8080)
         ///     -c, --compress      Compress (negatable)
         ///     -v, --verbose       Verbose (counting)
         ///     -I, --include PATH  Include path (repeatable)
