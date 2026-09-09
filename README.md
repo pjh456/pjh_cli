@@ -42,7 +42,7 @@ app.option<fixed_string("include")>("--include", 'I', "Include path").path().rep
 // Numeric option with range validation
 app.option<fixed_string("level")>("--level", 'l', "Log level").integer().min(0).max(7);
 
-// Env-var fallback
+// Env-var fallback (CLI > env > default)
 app.option<fixed_string("host")>("--host", "Host").str().env("MYAPP_HOST").required();
 
 // Option group (mutual exclusion / requirement)
@@ -186,7 +186,7 @@ subcommands.
 | `.enum_type<E>().mapping({...})` | Enum option with string mapping |
 | `.negatable()` | Support --no-xxx negation |
 | `.repeatable()` | Accept multiple values (--opt a --opt b) |
-| `.env("VAR")` | Environment variable fallback |
+| `.env("VAR")` | Environment variable fallback (CLI > env > default) |
 | `.min(v)` / `.max(v)` | Numeric range validation |
 | `.default_value(v)` | Manual default value |
 | `cmd.arg<T, Index>(name, desc)` | Positional argument |

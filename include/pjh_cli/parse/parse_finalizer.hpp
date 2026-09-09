@@ -13,11 +13,14 @@ namespace pjh::cli
     /// Called once after the main parse loop completes.  Walks the full
     /// command chain from root to the deepest matched command and performs
     /// the following steps in order:
-    ///   1. Apply compile-time default values for options not yet set.
-    ///   2. If an option has an env-var and no CLI value, read from env.
+    ///   1. If an option has an env-var and no CLI value, read from env.
+    ///   2. Apply compile-time default values for options not yet set.
     ///   3. If an option is required and still not set, return an error.
     ///   4. Validate option groups (exactly-one / at-most-one / at-least-one).
     ///   5. If a positional arg is required and not set, return an error.
+    ///
+    /// Values resolve with CLI > env > default precedence: env fills unset
+    /// options first, then defaults fill whatever env did not.
     ///
     /// The public entry point is finalize(); the five steps are decomposed
     /// into private static methods that can be tested individually.
@@ -26,7 +29,7 @@ namespace pjh::cli
     public:
         ParseFinalizer() = delete;
 
-        /// @brief Finalise a parse result by applying defaults, env-vars,
+        /// @brief Finalise a parse result by applying env-vars, defaults,
         ///        required checks, and group validation.
         ///
         /// @param cmd  The deepest matched command.
@@ -73,8 +76,7 @@ namespace pjh::cli
         /// If @p cmd is a leaf, iterates its positional args and returns
         /// a missing_required_arg error for any with m_required true that
         /// have no stored value.
-        static CliResult<void> check_required_args(
-            BaseCommand *cmd, ParseContext &ctx);
+        static CliResult<void> check_required_args(BaseCommand *cmd, ParseContext &ctx);
     };
 }  // namespace pjh::cli
 

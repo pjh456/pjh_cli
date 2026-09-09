@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+
 #include <cstdlib>
 #include <iostream>
 
@@ -11,6 +12,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace pjh::cli;
@@ -103,16 +105,10 @@ TEST_CASE("EnvVar absent env var does not set value")
     CHECK_FALSE(r.unwrap().has<fixed_string("port")>());
 }
 
-TEST_CASE("EnvVar default_value preferred over env when both set")
+TEST_CASE("EnvVar env overrides default when both set")
 {
-    // Actually default_value runs first, env runs second when still absent
-    // Let's test: env present but default should... wait
-    // Default runs in apply_defaults. If env is set, the default runs first.
-    // If env is NOT set, default still runs. If BOTH are set, only the first (default)
-    // applies. Actually: apply_defaults → env fallback → CLI value So default runs first.
-    // If default is set, env won't override it.
     setenv("TEST_PORT", "3000", 1);
-    App app("test", "1.0", "Env then default");
+    App app("test", "1.0", "Env over default");
     app.option<fixed_string("port")>("--port", "Port")
         .integer()
         .default_value(5000)
@@ -120,11 +116,94 @@ TEST_CASE("EnvVar default_value preferred over env when both set")
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    // default runs before env, so we get the default
-    // Wait no — apply_defaults checks has_default(). If default is set, it applies.
-    // Then env fallback checks if value is still absent. It IS absent? No, default was
-    // just applied. So default wins over env. This might be surprising. Let's just test
-    // that one of them is set.
-    CHECK(r.unwrap().has<fixed_string("port")>());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 3000);
     unsetenv("TEST_PORT");
+}
+
+TEST_CASE("EnvVar bool option reads true from environment")
+{
+    setenv("TEST_VERBOSE", "true", 1);
+    App app("test", "1.0", "Env bool true");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose")
+        .boolean()
+        .env("TEST_VERBOSE");
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+    unsetenv("TEST_VERBOSE");
+}
+
+TEST_CASE("EnvVar bool option reads false from environment")
+{
+    setenv("TEST_VERBOSE", "0", 1);
+    App app("test", "1.0", "Env bool false");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose")
+        .boolean()
+        .env("TEST_VERBOSE");
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
+    unsetenv("TEST_VERBOSE");
+}
+
+TEST_CASE("EnvVar bool option overrides default")
+{
+    setenv("TEST_VERBOSE", "true", 1);
+    App app("test", "1.0", "Env bool over default");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose")
+        .boolean()
+        .default_value(false)
+        .env("TEST_VERBOSE");
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+    unsetenv("TEST_VERBOSE");
+}
+
+TEST_CASE("EnvVar bool CLI flag overrides environment")
+{
+    setenv("TEST_VERBOSE", "false", 1);
+    App app("test", "1.0", "Env bool CLI override");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose")
+        .boolean()
+        .env("TEST_VERBOSE");
+    Argv argv{"test", "--verbose"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
+    unsetenv("TEST_VERBOSE");
+}
+
+TEST_CASE("EnvVar bool invalid value errors")
+{
+    setenv("TEST_VERBOSE", "maybe", 1);
+    App app("test", "1.0", "Env bool invalid");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose")
+        .boolean()
+        .env("TEST_VERBOSE");
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("invalid bool") !=
+        std::string_view::npos);
+    unsetenv("TEST_VERBOSE");
+}
+
+TEST_CASE("EnvVar option on subcommand reads environment")
+{
+    setenv("TEST_HOST", "sub.example.com", 1);
+    App app("test", "1.0", "Env subcommand");
+    app.add_leaf("sub", "Sub")
+        .option<fixed_string("host")>("--host", "Host")
+        .str()
+        .env("TEST_HOST");
+    Argv argv{"test", "sub"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("host")>() == "sub.example.com");
+    unsetenv("TEST_HOST");
 }

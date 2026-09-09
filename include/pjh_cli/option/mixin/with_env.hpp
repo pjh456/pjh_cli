@@ -12,7 +12,8 @@ namespace pjh::cli
     ///
     /// When the option is absent on the command line, the parser looks for
     /// an environment variable with the registered name and falls back to
-    /// its value.
+    /// its value.  Precedence is command line > environment > default: the
+    /// env value is consulted after the command line but before defaults.
     template <typename T, typename Derived, typename Base = OptionDef>
         requires std::derived_from<Base, OptionDef>
     class WithEnv : public Base

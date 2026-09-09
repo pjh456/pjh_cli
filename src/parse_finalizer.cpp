@@ -41,7 +41,8 @@ namespace pjh::cli
         {
             for (const auto &opt_ptr : c->options())
             {
-                if (!ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) && !opt_ptr->env_var().empty())
+                if (!ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) &&
+                    !opt_ptr->env_var().empty())
                 {
                     auto *env_val = env_snap->get(opt_ptr->env_var());
                     if (env_val)
@@ -67,7 +68,8 @@ namespace pjh::cli
         {
             for (const auto &opt_ptr : c->options())
             {
-                if (opt_ptr->is_required() && !ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
+                if (opt_ptr->is_required() &&
+                    !ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                     return CliFailure{
                         ErrorFactory::missing_required_option(opt_ptr->long_name())};
             }
@@ -96,9 +98,8 @@ namespace pjh::cli
                 {
                 case GroupMode::ExactlyOne:
                     if (count == 0)
-                        return CliFailure{
-                            ErrorFactory::required_option_group(
-                                group.option_names, true)};
+                        return CliFailure{ErrorFactory::required_option_group(
+                            group.option_names, true)};
                     if (count > 1)
                         return CliFailure{
                             ErrorFactory::conflicting_options(group.option_names)};
@@ -110,9 +111,8 @@ namespace pjh::cli
                     break;
                 case GroupMode::AtLeastOne:
                     if (count == 0)
-                        return CliFailure{
-                            ErrorFactory::required_option_group(
-                                group.option_names, false)};
+                        return CliFailure{ErrorFactory::required_option_group(
+                            group.option_names, false)};
                     break;
                 }
             }
@@ -138,13 +138,14 @@ namespace pjh::cli
         return CliResult<void>::Ok();
     }
 
-    /// @brief Finalise a parse result by applying defaults, env-vars,
+    /// @brief Finalise a parse result by applying env-vars, defaults,
     ///        required checks, and group validation.
     ///
     /// Chains together the five validation steps and returns the final
-    /// ParseContext on success, or the first error encountered.
-    CliResult<ParseContext> ParseFinalizer::finalize(
-        BaseCommand *cmd, ParseContext ctx)
+    /// ParseContext on success, or the first error encountered.  Values
+    /// resolve with CLI > env > default precedence: env fills unset options
+    /// first, then defaults fill whatever env did not.
+    CliResult<ParseContext> ParseFinalizer::finalize(BaseCommand *cmd, ParseContext ctx)
     {
         ParseContextWriter::set_matched_command(ctx, cmd);
 
@@ -152,13 +153,13 @@ namespace pjh::cli
         for (auto *c = cmd; c; c = c->parent()) chain.push_back(c);
         std::reverse(chain.begin(), chain.end());
 
-        auto dr = apply_chain_defaults(chain, ctx);
-        if (dr.is_err())
-            return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
-
         auto er = apply_chain_env(chain, ctx);
         if (er.is_err())
             return CliResult<ParseContext>::Err(std::move(er).unwrap_err());
+
+        auto dr = apply_chain_defaults(chain, ctx);
+        if (dr.is_err())
+            return CliResult<ParseContext>::Err(std::move(dr).unwrap_err());
 
         auto rr = check_required_options(chain, ctx);
         if (rr.is_err())
