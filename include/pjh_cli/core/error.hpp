@@ -29,9 +29,13 @@ namespace pjh::cli
     };
 
     /// @brief User specified an option that was not registered.
+    ///
+    /// `suggestions` is empty unless the producer found close long-option
+    /// names worth suggesting.
     struct UnknownOptionError
     {
-        std::string option_display;  // "--foo" or "-f"
+        std::string option_display;            // "--foo" or "-f"
+        std::vector<std::string> suggestions;  ///< Fuzzy candidates, closest first.
     };
 
     /// @brief Option declared as taking a value, but none provided.
@@ -197,7 +201,11 @@ namespace pjh::cli
                 }
                 else if constexpr (std::same_as<T, UnknownOptionError>)
                 {
-                    return std::format("unknown option: '{}'", e.option_display);
+                    if (e.suggestions.empty())
+                        return std::format("unknown option: '{}'", e.option_display);
+                    return std::format(
+                        "unknown option: '{}'; did you mean: {}", e.option_display,
+                        detail::join(e.suggestions, ", "));
                 }
                 else if constexpr (std::same_as<T, MissingValueError>)
                 {
@@ -386,6 +394,18 @@ namespace pjh::cli
         static CliError unknown_option(std::string_view display)
         {
             return CliError(UnknownOptionError{std::string(display)});
+        }
+
+        /// @brief Build an unknown-option error with fuzzy suggestions.
+        /// @param display     The option as typed (e.g. "--prot").
+        /// @param suggestions  Close candidate displays, closest first
+        ///        (e.g. {"--port"}); when empty, renders the plain message.
+        /// @return CliError rendering "unknown option: '<display>'; did you
+        ///         mean: …" when suggestions are present.
+        static CliError unknown_option(
+            std::string_view display, const std::vector<std::string> &suggestions)
+        {
+            return CliError(UnknownOptionError{std::string(display), suggestions});
         }
 
         static CliError missing_value(std::string_view display)

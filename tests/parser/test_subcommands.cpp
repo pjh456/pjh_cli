@@ -593,6 +593,19 @@ TEST_CASE("Unknown option after descent still errors")
         std::string_view("Parse Error: unknown option: '--bogus'"));
 }
 
+TEST_CASE("Parser unknown long option suggests ancestor option")
+{
+    App app("test", "1.0", "Ancestor suggestion");
+    app.option<fixed_string("verbose")>("--verbose", "Verbose").boolean();
+    app.add_leaf("son", "Son");
+    Argv argv{"test", "son", "--verbos"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("unknown option: '--verbos'") != std::string_view::npos);
+    CHECK(msg.find("did you mean: --verbose") != std::string_view::npos);
+}
+
 // ──────────────────────────────────────────
 //  Ancestor options: finalization interaction
 // ──────────────────────────────────────────

@@ -102,6 +102,64 @@ TEST_CASE("Parser error message unknown short option")
     CHECK(r.unwrap_err().what() == std::string_view("Parse Error: unknown option: '-x'"));
 }
 
+TEST_CASE("Parser unknown long option suggests close option")
+{
+    App app("test", "1.0", "Suggestion");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "--prot"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--prot'; did you mean: --port"));
+}
+
+TEST_CASE("Parser unknown long option without close option keeps message")
+{
+    App app("test", "1.0", "No suggestion");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "--bogus"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--bogus'"));
+}
+
+TEST_CASE("Parser unknown long option suggestions are capped")
+{
+    App app("test", "1.0", "Cap");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    app.option<fixed_string("pork")>("--pork", "Pork").integer();
+    app.option<fixed_string("poor")>("--poor", "Poor").integer();
+    app.option<fixed_string("pot")>("--pot", "Pot").integer();
+    Argv argv{"test", "--por"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("did you mean:") != std::string_view::npos);
+    // All four are distance 1 from "por"; stable registration order keeps the
+    // first three and drops the fourth.
+    CHECK(msg.find("--port") != std::string_view::npos);
+    CHECK(msg.find("--pork") != std::string_view::npos);
+    CHECK(msg.find("--poor") != std::string_view::npos);
+    CHECK(msg.find("--pot") == std::string_view::npos);  // 4th dropped
+}
+
+TEST_CASE("Parser unknown long option skips hidden command options")
+{
+    App app("test", "1.0", "Hidden");
+    auto &secret = app.add_leaf("secret", "Secret");
+    secret.set_visibility(Visibility::Hidden);
+    secret.option<fixed_string("token")>("--token", "Token").str();
+    Argv argv{"test", "secret", "--toke"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--toke'"));
+}
+
 TEST_CASE("Parser error message missing value for long option")
 {
     App app("test", "1.0", "Err msg");

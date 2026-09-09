@@ -127,6 +127,23 @@ TEST_CASE("unknown_option empty name")
     CHECK(std::string_view(e.what()) == "Parse Error: unknown option: ''");
 }
 
+TEST_CASE("unknown_option with suggestions")
+{
+    auto e = ErrorFactory::unknown_option("--prot", {"--port"});
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: unknown option: '--prot'; did you mean: --port");
+    CHECK(e.kind() == ErrorKind::Parse);
+}
+
+TEST_CASE("unknown_option with multiple suggestions")
+{
+    auto e = ErrorFactory::unknown_option("--prot", {"--ports", "--port"});
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: unknown option: '--prot'; did you mean: --ports, --port");
+}
+
 TEST_CASE("missing_value format")
 {
     auto e = ErrorFactory::missing_value("--port");

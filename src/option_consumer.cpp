@@ -1,5 +1,8 @@
+#include <algorithm>
+#include <cstddef>
 #include <format>
 #include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/command/matcher.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
@@ -7,14 +10,17 @@
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace
 {
     /// @brief True when @p tok exactly names/aliases a direct subcommand of
     ///        @p cmd.  Used to stop greedy repeatable consumption at a command
     ///        boundary so a following subcommand name is not swallowed.
-    bool is_subcommand_token(const pjh::cli::BaseCommand &cmd,
-                             std::string_view tok) noexcept
+    bool is_subcommand_token(
+        const pjh::cli::BaseCommand &cmd, std::string_view tok) noexcept
     {
         const auto *branch = cmd.as_branch();
         return branch != nullptr && branch->find_subcommand(tok) != nullptr;
@@ -48,6 +54,62 @@ namespace
             if (const auto *opt = c->find_option_by_short(ch))
                 return {opt, depth};
         return {};
+    }
+
+    /// @brief Maximum Levenshtein distance for a long-option suggestion.
+    ///
+    /// 2 (not the subcommand precedent's 3): option names are short, so a
+    /// distance-3 cutoff would suggest --verbose for the non-negatable
+    /// --no-verbose token (distance 3), where the named option exists but
+    /// simply does not support negation.
+    constexpr int k_suggestion_distance = 2;
+
+    /// @brief Maximum number of rendered long-option suggestions.
+    constexpr std::size_t k_max_suggestions = 3;
+
+    /// @brief Long-option displays near @p name on @p cmd or its ancestors.
+    ///
+    /// Walks the same current→ancestor chain as find_option_long_in_chain(),
+    /// keeps options whose declaring command is visible+enabled, and returns
+    /// "--name" displays within k_suggestion_distance, closest first, capped at
+    /// k_max_suggestions.  Options have no aliases, so one candidate per
+    /// declared long name; the nearest declaration wins on duplicates.
+    ///
+    /// @param cmd   Command in scope at the miss.
+    /// @param name  Typed long-option name without the leading dashes.
+    /// @return Display strings ("--port"), possibly empty.
+    /// @throws std::bad_alloc if a candidate list cannot be allocated.
+    /// @throws Any exception thrown by a user enabled predicate
+    ///         (is_visible_and_enabled is not noexcept).
+    std::vector<std::string> suggest_long_options(
+        const pjh::cli::BaseCommand &cmd, std::string_view name)
+    {
+        std::vector<std::pair<std::string, int>> matches;
+        std::unordered_set<std::string_view> seen;
+        for (const auto *c = &cmd; c != nullptr; c = c->parent())
+        {
+            if (!pjh::cli::detail::is_visible_and_enabled(*c, pjh::cli::Visibility::Both))
+                continue;
+            for (const auto &opt : c->options())
+            {
+                if (opt->long_name().empty())
+                    continue;  // unreachable via long lookup; nothing to suggest.
+                if (!seen.insert(opt->long_name()).second)
+                    continue;  // nearest declaration wins.
+                const int d = pjh::cli::edit_distance(name, opt->long_name());
+                if (d <= k_suggestion_distance)
+                    matches.emplace_back(opt->display_name(), d);
+            }
+        }
+        std::ranges::stable_sort(matches, {}, [](const auto &m) { return m.second; });
+        std::vector<std::string> out;
+        for (auto &m : matches)
+        {
+            if (out.size() == k_max_suggestions)
+                break;
+            out.push_back(std::move(m.first));
+        }
+        return out;
     }
 
     /// @brief Return the context @p depth parents above @p ctx; @p ctx if the
@@ -119,8 +181,9 @@ namespace pjh::cli
                     return CliResult<void>::Ok();
                 }
             }
-            return CliFailure{
-                ErrorFactory::unknown_option(std::format("--{}", parsed.name))};
+            return CliFailure{ErrorFactory::unknown_option(
+                std::format("--{}", parsed.name),
+                suggest_long_options(cmd, parsed.name))};
         }
         auto &owner = owner_context(ctx, match.depth);
 
