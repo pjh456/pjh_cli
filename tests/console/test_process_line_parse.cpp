@@ -9,6 +9,7 @@
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 
 using namespace pjh::cli;
 
@@ -111,4 +112,20 @@ TEST_CASE("process_line ancestor option after subcommand descent")
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("son --verbose");
     CHECK(r.is_ok());
+}
+
+TEST_CASE("process_line ambiguous fuzzy returns ambiguous error")
+{
+    App app("test", "1.0", "Ambiguous repl");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line("st");
+    CHECK(r.is_err());
+    auto &err = r.unwrap_err();
+    CHECK(std::holds_alternative<AmbiguousCommandError>(err.info()));
+    CHECK(
+        std::string_view(err.what()).find("ambiguous command 'st'") !=
+        std::string_view::npos);
 }

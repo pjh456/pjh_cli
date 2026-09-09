@@ -6,7 +6,9 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <span>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace pjh::cli
 {
@@ -41,19 +43,29 @@ namespace pjh::cli
         /// nullptr is returned.  When no exact match is found and
         /// @p max_fuzzy_distance > 0, fuzzy_find_subcommands() is used with
         /// a Levenshtein distance threshold.  Only when exactly one candidate
-        /// falls within the threshold is it returned.
+        /// falls within the threshold is it returned; when more than one
+        /// candidate does, @p out_ambiguous is appended with the candidate
+        /// command names and nullptr is returned.
         ///
         /// @param cmd                Parent BranchCommand to search.
         /// @param name               User-supplied subcommand name.
         /// @param max_fuzzy_distance  Max edit distance (0 = exact only).
         /// @param out_disabled       Set to true if an exact match was found
         ///                           but is disabled.
-        /// @return Pointer to the matched BaseCommand, or nullptr.
+        /// @param out_ambiguous      Appended with the candidate command names
+        ///                           (closest first) when more than one
+        ///                           visible+enabled child is within
+        ///                           @p max_fuzzy_distance; left untouched
+        ///                           otherwise.
+        /// @return Pointer to the matched BaseCommand, or nullptr.  A
+        ///         non-empty @p out_ambiguous or true @p out_disabled also
+        ///         yields nullptr.
         static BaseCommand *find_subcommand_match(
             BranchCommand &cmd,
             std::string_view name,
             int max_fuzzy_distance,
-            bool &out_disabled);
+            bool &out_disabled,
+            std::vector<std::string> &out_ambiguous);
 
         /// @brief Build an unknown-command error with fuzzy suggestions.
         ///
@@ -83,8 +95,11 @@ namespace pjh::cli
         /// @param max_fuzzy_distance  Max edit distance for fuzzy matching.
         /// @param double_dash        Whether we have already seen '--'.
         /// @return Ok with .matched = true on match, Ok with .matched = false
-        ///         when no match found, or Err(command_disabled) if the exact
-        ///         match is disabled.
+        ///         when no match found, Err(command_disabled) if the exact
+        ///         match is disabled, or Err(ambiguous_command) when more
+        ///         than one fuzzy candidate is within threshold (the
+        ///         candidate list is carried in
+        ///         AmbiguousCommandError::candidates, closest first).
         static CliResult<SubcommandResult> try_descend_subcommand(
             BaseCommand *cmd,
             ParseContext &ctx,

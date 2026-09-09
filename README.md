@@ -173,6 +173,11 @@ navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)
 app.parse_fuzzy(argc, argv);
 ```
 
+A unique close match is auto-corrected transparently.  When two or more
+candidates fall within distance 3, `parse_fuzzy()` reports
+`Parse Error: ambiguous command '<input>', candidates: …` instead of guessing;
+an exact or alias match still wins.
+
 ### Interactive hints
 
 ```cpp
@@ -194,8 +199,10 @@ app.add_leaf("list", "List items").alias("ls").alias("show");
 without subcommands (POSIX-style trailing operands are silently discarded).
 A branch that has subcommands reports an unmatched word as an unknown command
 (`Parse Error: unknown command: 'instal'; did you mean: install`) instead of
-silently succeeding.  Call `set_extra_args(...)` on the branch — including
-`Ignore` — to opt out explicitly.  Explicit policies are inherited by
+silently succeeding.  In fuzzy mode, a word with several close matches is
+reported as `Parse Error: ambiguous command '<input>', candidates: …` rather
+than as an unknown command.  Call `set_extra_args(...)` on the branch —
+including `Ignore` — to opt out explicitly.  Explicit policies are inherited by
 subcommands.
 
 A token whose first character after `-` is a digit or `.` (e.g. `-5`, `-3.14`)

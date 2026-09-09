@@ -3,6 +3,8 @@
 #include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
+#include <string>
+#include <vector>
 
 namespace pjh::cli
 {
@@ -11,12 +13,14 @@ namespace pjh::cli
     /// Exact name match is attempted first (including aliases).  If the
     /// exact match is disabled, @p out_disabled is set to true and nullptr
     /// is returned.  When no exact match is found and @p max_fuzzy_distance
-    /// > 0, fuzzy_find_subcommands() is used.
+    /// > 0, fuzzy_find_subcommands() is used; a unique candidate is returned,
+    /// while several candidates are appended to @p out_ambiguous.
     BaseCommand *SubcommandResolver::find_subcommand_match(
         BranchCommand &cmd,
         std::string_view name,
         int max_fuzzy_distance,
-        bool &out_disabled)
+        bool &out_disabled,
+        std::vector<std::string> &out_ambiguous)
     {
         auto *exact = cmd.find_subcommand(name);
         if (exact)
@@ -33,6 +37,8 @@ namespace pjh::cli
                 fuzzy_find_subcommands(cmd, name, max_fuzzy_distance, Visibility::Both);
             if (fuzzy.size() == 1)
                 return fuzzy[0].command;
+            if (fuzzy.size() > 1)
+                for (const auto &m : fuzzy) out_ambiguous.push_back(m.command->name());
         }
 
         return nullptr;
@@ -53,7 +59,8 @@ namespace pjh::cli
     /// Guards against descent when @p double_dash is true, the token is
     /// dash-prefixed, or the current command is not a branch.  On success,
     /// creates a child ParseContext with parent linking and returns the
-    /// matched command.
+    /// matched command.  Reports Err(ambiguous_command) when several fuzzy
+    /// candidates are within threshold.
     CliResult<SubcommandResolver::SubcommandResult>
     SubcommandResolver::try_descend_subcommand(
         BaseCommand *cmd,
@@ -67,10 +74,16 @@ namespace pjh::cli
 
         auto *branch = cmd->as_branch();
         bool disabled = false;
-        auto *sub = find_subcommand_match(*branch, a, max_fuzzy_distance, disabled);
+        std::vector<std::string> ambiguous;
+        auto *sub =
+            find_subcommand_match(*branch, a, max_fuzzy_distance, disabled, ambiguous);
 
         if (disabled)
             return CliResult<SubcommandResult>::Err(ErrorFactory::command_disabled(a));
+
+        if (!ambiguous.empty())
+            return CliResult<SubcommandResult>::Err(
+                ErrorFactory::ambiguous_command(a, ambiguous));
 
         if (!sub)
             return CliResult<SubcommandResult>::Ok(SubcommandResult{});

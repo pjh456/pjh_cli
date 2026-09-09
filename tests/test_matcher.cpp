@@ -1,16 +1,19 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
+#include <pjh_cli/parse/subcommand_resolver.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 using namespace pjh::cli;
@@ -269,7 +272,7 @@ TEST_CASE("parse_fuzzy typo tolerant")
     CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "server");
 }
 
-TEST_CASE("parse_fuzzy ambiguous")
+TEST_CASE("parse_fuzzy ambiguous reports AmbiguousCommandError")
 {
     App app("test", "1.0", "Ambiguous");
     app.add_leaf("start", "Start");
@@ -278,9 +281,59 @@ TEST_CASE("parse_fuzzy ambiguous")
     Argv argv{"test", "st"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(
-        std::string_view(r.unwrap_err().what()).find("unknown command: 'st'") !=
-        std::string_view::npos);
+    auto &err = r.unwrap_err();
+    CHECK(std::holds_alternative<AmbiguousCommandError>(err.info()));
+    auto msg = std::string_view(err.what());
+    CHECK(msg.find("ambiguous command 'st'") != std::string_view::npos);
+    CHECK(msg.find("start") != std::string_view::npos);
+    CHECK(msg.find("stop") != std::string_view::npos);
+}
+
+TEST_CASE("parse exact mode ambiguous name is unknown command")
+{
+    App app("test", "1.0", "Exact ambiguous");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
+
+    Argv argv{"test", "st"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    auto &err = r.unwrap_err();
+    CHECK_FALSE(std::holds_alternative<AmbiguousCommandError>(err.info()));
+    CHECK(std::holds_alternative<UnknownCommandError>(err.info()));
+    auto msg = std::string_view(err.what());
+    CHECK(msg.find("unknown command: 'st'") != std::string_view::npos);
+    CHECK(msg.find("stop, start") != std::string_view::npos);
+}
+
+TEST_CASE("find_subcommand_match reports ambiguity candidates")
+{
+    App app("test", "1.0", "Resolver");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
+
+    bool disabled = false;
+    std::vector<std::string> ambiguous;
+    auto *m =
+        SubcommandResolver::find_subcommand_match(app, "st", 3, disabled, ambiguous);
+    CHECK(m == nullptr);
+    CHECK_FALSE(disabled);
+    REQUIRE(ambiguous.size() == 2);
+    CHECK(ambiguous[0] == "stop");
+    CHECK(ambiguous[1] == "start");
+}
+
+TEST_CASE("parse_fuzzy ambiguous nested branch")
+{
+    App app("test", "1.0", "Nested ambiguous");
+    auto &db = app.add_branch("db", "Database");
+    db.add_leaf("migrate", "Migrate");
+    db.add_leaf("mirror", "Mirror");
+
+    Argv argv{"test", "db", "migrat"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(std::holds_alternative<AmbiguousCommandError>(r.unwrap_err().info()));
 }
 
 TEST_CASE("parse_fuzzy no match")
@@ -296,7 +349,7 @@ TEST_CASE("parse_fuzzy no match")
         std::string_view::npos);
 }
 
-TEST_CASE("parse_fuzzy multi-candidate ambiguous reports unknown command")
+TEST_CASE("parse_fuzzy multi-candidate ambiguous reports ambiguous command")
 {
     App app("test", "1.0", "Multi fuzzy");
     app.add_leaf("start", "Start server");
@@ -307,9 +360,11 @@ TEST_CASE("parse_fuzzy multi-candidate ambiguous reports unknown command")
     CHECK(r.is_err());
     // Both "start" and "stop" are within edit distance 3 from "st", so fuzzy
     // matching is ambiguous and neither is matched.  The parser reports an
-    // unknown command listing the candidates.
-    auto msg = std::string_view(r.unwrap_err().what());
-    CHECK(msg.find("unknown command: 'st'") != std::string_view::npos);
+    // ambiguous command listing the candidates.
+    auto &err = r.unwrap_err();
+    CHECK(std::holds_alternative<AmbiguousCommandError>(err.info()));
+    auto msg = std::string_view(err.what());
+    CHECK(msg.find("ambiguous command 'st'") != std::string_view::npos);
     CHECK(msg.find("start") != std::string_view::npos);
     CHECK(msg.find("stop") != std::string_view::npos);
 }

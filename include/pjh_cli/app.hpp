@@ -61,7 +61,9 @@ namespace pjh::cli
         ///
         /// When an exact subcommand match fails, falls back to Levenshtein
         /// distance matching (max_distance = 3).  If exactly one close match
-        /// is found, it is used transparently (no error).
+        /// is found, it is used transparently (no error).  If more than one
+        /// close match is found, returns `AmbiguousCommandError` listing the
+        /// candidates instead of guessing; an exact/alias match always wins.
         ///
         /// @note This does not print help/version or exit.  When
         ///       help_requested() / version_requested() is set, dispatch on it
