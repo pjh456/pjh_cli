@@ -4,6 +4,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 #include <string>
 #include <string_view>
 
@@ -57,6 +58,18 @@ TEST_CASE("process_line help subcommand shows full path")
     auto r = console.process_line("help container start");
     CHECK(r.is_ok());
     CHECK(sf.output.str().starts_with("Usage: test container start"));
+}
+
+TEST_CASE("process_line help shows option metadata annotations")
+{
+    App app("test", "1.0", "Repl metadata help");
+    app.option<fixed_string("host")>("--host", "Host").str().env("APP_HOST");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("help");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().find("(env: APP_HOST)") != std::string_view::npos);
 }
 
 TEST_CASE("process_line subcommand --help shows full path")

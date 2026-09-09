@@ -17,6 +17,10 @@ namespace pjh::cli
     /// Produced by collecting data from an OptionDef for use in
     /// help rendering and hint formatting.  All string_view fields
     /// alias the command tree's strings.
+    ///
+    /// `HelpFormatter` renders `env_var`, `is_negatable`, `is_counting`, and
+    /// `is_repeatable` as `(env: VAR)` / `(negatable)` / `(counting)` /
+    /// `(repeatable)` annotations in the Options table.
     struct OptionInfo
     {
         std::string_view long_name;           ///< Long option name without "--" prefix.

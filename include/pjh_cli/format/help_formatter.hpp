@@ -14,9 +14,12 @@ namespace pjh::cli
     /// Produces the standard CLI help output:
     ///   - One-line usage string
     ///   - Description
-    ///   - Options table (with labels, required/default markers)
+    ///   - Options table (with labels and metadata annotations)
     ///   - Positional arguments table
     ///   - Subcommands table
+    ///
+    /// The Options table annotates `(required)`, `(env: VAR)`, `(default: X)`,
+    /// `(negatable)`, `(counting)`, and `(repeatable)` after the description.
     ///
     /// Two pipelines exist:
     ///   1. collect_help() → format_help(HelpInfo) for the full multi-line help
@@ -89,7 +92,10 @@ namespace pjh::cli
         ///   description
         ///
         ///   Options:
-        ///     -s, --long VALUE   description (required) (default: ...)
+        ///     -p, --port PORT     Port number (default: 8080) (env: APP_PORT)
+        ///     -c, --compress      Compress (negatable)
+        ///     -v, --verbose       Verbose (counting)
+        ///     -I, --include PATH  Include path (repeatable)
         ///
         ///   Arguments:
         ///     src              description (required)
@@ -97,6 +103,9 @@ namespace pjh::cli
         ///   Subcommands:
         ///     serve            Start the server
         ///
+        /// Option annotations are emitted in a fixed order after the
+        /// description: `(required)`, `(env: VAR)`, `(default: X)`,
+        /// `(negatable)`, `(counting)`, `(repeatable)`.
         /// Column widths auto-size up to 32 for options and 28 for args/subcommands.
         ///
         /// @param info  Structured data from collect_help().
@@ -155,7 +164,10 @@ namespace pjh::cli
         ///   - both:           `"-v, --verbose"`
         ///   - with value:     `"-p, --port PORT"` or `"-p PORT"` / `"--port PORT"`
         ///
-        /// The value placeholder is the option name uppercased.
+        /// The value placeholder is the option name uppercased.  The label is
+        /// syntax only (no metadata); `(required)` / `(env: ...)` /
+        /// `(default: ...)` / `(negatable)` / `(counting)` / `(repeatable)` are
+        /// rendered in the right column by format_help(HelpInfo).
         ///
         /// @param opt  Option metadata.
         /// @param sep  Separator between short and long names (default ", ").

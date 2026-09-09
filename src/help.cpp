@@ -8,8 +8,34 @@
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <vector>
+
+namespace
+{
+    /// @brief Right-column metadata annotations for an option row.
+    ///
+    /// Emits, in fixed order: `(required)`, `(env: VAR)`, `(default: X)`,
+    /// `(negatable)`, `(counting)`, `(repeatable)`.
+    std::string option_annotations(const pjh::cli::OptionInfo &opt)
+    {
+        std::string out;
+        if (opt.is_required)
+            out += " (required)";
+        if (!opt.env_var.empty())
+            out += " (env: " + std::string(opt.env_var) + ")";
+        if (opt.has_default)
+            out += " (default: " + opt.default_str + ")";
+        if (opt.is_negatable)
+            out += " (negatable)";
+        if (opt.is_counting)
+            out += " (counting)";
+        if (opt.is_repeatable)
+            out += " (repeatable)";
+        return out;
+    }
+}  // namespace
 
 namespace pjh::cli
 {
@@ -40,8 +66,6 @@ namespace pjh::cli
             auto label = opt.long_name.empty() ? std::string(1, opt.short_name)
                                                : std::string(opt.long_name);
             left += " " + detail::StringUtils::to_upper_copy(label);
-            if (opt.is_repeatable)
-                left += " [...]";
         }
         return left;
     }
@@ -125,10 +149,7 @@ namespace pjh::cli
                         HelpLine line;
                         line.left = option_label(opt);
                         line.right = std::string(opt.description);
-                        if (opt.is_required)
-                            line.right += " (required)";
-                        if (opt.has_default)
-                            line.right += " (default: " + opt.default_str + ")";
+                        line.right += option_annotations(opt);
                         lines.push_back(std::move(line));
                     }
                 }));

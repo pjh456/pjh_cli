@@ -337,6 +337,96 @@ TEST_CASE("collect_help includes option metadata")
     CHECK(info.args[0].is_required);
 }
 
+TEST_CASE("format_help shows env metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("host")>("--host", 'H', "Host").str().env("APP_HOST");
+
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(help.find("(env: APP_HOST)") != std::string::npos);
+}
+
+TEST_CASE("format_help shows negatable metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("compress")>("--compress", 'c', "Compress")
+        .boolean()
+        .negatable();
+
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(help.find("(negatable)") != std::string::npos);
+}
+
+TEST_CASE("format_help shows counting metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(help.find("(counting)") != std::string::npos);
+}
+
+TEST_CASE("format_help shows repeatable metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("include")>("--include", 'I', "Include path")
+        .path()
+        .repeatable();
+
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(help.find("(repeatable)") != std::string::npos);
+    CHECK(help.find("[...]") == std::string::npos);
+}
+
+TEST_CASE("format_help orders option annotations")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("host")>("--host", 'H', "Host")
+        .str()
+        .required()
+        .default_value("x")
+        .env("V")
+        .repeatable();
+    cmd.option<fixed_string("compress")>("--compress", 'c', "Compress")
+        .boolean()
+        .negatable();
+
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(
+        help.find(" (required) (env: V) (default: x) (repeatable)") != std::string::npos);
+    CHECK(help.find(" (negatable)") != std::string::npos);
+}
+
+TEST_CASE("collect_help exposes option metadata")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("host")>("--host", 'H', "Host").str().env("APP_HOST");
+    cmd.option<fixed_string("compress")>("--compress", 'c', "Compress")
+        .boolean()
+        .negatable();
+    cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+    cmd.option<fixed_string("include")>("--include", 'I', "Include").path().repeatable();
+
+    auto info = HelpFormatter::collect_help(cmd, "test");
+    REQUIRE(info.options.size() == 4);
+    CHECK(info.options[0].env_var == "APP_HOST");
+    CHECK(info.options[1].is_negatable);
+    CHECK(info.options[2].is_counting);
+    CHECK(info.options[3].is_repeatable);
+}
+
+TEST_CASE("format_usage drops repeatable marker")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("include")>("--include", 'I', "Include path")
+        .path()
+        .repeatable();
+
+    auto usage = HelpFormatter::format_usage(cmd, "test");
+    CHECK(usage.find("--include INCLUDE") != std::string::npos);
+    CHECK(usage.find("[...]") == std::string::npos);
+}
+
 // ──────────────────────────────────────────
 //  Alias tests
 // ──────────────────────────────────────────

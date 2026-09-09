@@ -105,6 +105,19 @@ TEST_CASE("Parser --help bypasses required checks")
     CHECK(r.unwrap().help_requested());
 }
 
+TEST_CASE("Parser --help shows option metadata annotations")
+{
+    App app("test", "1.0", "Metadata help test");
+    app.option<fixed_string("host")>("--host", "Host").str().env("APP_HOST");
+    app.option<fixed_string("compress")>("--compress", "Compress").boolean().negatable();
+    Argv argv{"test", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto help = r.unwrap().help_text();
+    CHECK(help.find("(env: APP_HOST)") != std::string::npos);
+    CHECK(help.find("(negatable)") != std::string::npos);
+}
+
 TEST_CASE("Parser --help after double dash is not intercepted")
 {
     App app("test", "1.0", "Double dash help test");

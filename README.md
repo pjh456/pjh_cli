@@ -92,6 +92,9 @@ if (ctx.version_requested())
 // safe to read values from here
 ```
 
+`format_help` annotates options with `(env: VAR)`, `(negatable)`, `(counting)`,
+and `(repeatable)` in the Options table.
+
 ### Positional arguments
 
 ```cpp
