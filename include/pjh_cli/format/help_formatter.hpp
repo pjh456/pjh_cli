@@ -12,14 +12,16 @@ namespace pjh::cli
     /// @brief Utility for rendering help text from a command tree.
     ///
     /// Produces the standard CLI help output:
-    ///   - One-line usage string
+    ///   - One-line usage string (current command's options only)
     ///   - Description
     ///   - Options table (with labels and metadata annotations)
+    ///   - Inherited Options table (options accepted from ancestors)
     ///   - Positional arguments table
     ///   - Subcommands table
     ///
     /// The Options table annotates `(required)`, `(env: VAR)`, `(default: X)`,
     /// `(negatable)`, `(counting)`, and `(repeatable)` after the description.
+    /// Inherited rows reuse the same annotations and ordering.
     ///
     /// Two pipelines exist:
     ///   1. collect_help() → format_help(HelpInfo) for the full multi-line help
@@ -68,7 +70,8 @@ namespace pjh::cli
 
         /// @brief Walk a command tree and collect structured help data.
         ///
-        /// Populates a HelpInfo with the program name, description, options,
+        /// Populates a HelpInfo with the program name, description, options
+        /// registered on @p cmd, inherited ancestor options (nearest first),
         /// positional args (from leaf commands), and subcommands (respecting
         /// visibility + enabled predicates).
         ///
@@ -97,11 +100,17 @@ namespace pjh::cli
         ///     -v, --verbose       Verbose (counting)
         ///     -I, --include PATH  Include path (repeatable)
         ///
+        ///   Inherited Options:
+        ///     -g, --global        Option declared on an ancestor command
+        ///
         ///   Arguments:
         ///     src              description (required)
         ///
         ///   Subcommands:
         ///     serve            Start the server
+        ///
+        /// The usage line lists only the current command's options; inherited
+        /// options appear in their own section.
         ///
         /// Option annotations are emitted in a fixed order after the
         /// description: `(required)`, `(env: VAR)`, `(default: X)`,

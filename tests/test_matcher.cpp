@@ -705,6 +705,8 @@ TEST_CASE("complete_line completes option names in subcommand context")
     App app("test", "1.0", "Complete line");
     populate_completion_app(app);
 
+    // Prefix "--po" matches no ancestor option, so this case no longer pins
+    // node-locality; ancestor coverage is in the cases below.
     auto r = complete_line(app, "serve --po", 10);
     REQUIRE(r.size() == 1);
     CHECK(r[0].display == "--port");
@@ -739,4 +741,144 @@ TEST_CASE("complete_line handles double-dash barrier")
 
     auto r = complete_line(app, "serve -- --color r", 18);
     CHECK(r.empty());
+}
+
+// ──────────────────────────────────────────
+//  Ancestor option visibility
+// ──────────────────────────────────────────
+
+TEST_CASE("format_help shows inherited options section")
+{
+    App app("test", "1.0", "App");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    auto help = HelpFormatter::format_help(serve);
+    CHECK(help.find("Inherited Options:") != std::string::npos);
+    CHECK(help.find("--verbose") != std::string::npos);
+    CHECK(help.find("Verbose") != std::string::npos);
+    // Usage line stays node-local.
+    CHECK(help.substr(0, help.find('\n')).find("--verbose") == std::string::npos);
+}
+
+TEST_CASE("format_help inherited options are nearest-first")
+{
+    App app("test", "1.0", "App");
+    app.option<fixed_string("root")>("--root", "Root").boolean();
+    auto &mid = app.add_branch("mid", "Mid");
+    mid.option<fixed_string("mid")>("--mid", "Mid opt").boolean();
+    auto &leaf = mid.add_leaf("leaf", "Leaf");
+    leaf.option<fixed_string("leaf")>("--leaf", "Leaf opt").boolean();
+
+    auto help = HelpFormatter::format_help(leaf);
+    auto mid_pos = help.find("--mid");
+    auto root_pos = help.find("--root");
+    REQUIRE(mid_pos != std::string::npos);
+    REQUIRE(root_pos != std::string::npos);
+    CHECK(mid_pos < root_pos);
+}
+
+TEST_CASE("format_help omits shadowed ancestor option")
+{
+    App app("test", "1.0", "App");
+    app.option<fixed_string("opt")>("--opt", "Root").boolean();
+    auto &child = app.add_leaf("child", "Child");
+    child.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    auto help = HelpFormatter::format_help(child);
+    CHECK(help.find("Inherited Options:") == std::string::npos);
+}
+
+TEST_CASE("format_help renders partially shadowed ancestor short")
+{
+    App app("test", "1.0", "App");
+    app.option<fixed_string("opt")>("--opt", 'o', "Root").boolean();
+    auto &child = app.add_leaf("child", "Child");
+    child.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    auto help = HelpFormatter::format_help(child);
+    auto pos = help.find("Inherited Options:");
+    REQUIRE(pos != std::string::npos);
+    auto inherited = help.substr(pos);
+    CHECK(inherited.find("-o") != std::string::npos);
+    CHECK(inherited.find("--opt") == std::string::npos);
+}
+
+TEST_CASE("collect_help separates current and inherited options")
+{
+    App app("test", "1.0", "App");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    auto info = HelpFormatter::collect_help(serve, "test serve");
+    REQUIRE(info.options.size() == 1);
+    CHECK(info.options[0].long_name == "port");
+    REQUIRE(info.inherited_options.size() == 1);
+    CHECK(info.inherited_options[0].long_name == "verbose");
+}
+
+TEST_CASE("complete_line offers ancestor option names in subcommand context")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve --", 8);
+    bool has_color = false, has_port = false, has_verbose = false;
+    for (const auto &c : r)
+    {
+        if (c.display == "--color")
+            has_color = true;
+        if (c.display == "--port")
+            has_port = true;
+        if (c.display == "--verbose")
+            has_verbose = true;
+    }
+    CHECK(has_color);
+    CHECK(has_port);
+    CHECK(has_verbose);
+}
+
+TEST_CASE("complete_line completes an ancestor long option after descent")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve --v", 9);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "--verbose");
+}
+
+TEST_CASE("complete_line offers ancestor short options after descent")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve -", 7);
+    bool has_c = false, has_p = false, has_v = false;
+    for (const auto &c : r)
+    {
+        if (c.display == "-c")
+            has_c = true;
+        if (c.display == "-p")
+            has_p = true;
+        if (c.display == "-v")
+            has_v = true;
+    }
+    CHECK(has_c);
+    CHECK(has_p);
+    CHECK(has_v);
+}
+
+TEST_CASE("complete_candidates deduplicates a shadowed ancestor option")
+{
+    App app("test", "1.0", "Dedup");
+    app.option<fixed_string("opt")>("--opt", "Root").boolean();
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    auto candidates = complete(son, "--");
+    REQUIRE(candidates.size() == 1);
+    CHECK(candidates[0] == "--opt");
 }

@@ -36,6 +36,9 @@ namespace pjh::cli
         static std::string option_type_name(const OptionDef &opt);
 
         /// @brief Walk a partial input string to determine the current command position.
+        ///
+        /// The returned context's options are those on the reached command plus
+        /// inherited ancestor options, nearest declaration first.
         static HintContext build_context(const BaseCommand &root, std::string_view input);
 
         /// @brief Build structured hint data from context and config.

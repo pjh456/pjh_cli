@@ -126,3 +126,54 @@ TEST_CASE("option_left_label empty")
     OptionDef opt;
     CHECK(option_left_label(opt).empty());
 }
+
+TEST_CASE("collect_options_in_chain returns current then ancestors")
+{
+    App app("test", "1.0", "Chain");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &leaf = app.add_leaf("serve", "Serve");
+    leaf.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    auto chain = collect_options_in_chain(leaf);
+    REQUIRE(chain.size() == 2);
+    CHECK(chain[0].opt->long_name() == "port");
+    CHECK(chain[1].opt->long_name() == "verbose");
+}
+
+TEST_CASE("collect_options_in_chain marks shadowed long name")
+{
+    App app("test", "1.0", "Chain");
+    app.option<fixed_string("opt")>("--opt", 'o', "Root").boolean();
+    auto &child = app.add_leaf("child", "Child");
+    child.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    auto chain = collect_options_in_chain(child);
+    REQUIRE(chain.size() == 2);
+    CHECK_FALSE(chain[0].long_shadowed);
+    CHECK(chain[1].long_shadowed);
+    CHECK_FALSE(chain[1].short_shadowed);
+    CHECK(chain[1].opt->short_name() == 'o');
+}
+
+TEST_CASE("collect_options_in_chain skips fully shadowed option")
+{
+    App app("test", "1.0", "Chain");
+    app.option<fixed_string("opt")>("--opt", "Root").boolean();
+    auto &child = app.add_leaf("child", "Child");
+    child.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    CHECK(collect_options_in_chain(child).size() == 1);
+}
+
+TEST_CASE("collect_options_in_chain excludes current when asked")
+{
+    App app("test", "1.0", "Chain");
+    app.option<fixed_string("opt")>("--opt", 'o', "Root").boolean();
+    auto &child = app.add_leaf("child", "Child");
+    child.option<fixed_string("opt")>("--opt", "Leaf").boolean();
+
+    auto chain = collect_options_in_chain(child, false);
+    REQUIRE(chain.size() == 1);
+    CHECK(chain[0].opt->short_name() == 'o');
+    CHECK(chain[0].long_shadowed);
+}

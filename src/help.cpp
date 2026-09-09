@@ -81,6 +81,17 @@ namespace pjh::cli
         info.options.reserve(cmd.options().size());
         for (const auto &opt_ptr : cmd.options()) info.options.emplace_back(*opt_ptr);
 
+        for (const auto &entry :
+             detail::collect_options_in_chain(cmd, /*include_current=*/false))
+        {
+            OptionInfo opt_info(*entry.opt);
+            if (entry.long_shadowed)
+                opt_info.long_name = {};
+            if (entry.short_shadowed)
+                opt_info.short_name = 0;
+            info.inherited_options.push_back(std::move(opt_info));
+        }
+
         if (auto *leaf = cmd.as_leaf())
         {
             info.args.reserve(leaf->args().size());
@@ -146,6 +157,24 @@ namespace pjh::cli
                 [&](std::vector<HelpLine> &lines)
                 {
                     for (const auto &opt : info.options)
+                    {
+                        HelpLine line;
+                        line.left = option_label(opt);
+                        line.right = std::string(opt.description);
+                        line.right += option_annotations(opt);
+                        lines.push_back(std::move(line));
+                    }
+                }));
+        }
+
+        // Inherited Options
+        if (!info.inherited_options.empty())
+        {
+            doc.sections.push_back(make_section(
+                "Inherited Options",
+                [&](std::vector<HelpLine> &lines)
+                {
+                    for (const auto &opt : info.inherited_options)
                     {
                         HelpLine line;
                         line.left = option_label(opt);
@@ -224,7 +253,10 @@ namespace pjh::cli
         {
             os << section.heading << ":\n";
             size_t max_left = 0;
-            size_t width_limit = (section.heading == "Options") ? size_t{32} : size_t{28};
+            size_t width_limit =
+                (section.heading == "Options" || section.heading == "Inherited Options")
+                    ? size_t{32}
+                    : size_t{28};
             for (const auto &line : section.lines)
                 max_left = std::max(max_left, line.left.size());
             size_t left_width = std::min(max_left, width_limit);

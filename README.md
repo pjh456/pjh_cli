@@ -178,8 +178,11 @@ declare it.  Resolution walks the current command and its ancestors with the
 nearest declaration winning; the value is stored in the declaring command's
 context, so repeatable/counting ancestor options accumulate across descent
 (`app --tag a server --tag b` yields `{a, b}`).  Siblings and descendants stay
-invisible and unknown tokens still error.  Help and completion still list only
-the current node's options.
+invisible and unknown tokens still error.  Help lists inherited options in a
+separate `Inherited Options` section; Tab name completion and hints include
+ancestor options (nearest declaration wins, with a partially shadowed spelling
+shown under its free form); the usage line still shows only the current
+command's options.
 
 ### Actions
 
@@ -314,11 +317,11 @@ via that form.
 | `ctx.version_text()` | Pre-formatted version string (non-empty when version requested) |
 | `HelpFormatter::format_help(cmd)` | Formatted help string |
 | `HelpFormatter::format_usage(cmd)` | One-line usage string |
-| `HelpFormatter::collect_help(cmd)` | Structured HelpInfo data |
-| `HintBuilder::format(root, input)` | Interactive hint for partial input |
+| `HelpFormatter::collect_help(cmd)` | Structured HelpInfo data (`options` node-local, `inherited_options` ancestors) |
+| `HintBuilder::format(root, input)` | Interactive hint for partial input (includes ancestor options) |
 | `list_subcommands(cmd)` | Visible subcommand names |
 | `complete(cmd, prefix)` | Tab completion candidates (strings) |
-| `complete_candidates(cmd, prefix)` | Tab completion candidates (struct) |
+| `complete_candidates(cmd, prefix)` | Tab completion candidates (struct, includes ancestor options) |
 | `complete_line(root, line, cursor)` | Completion for the token under the cursor, including `.completer` values |
 | `complete_line_result(root, line, cursor)` | Same, plus the matched prefix length for inline/compact value insertion |
 | `complete_value_candidates(opt, prefix)` | Option-value candidates from `.completer(fn)` |

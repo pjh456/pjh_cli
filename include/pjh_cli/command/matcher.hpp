@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_MATCHER_HPP
 #define INCLUDE_PJH_CLI_COMMAND_MATCHER_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
@@ -68,6 +69,70 @@ namespace pjh::cli::detail
         if ((cmd.visibility() & mode) == Visibility::Hidden)
             return false;
         return true;
+    }
+
+    /// @brief One option reachable from a command, with shadow flags.
+    ///
+    /// `long_shadowed`/`short_shadowed` mark a name component claimed by a
+    /// nearer command, so the display layer can blank it and keep the option
+    /// discoverable under its remaining spelling.
+    struct ChainOption
+    {
+        const OptionDef *opt = nullptr;  ///< Option in the command tree.
+        bool long_shadowed = false;      ///< A nearer command declares this long name.
+        bool short_shadowed = false;     ///< A nearer command claims this short char.
+    };
+
+    /// @brief Options reachable from @p cmd, nearest declaration first.
+    ///
+    /// Walks @p cmd and its ancestors iteratively.  Long names and short chars
+    /// are tracked independently (the parser resolves them independently), so a
+    /// partially shadowed ancestor option is returned with the shadowed
+    /// component flagged.  Options with no visible component are skipped.
+    ///
+    /// When @p include_current is false the current node's entries are not
+    /// returned but still seed shadow tracking (used by collect_help, which
+    /// lists the current node separately).
+    ///
+    /// @param cmd              Command to start from.
+    /// @param include_current  Emit @p cmd's own options (default true).
+    /// @return Entries ordered current→root; empty when no options exist.
+    inline std::vector<ChainOption> collect_options_in_chain(
+        const BaseCommand &cmd, bool include_current = true)
+    {
+        std::vector<ChainOption> out;
+        std::vector<std::string_view> seen_long;
+        std::vector<char> seen_short;
+        bool first = true;
+        for (const BaseCommand *cur = &cmd; cur != nullptr; cur = cur->parent())
+        {
+            for (const auto &opt_ptr : cur->options())
+            {
+                const auto &opt = *opt_ptr;
+                const std::string_view long_name = opt.long_name();
+                const char short_name = opt.short_name();
+                const bool long_shadowed =
+                    !long_name.empty() &&
+                    std::ranges::find(seen_long, long_name) != seen_long.end();
+                const bool short_shadowed =
+                    short_name != 0 &&
+                    std::ranges::find(seen_short, short_name) != seen_short.end();
+                const bool long_visible = !long_name.empty() && !long_shadowed;
+                const bool short_visible = short_name != 0 && !short_shadowed;
+                if (long_visible)
+                    seen_long.push_back(long_name);
+                if (short_visible)
+                    seen_short.push_back(short_name);
+                if (!long_visible && !short_visible)
+                    continue;
+                if (include_current || !first)
+                    out.push_back(
+                        {&opt, !long_visible && !long_name.empty(),
+                         !short_visible && short_name != 0});
+            }
+            first = false;
+        }
+        return out;
     }
 
 }  // namespace pjh::cli::detail

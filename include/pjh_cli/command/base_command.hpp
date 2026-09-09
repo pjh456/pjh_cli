@@ -147,6 +147,10 @@ namespace pjh::cli
         bool extra_args_explicit() const noexcept { return m_extra_args_explicit; }
 
         /// @brief All registered options (pointer-based, polymorphic).
+        ///
+        /// Discovery surfaces (help, completion, hints) walk the ancestor chain
+        /// via detail::collect_options_in_chain; find_option_by_long/short stay
+        /// node-local parse queries.
         /// @return Deque of unique_ptr<OptionDef> in registration order.
         const std::deque<std::unique_ptr<OptionDef>> &options() const noexcept
         {

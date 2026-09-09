@@ -291,28 +291,32 @@ namespace pjh::cli
 
         if (!prefix.empty() && prefix[0] == '-')
         {
+            const auto chain = detail::collect_options_in_chain(cmd);
             if (prefix.size() >= 2 && prefix[1] == '-')
             {
                 auto opt_prefix = prefix.substr(2);
-                for (const auto &opt_ptr : cmd.options())
-                    if (opt_ptr->long_name().starts_with(opt_prefix))
-                        candidates.push_back(
-                            {std::format("--{}", opt_ptr->long_name())});
+                for (const auto &entry : chain)
+                {
+                    const auto &name = entry.opt->long_name();
+                    if (!entry.long_shadowed && !name.empty() &&
+                        name.starts_with(opt_prefix))
+                        candidates.push_back({std::format("--{}", name)});
+                }
             }
             else if (prefix.size() == 1)
             {
-                for (const auto &opt_ptr : cmd.options())
-                    if (opt_ptr->short_name() != 0)
+                for (const auto &entry : chain)
+                    if (!entry.short_shadowed && entry.opt->short_name() != 0)
                         candidates.push_back(
-                            {std::format("-{}", opt_ptr->short_name())});
+                            {std::format("-{}", entry.opt->short_name())});
             }
             else
             {
                 char c = prefix[1];
-                for (const auto &opt_ptr : cmd.options())
-                    if (opt_ptr->short_name() == c)
+                for (const auto &entry : chain)
+                    if (!entry.short_shadowed && entry.opt->short_name() == c)
                         candidates.push_back(
-                            {std::format("-{}", opt_ptr->short_name())});
+                            {std::format("-{}", entry.opt->short_name())});
             }
         }
 

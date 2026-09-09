@@ -123,6 +123,20 @@ TEST_CASE("Parser --help shows option metadata annotations")
     CHECK(help.find("(negatable)") != std::string::npos);
 }
 
+TEST_CASE("Parser subcommand --help shows inherited options")
+{
+    App app("test", "1.0", "Inherited help test");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.add_leaf("serve", "Start server");
+    Argv argv{"test", "serve", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto help = r.unwrap().help_text();
+    CHECK(help.find("Inherited Options:") != std::string::npos);
+    CHECK(help.find("--verbose") != std::string::npos);
+    CHECK(help.starts_with("Usage: test serve"));
+}
+
 TEST_CASE("Parser --help after double dash is not intercepted")
 {
     App app("test", "1.0", "Double dash help test");

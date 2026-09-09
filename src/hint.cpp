@@ -1,5 +1,6 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/command/matcher.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/hint.hpp>
 #include <pjh_cli/format/info.hpp>
@@ -75,8 +76,15 @@ namespace pjh::cli
         ctx.reached_command = cmd;
         ctx.consumed_positional_args = arg_pos;
 
-        ctx.options.reserve(cmd->options().size());
-        for (const auto &opt_ptr : cmd->options()) ctx.options.emplace_back(*opt_ptr);
+        for (const auto &entry : detail::collect_options_in_chain(*cmd))
+        {
+            OptionInfo opt_info(*entry.opt);
+            if (entry.long_shadowed)
+                opt_info.long_name = {};
+            if (entry.short_shadowed)
+                opt_info.short_name = 0;
+            ctx.options.push_back(std::move(opt_info));
+        }
 
         if (auto *leaf = cmd->as_leaf())
         {

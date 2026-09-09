@@ -88,11 +88,15 @@ namespace pjh::cli
     /// as long as the tree exists (typically the program lifetime).
     struct HelpInfo
     {
-        std::string_view program_name;            ///< Binary name for usage line.
-        std::string_view description;             ///< Command description.
-        std::vector<OptionInfo> options;          ///< Registered options.
-        std::vector<ArgInfo> args;                ///< Positional arguments (leaf only).
-        std::vector<SubcommandInfo> subcommands;  ///< Visible child subcommands.
+        std::string_view program_name;    ///< Binary name for usage line.
+        std::string_view description;     ///< Command description.
+        std::vector<OptionInfo> options;  ///< Options registered on this command
+                                          ///< (used for the usage line and the
+                                          ///< Options section).
+        std::vector<OptionInfo> inherited_options;  ///< Ancestor options accepted
+                                                    ///< here (nearest first).
+        std::vector<ArgInfo> args;                  ///< Positional arguments (leaf only).
+        std::vector<SubcommandInfo> subcommands;    ///< Visible child subcommands.
     };
 
     // ── Display-level structs ──
@@ -154,7 +158,9 @@ namespace pjh::cli
         const BaseCommand *reached_command =
             nullptr;                          ///< Deepest command matched so far.
         size_t consumed_positional_args = 0;  ///< Number of positional tokens consumed.
-        std::vector<OptionInfo> options;      ///< Options on the reached command.
+        std::vector<OptionInfo> options;      ///< Options on the reached command plus
+                                              ///< inherited ancestor options
+                                              ///< (nearest first).
         std::vector<ArgInfo> remaining_args;  ///< Unconsumed positional args.
     };
 

@@ -24,6 +24,9 @@ namespace pjh::cli
     /// handles long options (--ver→ --verbose) and short options (-v).
     /// Results are sorted and deduplicated.
     ///
+    /// Options are resolved on @p cmd and its ancestors (nearest declaration
+    /// wins); subcommands stay node-local.
+    ///
     /// @param cmd    Current command whose options/subcommands are consulted.
     /// @param prefix Partial token to match against.
     /// @param mode   Visibility filter (default Both).
@@ -62,8 +65,8 @@ namespace pjh::cli
     /// option (if any) whose value is being typed, then returns value
     /// candidates (preceding option has a completer) or name candidates.
     /// Supports `--opt value`, `--opt=value`, `-o value`, and `-ovalue`.
-    /// Option resolution walks the ancestor chain (matching the parser), while
-    /// name completion stays node-local.
+    /// Option names and values both walk the ancestor chain (matching the
+    /// parser); subcommand completion is node-local.
     ///
     /// @param root    Root of the command tree.
     /// @param line    Full input line.

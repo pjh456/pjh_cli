@@ -78,8 +78,42 @@ TEST_CASE("format_hint descends with options before subcommand")
     leaf.option<fixed_string("port")>("--port", 'p', "Port", 8080);
 
     auto hint = HintBuilder::format(app, "-v serve");
-    // Descend to serve, show serve's option
-    CHECK(hint == "[INT:port]");
+    // Descend to serve; current options first, then inherited ancestors.
+    CHECK(hint == "[INT:port] [BOOL:verbose]");
+}
+
+TEST_CASE("format_hint includes ancestor options after descent")
+{
+    App app("test", "1.0", "Test");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &leaf = app.add_leaf("serve", "Serve");
+    leaf.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+
+    auto hint = HintBuilder::format(app, "serve");
+    CHECK(hint.find("[BOOL:verbose]") != std::string_view::npos);
+    CHECK(hint.find("[INT:port]") != std::string_view::npos);
+}
+
+TEST_CASE("format_hint nearest declaration wins")
+{
+    App app("test", "1.0", "Test");
+    app.option<fixed_string("opt")>("--opt", "Root").integer();
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("opt")>("--opt", "Leaf").integer();
+
+    CHECK(HintBuilder::format(app, "son") == "[INT:opt]");
+}
+
+TEST_CASE("format_hint inherited required option in Required mode")
+{
+    App app("test", "1.0", "Test");
+    app.option<fixed_string("token")>("--token", 't', "Token").integer().required();
+    auto &leaf = app.add_leaf("serve", "Serve");
+    leaf.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    auto hint = HintBuilder::format(app, "serve", HintConfig{HintOptionMode::Required});
+    CHECK(hint.find("INT:token") != std::string_view::npos);
+    CHECK(hint.find("INT:port") == std::string_view::npos);
 }
 
 TEST_CASE("format_hint with consumed positional args")

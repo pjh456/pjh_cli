@@ -85,6 +85,21 @@ TEST_CASE("process_line subcommand --help shows full path")
     CHECK(sf.output.str().starts_with("Usage: test container start"));
 }
 
+TEST_CASE("process_line subcommand help shows inherited options")
+{
+    App app("test", "1.0", "Repl inherited help");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("help container start");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().find("Inherited Options:") != std::string_view::npos);
+    CHECK(sf.output.str().find("--verbose") != std::string_view::npos);
+}
+
 TEST_CASE("process_line query list all")
 {
     App app("test", "1.0", "Query all");
