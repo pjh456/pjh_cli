@@ -362,5 +362,5 @@ target_link_libraries(myapp PRIVATE pjh::cli)
 ```
 
 Both modes expose the same target name `pjh::cli`. The package config calls
-`find_dependency(pjh_result)`, so an installed `pjh_result` must be discoverable
+`find_dependency(pjh_result 0.1.0)`, so an installed `pjh_result` must be discoverable
 when `find_package(pjh_cli)` runs.
