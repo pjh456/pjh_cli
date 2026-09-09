@@ -27,7 +27,10 @@ namespace
     /// @brief Windows console backend built on _getch().
     ///
     /// Saves the console input mode on construction, switches it to raw
-    /// (echo + line input disabled) and restores it in the destructor.
+    /// (echo, line input, and processed input disabled) and restores it in the
+    /// destructor.  Clearing @c ENABLE_PROCESSED_INPUT keeps Ctrl-C in the input
+    /// buffer so it arrives as byte 0x03 and is mapped to
+    /// @c KeyEvent::Code::Cancel instead of being handled by the system.
     class WindowsTerminal final : public pjh::cli::ITerminal
     {
     public:
@@ -66,7 +69,9 @@ namespace
         pjh::cli::KeyEvent read_key() override
         {
             int c = ::_getch();
-            if (c == 0x03 || c == 0x04)  // Ctrl-C / Ctrl-D.
+            if (c == 0x03)  // Ctrl-C: cancel the current line.
+                return {pjh::cli::KeyEvent::Code::Cancel, 0};
+            if (c == 0x04)  // Ctrl-D: end of input.
                 return {pjh::cli::KeyEvent::Code::Eof, 0};
             if (c == 0xE0 || c == 0x00)  // Extended key prefix.
             {
@@ -99,13 +104,15 @@ namespace
         }
 
     private:
-        /// @brief Disable echo and line input so _getch() sees every key.
+        /// @brief Disable echo, line input, and processed input so _getch()
+        ///        sees every key, including Ctrl-C.
         void apply_raw()
         {
             HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
             if (input == INVALID_HANDLE_VALUE || input == nullptr)
                 return;
-            DWORD raw = m_saved & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT);
+            DWORD raw = m_saved &
+                        ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT);
             if (::SetConsoleMode(input, raw))
                 m_active = true;
         }
@@ -122,10 +129,13 @@ namespace
     ///
     /// Saves the terminal attributes on construction and restores them in the
     /// destructor, so every exit path (EOF, quit, exception) leaves the shell
-    /// in a usable state.  suspend() / resume() temporarily hand the terminal
-    /// back to cooked mode for human-in-the-loop actions and re-enter raw mode
-    /// afterwards.  Restoration only happens when the terminal was actually
-    /// switched to raw mode.
+    /// in a usable state.  Raw mode also clears @c ISIG, so the kernel does not
+    /// generate SIGINT/SIGQUIT/SIGTSTP; Ctrl-C arrives as byte 0x03 and is
+    /// mapped to @c KeyEvent::Code::Cancel (Ctrl-Z / Ctrl-\\ become inert).
+    /// suspend() / resume() temporarily hand the terminal back to cooked mode
+    /// for human-in-the-loop actions (with @c ISIG restored) and re-enter raw
+    /// mode afterwards.  Restoration only happens when the terminal was
+    /// actually switched to raw mode.
     class PosixTerminal final : public pjh::cli::ITerminal
     {
     public:
@@ -170,6 +180,8 @@ namespace
 
             switch (c)
             {
+            case 0x03:
+                return {pjh::cli::KeyEvent::Code::Cancel, 0};
             case '\r':
             case '\n':
                 return {pjh::cli::KeyEvent::Code::Enter, 0};
@@ -238,11 +250,12 @@ namespace
             return n == 1;
         }
 
-        /// @brief Disable canonical mode and echo so read() sees every key.
+        /// @brief Disable canonical mode, echo, and signal generation so read()
+        ///        sees every key, including Ctrl-C.
         void apply_raw()
         {
             termios raw = m_saved;
-            raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
+            raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO | ISIG));
             raw.c_cc[VMIN] = 1;
             raw.c_cc[VTIME] = 0;
             if (::tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)

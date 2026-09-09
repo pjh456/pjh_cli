@@ -123,7 +123,10 @@ namespace pjh::cli
         /// IHistory.  The active terminal is resolved and pinned once per line,
         /// so set_terminal() may be called from an action: the current line
         /// finishes on the terminal it was read on and the replacement takes
-        /// effect on the next line.  Otherwise each iteration:
+        /// effect on the next line.  On that path Ctrl-C cancels the current
+        /// line (buffer discarded, `^C` echoed, fresh prompt) and the REPL keeps
+        /// running; Ctrl-D or `quit`/`exit`/`q` end it.  Otherwise each
+        /// iteration:
         ///   1. Prints @p m_prompt to m_output.
         ///   2. Reads a line from m_input with std::getline (arrow keys are
         ///      consumed by the terminal line discipline and cannot navigate).

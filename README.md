@@ -218,6 +218,8 @@ lines that fail to parse — so Up can recall a typo and fix it.
 Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
 navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.
+On the raw-mode path Ctrl-C cancels the current line and prints a fresh prompt;
+Ctrl-D (or `quit`/`exit`/`q`) ends the REPL.
 
 `run()` is re-entrant on the same console: an action may call `run()` again and
 the outer loop resumes when the nested loop exits; `stop()` stops the innermost

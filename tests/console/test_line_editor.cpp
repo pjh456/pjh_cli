@@ -31,6 +31,12 @@ namespace
         term.keys.push_back({KeyEvent::Code::Down, 0});
     }
 
+    /// @brief Push one Ctrl-C (line cancel) KeyEvent.
+    void press_cancel(ScriptedTerminal &term)
+    {
+        term.keys.push_back({KeyEvent::Code::Cancel, 0});
+    }
+
     /// @brief Completion callback that always returns an empty candidate list.
     CompletionResult no_candidates(std::string_view, std::size_t) { return {}; }
 
@@ -522,4 +528,56 @@ TEST_CASE("LineEditor Tab completes a CJK candidate then backspace removes it")
     std::string line;
     CHECK(editor.read_line(line, complete, no_hint));
     CHECK(line.empty());  // both the appended space and 中 are removed whole
+}
+
+// ──────────────────────────────────────────
+//  Ctrl-C line cancel (task 50)
+// ──────────────────────────────────────────
+
+TEST_CASE("LineEditor Ctrl-C discards the current line and reads the next")
+{
+    ScriptedTerminal term;
+    chars(term, "bad");
+    press_cancel(term);
+    chars(term, "serve");
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "serve");
+    CHECK(term.written.find("^C\n") != std::string::npos);
+    CHECK(term.written.find("> serve\n") != std::string::npos);
+}
+
+TEST_CASE("LineEditor Ctrl-C on an empty line redraws the prompt")
+{
+    ScriptedTerminal term;
+    press_cancel(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line.empty());
+    CHECK(term.written == "> ^C\n> \n");
+}
+
+TEST_CASE("LineEditor Ctrl-C resets history navigation")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press_up(term);      // recall newest ("two"), arms draft
+    press_cancel(term);  // discard + reset cursor/nav/draft
+    press_up(term);      // must recall newest again, not the older entry
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    InMemoryHistory history;
+    history.push("one");
+    history.push("two");
+
+    LineEditor editor(term, "> ", &history);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "two");
 }

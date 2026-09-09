@@ -25,6 +25,7 @@ namespace pjh::cli
             Backspace,  ///< 0x7f / '\b'.
             Up,         ///< Arrow up (reserved for history navigation).
             Down,       ///< Arrow down (reserved for history navigation).
+            Cancel,     ///< Ctrl-C: discard the current line and start over.
             Eof,        ///< Ctrl-D / stream end (ends the line).
             Unknown,    ///< Escape sequence not understood.
         };
@@ -97,6 +98,11 @@ namespace pjh::cli
     /// older entries and Down recalls newer ones, replacing the current buffer.
     /// The line typed before the first Up is kept as a draft and restored when
     /// Down moves past the newest entry.  Without a history, Up/Down are no-ops.
+    ///
+    /// Ctrl-C (@c KeyEvent::Code::Cancel) discards the current line, echoes
+    /// @c ^C, resets history navigation, and starts a fresh prompt without
+    /// returning; the REPL keeps running.  Ctrl-D (@c KeyEvent::Code::Eof)
+    /// ends input and makes read_line() return false.
     ///
     /// @note The editor owns neither the terminal nor the history; both must
     ///       outlive it.

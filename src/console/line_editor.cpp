@@ -66,6 +66,15 @@ namespace pjh::cli
                 m_navigating = false;
                 m_draft.clear();
                 return true;
+            case KeyEvent::Code::Cancel:
+                m_terminal.write("^C\n");
+                buffer.clear();
+                if (m_history)
+                    m_history->reset_cursor();
+                m_navigating = false;
+                m_draft.clear();
+                m_terminal.write(m_prompt);
+                break;
             case KeyEvent::Code::Eof:
                 m_terminal.write("\n");
                 m_navigating = false;

@@ -403,3 +403,37 @@ TEST_CASE("InteractiveConsole constructor accepts error formatter")
     console.run();
     CHECK(sf.error.str() == "CTOR ERR\n");
 }
+
+TEST_CASE("InteractiveConsole Ctrl-C cancels the line and keeps running")
+{
+    App app("test", "1.0", "Ctrl-C cancel");
+    bool ran = false;
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.action(
+        [&ran](ParseContext &) -> CliResult<void>
+        {
+            ran = true;
+            return CliResult<void>::Ok();
+        });
+
+    StreamFixture streams;
+    InteractiveConsole console(app, "> ", streams.input, streams.output, streams.error);
+
+    auto term = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *term_ptr = term.get();
+    for (char c : std::string("bad"))
+        term->keys.push_back({KeyEvent::Code::Character, c});
+    term->keys.push_back({KeyEvent::Code::Cancel, 0});
+    for (char c : std::string("serve"))
+        term->keys.push_back({KeyEvent::Code::Character, c});
+    term->keys.push_back({KeyEvent::Code::Enter, 0});
+    term->keys.push_back({KeyEvent::Code::Eof, 0});
+    console.set_terminal(std::move(term));
+
+    console.run();
+
+    CHECK(ran);  // REPL did not exit on Ctrl-C
+    CHECK(term_ptr->written.find("^C\n") != std::string::npos);
+    CHECK(
+        streams.error.str().find("bad") == std::string::npos);  // cancelled, not executed
+}
