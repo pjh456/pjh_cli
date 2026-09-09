@@ -1,13 +1,6 @@
 #include <doctest/doctest.h>
 
 #include <cstdlib>
-#include <iostream>
-
-#ifdef _WIN32
-#define setenv(name, val, overwrite) _putenv_s(name, val)
-#define unsetenv(name) _putenv_s(name, "")
-#endif
-
 #include <initializer_list>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
@@ -15,6 +8,8 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include "test_helpers.hpp"
 
 using namespace pjh::cli;
 
@@ -36,48 +31,45 @@ struct Argv
 
 TEST_CASE("EnvVar int option reads from environment")
 {
-    setenv("TEST_PORT", "8080", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PORT", "8080"};
     App app("test", "1.0", "Env int");
-    app.option<fixed_string("port")>("--port", "Port").integer().env("TEST_PORT");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
-    unsetenv("TEST_PORT");
 }
 
 TEST_CASE("EnvVar string option reads from environment")
 {
-    setenv("TEST_HOST", "example.com", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_HOST", "example.com"};
     App app("test", "1.0", "Env str");
-    app.option<fixed_string("host")>("--host", "Host").str().env("TEST_HOST");
+    app.option<fixed_string("host")>("--host", "Host").str().env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<std::string, fixed_string("host")>() == "example.com");
-    unsetenv("TEST_HOST");
 }
 
 TEST_CASE("EnvVar CLI value overrides environment")
 {
-    setenv("TEST_PORT", "3000", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PORT", "3000"};
     App app("test", "1.0", "Env override");
-    app.option<fixed_string("port")>("--port", "Port").integer().env("TEST_PORT");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(env_guard.name());
     Argv argv{"test", "--port", "8080"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
-    unsetenv("TEST_PORT");
 }
 
 TEST_CASE("EnvVar default falls through to hardcoded default")
 {
-    unsetenv("TEST_PORT");
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PORT", std::nullopt};
     App app("test", "1.0", "Env default");
     app.option<fixed_string("port")>("--port", "Port")
         .integer()
         .default_value(9999)
-        .env("TEST_PORT");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -86,24 +78,23 @@ TEST_CASE("EnvVar default falls through to hardcoded default")
 
 TEST_CASE("EnvVar satisfies required")
 {
-    setenv("TEST_TOKEN", "secret123", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_TOKEN", "secret123"};
     App app("test", "1.0", "Env required");
     app.option<fixed_string("token")>("--token", "Token")
         .str()
-        .env("TEST_TOKEN")
+        .env(env_guard.name())
         .required();
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<std::string, fixed_string("token")>() == "secret123");
-    unsetenv("TEST_TOKEN");
 }
 
 TEST_CASE("EnvVar absent env var does not set value")
 {
-    unsetenv("TEST_PORT");
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PORT", std::nullopt};
     App app("test", "1.0", "Env absent");
-    app.option<fixed_string("port")>("--port", "Port").integer().env("TEST_PORT");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
@@ -112,115 +103,133 @@ TEST_CASE("EnvVar absent env var does not set value")
 
 TEST_CASE("EnvVar env overrides default when both set")
 {
-    setenv("TEST_PORT", "3000", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PORT", "3000"};
     App app("test", "1.0", "Env over default");
     app.option<fixed_string("port")>("--port", "Port")
         .integer()
         .default_value(5000)
-        .env("TEST_PORT");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 3000);
-    unsetenv("TEST_PORT");
 }
 
 TEST_CASE("EnvVar bool option reads true from environment")
 {
-    setenv("TEST_VERBOSE", "true", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSE", "true"};
     App app("test", "1.0", "Env bool true");
     app.option<fixed_string("verbose")>("--verbose", "Verbose")
         .boolean()
-        .env("TEST_VERBOSE");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
-    unsetenv("TEST_VERBOSE");
 }
 
 TEST_CASE("EnvVar bool option reads false from environment")
 {
-    setenv("TEST_VERBOSE", "0", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSE", "0"};
     App app("test", "1.0", "Env bool false");
     app.option<fixed_string("verbose")>("--verbose", "Verbose")
         .boolean()
-        .env("TEST_VERBOSE");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
-    unsetenv("TEST_VERBOSE");
 }
 
 TEST_CASE("EnvVar bool option overrides default")
 {
-    setenv("TEST_VERBOSE", "true", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSE", "true"};
     App app("test", "1.0", "Env bool over default");
     app.option<fixed_string("verbose")>("--verbose", "Verbose")
         .boolean()
         .default_value(false)
-        .env("TEST_VERBOSE");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
-    unsetenv("TEST_VERBOSE");
 }
 
 TEST_CASE("EnvVar bool CLI flag overrides environment")
 {
-    setenv("TEST_VERBOSE", "false", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSE", "false"};
     App app("test", "1.0", "Env bool CLI override");
     app.option<fixed_string("verbose")>("--verbose", "Verbose")
         .boolean()
-        .env("TEST_VERBOSE");
+        .env(env_guard.name());
     Argv argv{"test", "--verbose"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
-    unsetenv("TEST_VERBOSE");
 }
 
 TEST_CASE("EnvVar bool invalid value errors")
 {
-    setenv("TEST_VERBOSE", "maybe", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSE", "maybe"};
     App app("test", "1.0", "Env bool invalid");
     app.option<fixed_string("verbose")>("--verbose", "Verbose")
         .boolean()
-        .env("TEST_VERBOSE");
+        .env(env_guard.name());
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
     auto msg = std::string_view(r.unwrap_err().what());
     CHECK(msg.find("invalid value 'maybe' for '--verbose'") != std::string_view::npos);
     CHECK(msg.find("expected bool") != std::string_view::npos);
-    unsetenv("TEST_VERBOSE");
 }
 
 TEST_CASE("EnvVar option on subcommand reads environment")
 {
-    setenv("TEST_HOST", "sub.example.com", 1);
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_HOST", "sub.example.com"};
     App app("test", "1.0", "Env subcommand");
     app.add_leaf("sub", "Sub")
         .option<fixed_string("host")>("--host", "Host")
         .str()
-        .env("TEST_HOST");
+        .env(env_guard.name());
     Argv argv{"test", "sub"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().get<std::string, fixed_string("host")>() == "sub.example.com");
-    unsetenv("TEST_HOST");
+}
+
+TEST_CASE("ScopedEnvVar restores previous value")
+{
+    ScopedEnvVar outer{"PJH_CLI_TEST_ENV_RESTORE", "before"};
+    {
+        ScopedEnvVar inner{"PJH_CLI_TEST_ENV_RESTORE", "during"};
+        const char *inner_value = std::getenv("PJH_CLI_TEST_ENV_RESTORE");
+        REQUIRE(inner_value != nullptr);
+        CHECK(std::string(inner_value) == "during");
+    }
+    const char *restored_value = std::getenv("PJH_CLI_TEST_ENV_RESTORE");
+    REQUIRE(restored_value != nullptr);
+    CHECK(std::string(restored_value) == "before");
+}
+
+TEST_CASE("ScopedEnvVar removes variable when value is nullopt")
+{
+    ScopedEnvVar outer{"PJH_CLI_TEST_ENV_REMOVE", "x"};
+    {
+        ScopedEnvVar inner{"PJH_CLI_TEST_ENV_REMOVE", std::nullopt};
+        CHECK(std::getenv("PJH_CLI_TEST_ENV_REMOVE") == nullptr);
+    }
+    const char *restored_value = std::getenv("PJH_CLI_TEST_ENV_REMOVE");
+    REQUIRE(restored_value != nullptr);
+    CHECK(std::string(restored_value) == "x");
 }
 
 #ifdef _WIN32
 TEST_CASE("EnvSnapshot reads Windows environment")
 {
-    _putenv_s("PJH_CLI_TEST_ENV", "42");
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_SNAPSHOT", "42"};
     detail::EnvSnapshot snap;
-    auto *v = snap.get("PJH_CLI_TEST_ENV");
+    auto *v = snap.get(env_guard.name());
     REQUIRE(v != nullptr);
     CHECK(*v == "42");
-    _putenv_s("PJH_CLI_TEST_ENV", "");
 }
 #endif
