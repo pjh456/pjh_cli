@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <deque>
 #include <iostream>
+#include <memory>
 #include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <sstream>
@@ -48,8 +49,11 @@ struct StreamFixture
 class ScriptedTerminal : public pjh::cli::ITerminal
 {
 public:
+    ~ScriptedTerminal() override { *alive = false; }
+
     pjh::cli::KeyEvent read_key() override
     {
+        ++read_calls;
         if (keys.empty())
             return {pjh::cli::KeyEvent::Code::Eof, 0};
         auto event = keys.front();
@@ -74,6 +78,9 @@ public:
     std::string written;                  ///< Accumulated echo output.
     std::size_t suspend_calls = 0;        ///< Times suspend() was invoked.
     std::size_t resume_calls = 0;         ///< Times resume() was invoked.
+    std::shared_ptr<bool> alive =
+        std::make_shared<bool>(true);  ///< False once destroyed.
+    std::size_t read_calls = 0;        ///< read_key() invocations.
 };
 
 #endif

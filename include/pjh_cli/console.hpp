@@ -83,7 +83,10 @@ namespace pjh::cli
         /// When an interactive TTY (or a terminal installed via set_terminal())
         /// is available, input is read through a LineEditor that handles Tab
         /// completion, hint rendering, and Up/Down recall from the injected
-        /// IHistory.  Otherwise each iteration:
+        /// IHistory.  The active terminal is resolved and pinned once per line,
+        /// so set_terminal() may be called from an action: the current line
+        /// finishes on the terminal it was read on and the replacement takes
+        /// effect on the next line.  Otherwise each iteration:
         ///   1. Prints @p m_prompt to m_output.
         ///   2. Reads a line from m_input with std::getline (arrow keys are
         ///      consumed by the terminal line discipline and cannot navigate).
@@ -108,6 +111,13 @@ namespace pjh::cli
 
         /// @brief Install a custom terminal (e.g. a scripted one in tests).
         ///        Pass nullptr to fall back to TTY detection / std::getline.
+        ///
+        /// Safe to call while run() or process_line() is executing: the
+        /// terminal currently in use is kept alive until the in-flight read or
+        /// action finishes, and the replacement takes effect on the next line
+        /// read or the next process_line() call.  Passing nullptr mid-run()
+        /// makes run() fall back to the line-based std::getline loop.
+        /// Not thread-safe: call from the same thread as run()/process_line().
         /// @param terminal  Raw-mode terminal implementation; ownership taken.
         void set_terminal(std::unique_ptr<ITerminal> terminal)
         {
@@ -170,9 +180,12 @@ namespace pjh::cli
         /// line has been executed (regardless of success or failure).
         std::unique_ptr<IHistory> m_history;
 
-        /// @brief Optional raw-mode terminal; when unset, run() probes the
-        ///        input stream and falls back to std::getline for non-TTYs.
-        std::unique_ptr<ITerminal> m_terminal;
+        /// @brief Optional raw-mode terminal.  Shared ownership keeps a
+        ///        terminal alive while a line read or an action still uses it;
+        ///        a replacement is picked up on the next line / process_line().
+        ///        When unset, run() probes the input stream and falls back to
+        ///        std::getline for non-TTYs.
+        std::shared_ptr<ITerminal> m_terminal;
 
         /// @brief Handle `?` or `?query` — list or search subcommands.
         ///

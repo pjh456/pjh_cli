@@ -152,3 +152,61 @@ TEST_CASE("process_line resumes terminal when action throws")
     CHECK(term_ptr->suspend_calls == 1);
     CHECK(term_ptr->resume_calls == 1);
 }
+
+TEST_CASE("set_terminal during run keeps the active terminal alive")
+{
+    App app("test", "1.0", "Terminal swap");
+    InteractiveConsole console(app, "> ");
+    auto t1 = std::make_unique<ScriptedTerminal>();
+    std::shared_ptr<bool> t1_alive = t1->alive;
+    auto t2 = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *p2 = t2.get();
+    bool t1_alive_during_action = false;
+
+    app.add_leaf("swap", "Swap")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                console.set_terminal(std::move(t2));
+                t1_alive_during_action = *t1_alive;
+                return CliResult<void>::Ok();
+            });
+
+    for (char c : std::string("swap")) t1->keys.push_back({KeyEvent::Code::Character, c});
+    t1->keys.push_back({KeyEvent::Code::Enter, 0});
+    t1->keys.push_back({KeyEvent::Code::Eof, 0});
+    t2->keys.push_back({KeyEvent::Code::Eof, 0});
+
+    console.set_terminal(std::move(t1));
+    console.run();
+
+    CHECK(t1_alive_during_action);  // old terminal not freed by set_terminal
+    CHECK(p2->read_calls >= 1u);    // replacement used on the next line
+    CHECK_FALSE(*t1_alive);         // released after the in-flight line
+}
+
+TEST_CASE("set_terminal during process_line keeps the guarded terminal alive")
+{
+    App app("test", "1.0", "Guard swap");
+    InteractiveConsole console(app, "> ");
+    auto t1 = std::make_unique<ScriptedTerminal>();
+    std::shared_ptr<bool> t1_alive = t1->alive;
+    auto t2 = std::make_unique<ScriptedTerminal>();
+    bool t1_alive_during_action = false;
+
+    app.add_leaf("swap", "Swap")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                console.set_terminal(std::move(t2));
+                t1_alive_during_action = *t1_alive;
+                return CliResult<void>::Ok();
+            });
+
+    console.set_terminal(std::move(t1));
+    auto r = console.process_line("swap");
+
+    CHECK(r.is_ok());
+    CHECK(t1_alive_during_action);
+    CHECK_FALSE(*t1_alive);  // released when process_line returned
+}

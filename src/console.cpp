@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <memory>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console.hpp>
@@ -91,30 +92,26 @@ namespace pjh::cli
             return HintBuilder::format(m_root, line);
         };
 
-        ITerminal *term = m_terminal.get();
-        if (!term)
-        {
+        if (!m_terminal)
             m_terminal = make_tty_terminal(m_input, m_output);
-            term = m_terminal.get();
-        }
 
         std::string line;
-        if (term)
+        while (m_running)
         {
+            std::shared_ptr<ITerminal> term = m_terminal;  // pin for this line
+            if (!term)
+                break;  // removed mid-run -> getline fallback
+
             LineEditor editor(*term, m_prompt, m_history.get());
-            while (m_running)
-            {
-                if (!editor.read_line(line, complete, hint))
-                    break;
-                if (line.empty())
-                    continue;
-                if (line == "quit" || line == "exit" || line == "q")
-                    break;
-                auto r = process_line(line);
-                if (r.is_err())
-                    m_error << r.unwrap_err().what() << "\n";
-            }
-            return;
+            if (!editor.read_line(line, complete, hint))
+                return;
+            if (line.empty())
+                continue;
+            if (line == "quit" || line == "exit" || line == "q")
+                return;
+            auto r = process_line(line);
+            if (r.is_err())
+                m_error << r.unwrap_err().what() << "\n";
         }
 
         while (m_running)
@@ -189,7 +186,8 @@ namespace pjh::cli
 
         CliResult<void> exec = CliResult<void>::Ok();
         {
-            TerminalActionGuard guard(m_terminal.get());
+            std::shared_ptr<ITerminal> term = m_terminal;  // pin for the action
+            TerminalActionGuard guard(term.get());
             exec = cmd->execute(ctx);
         }
         if (m_history)
