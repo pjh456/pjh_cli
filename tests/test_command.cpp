@@ -61,9 +61,9 @@ TEST_CASE("Option int with short no default")
 TEST_CASE("Option string with short")
 {
     App app("test", "1.0", "Test");
-    auto &opt = app.option<fixed_string("host")>("--host", 'h', "Host address").str();
+    auto &opt = app.option<fixed_string("host")>("--host", 'H', "Host address").str();
     CHECK(opt.long_name() == "host");
-    CHECK(opt.short_name() == 'h');
+    CHECK(opt.short_name() == 'H');
     CHECK(opt.has_value() == true);
 }
 
@@ -283,7 +283,7 @@ TEST_CASE("Command options count")
     cmd.option<fixed_string("verbose")>("--verbose", "Enable verbose output").boolean();
     cmd.option<fixed_string("port")>("--port", 'p', "Port number").integer();
     cmd.option<fixed_string("host")>(
-        "--host", 'h', "Host address", std::string("0.0.0.0"));
+        "--host", 'H', "Host address", std::string("0.0.0.0"));
     cmd.option<fixed_string("timeout")>("--timeout", "Timeout in seconds", 30);
     cmd.option<fixed_string("required-opt")>("--required-opt", 'r', "Required option")
         .integer()
@@ -370,4 +370,80 @@ TEST_CASE("OptionDef completer empty when not registered")
     auto *def = app.find_option_by_long("port");
     REQUIRE(def != nullptr);
     CHECK_FALSE(def->completer_fn());
+}
+
+TEST_CASE("reserved long option --help is rejected at registration")
+{
+    App app("test", "1.0", "Reserved help");
+    CHECK_THROWS_WITH_AS(
+        app.option<fixed_string("help")>("--help", "Help").boolean(),
+        "BaseCommand::add_option: option '--help' is reserved for the built-in "
+        "--help/-h/--version flags on command 'test'",
+        LogicError);
+    CHECK(app.options().empty());
+    CHECK(app.find_option_by_long("help") == nullptr);
+}
+
+TEST_CASE("reserved long option --version is rejected at registration")
+{
+    App app("test", "1.0", "Reserved version");
+    CHECK_THROWS_WITH_AS(
+        app.option<fixed_string("version")>("--version", "Version").boolean(),
+        "BaseCommand::add_option: option '--version' is reserved for the built-in "
+        "--help/-h/--version flags on command 'test'",
+        LogicError);
+    CHECK(app.options().empty());
+}
+
+TEST_CASE("reserved short option -h is rejected at registration")
+{
+    App app("test", "1.0", "Reserved short");
+    CHECK_THROWS_WITH_AS(
+        app.option<fixed_string("host")>("--host", 'h', "Host").str(),
+        "BaseCommand::add_option: option '-h' is reserved for the built-in "
+        "--help/-h/--version flags on command 'test'",
+        LogicError);
+    CHECK(app.options().empty());
+    CHECK(app.find_option_by_long("host") == nullptr);  // no partial long insert
+    CHECK(app.find_option_by_short('h') == nullptr);
+}
+
+TEST_CASE("reserved names are rejected without the -- prefix")
+{
+    App app("test", "1.0", "Reserved normalized");
+    CHECK_THROWS_AS(
+        app.option<fixed_string("help")>("help", "Help").boolean(), LogicError);
+    CHECK_THROWS_AS(
+        app.option<fixed_string("version")>("version", "V").boolean(), LogicError);
+}
+
+TEST_CASE("near-reserved option names are allowed")
+{
+    App app("test", "1.0", "Near reserved");
+    CHECK_NOTHROW(app.option<fixed_string("helper")>("--helper", "Helper").boolean());
+    CHECK_NOTHROW(
+        app.option<fixed_string("versioned")>("--versioned", "Versioned").boolean());
+    CHECK_NOTHROW(app.option<fixed_string("host")>("--host", 'H', "Host").str());
+    CHECK(app.options().size() == 3);
+    CHECK(app.find_option_by_short('H') != nullptr);
+}
+
+TEST_CASE("reserved name rejection is case-sensitive")
+{
+    App app("test", "1.0", "Case");
+    CHECK_NOTHROW(app.option<fixed_string("h")>("--Help", "Help upper").boolean());
+    CHECK_NOTHROW(app.option<fixed_string("v")>("--Version", "Version upper").boolean());
+    CHECK(app.options().size() == 2);
+}
+
+TEST_CASE("reserved names are rejected on non-root commands")
+{
+    App app("test", "1.0", "Reserved child");
+    auto &sub = app.add_leaf("sub", "Sub");
+    CHECK_THROWS_AS(
+        sub.option<fixed_string("help")>("--help", "Help").boolean(), LogicError);
+    CHECK_THROWS_AS(
+        sub.option<fixed_string("host")>("--host", 'h', "Host").str(), LogicError);
+    CHECK(sub.options().empty());
+    CHECK(app.options().empty());
 }

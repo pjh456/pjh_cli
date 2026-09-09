@@ -8,6 +8,7 @@
 #include <memory>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/concept.hpp>
+#include <pjh_cli/detail/meta_flags.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/option/group.hpp>
 #include <pjh_cli/option/option_builder.hpp>
@@ -336,8 +337,28 @@ namespace pjh::cli
         /// @brief Register an option definition.
         ///
         /// Populates both lookup maps and the ordered option list.
+        /// @throws LogicError if the option long name is "help" or "version",
+        ///         or the short name is 'h' — those tokens are reserved for the
+        ///         built-in --help/-h/--version meta-flags and cannot be
+        ///         registered on any command.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
+            if (detail::is_reserved_long_name(opt->long_name()))
+                throw LogicError(
+                    std::string("BaseCommand::add_option: option '") +
+                    opt->display_name() +
+                    "' is reserved for the built-in --help/-h/--version flags on command "
+                    "'" +
+                    m_name + "'");
+            if (opt->short_name() != 0 &&
+                detail::is_reserved_short_name(opt->short_name()))
+                throw LogicError(
+                    std::string("BaseCommand::add_option: option '-") +
+                    std::string(1, opt->short_name()) +
+                    "' is reserved for the built-in --help/-h/--version flags on command "
+                    "'" +
+                    m_name + "'");
+
             m_option_by_long[opt->long_name()] = opt.get();
             if (opt->short_name() != 0)
                 m_option_by_short[opt->short_name()] = opt.get();

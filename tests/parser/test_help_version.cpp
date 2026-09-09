@@ -321,3 +321,39 @@ TEST_CASE("Empty injected help text cancels help_requested")
     CHECK_FALSE(ctx.help_requested());
     CHECK(ctx.help_text().empty());
 }
+
+TEST_CASE("near-reserved user options do not shadow help or version")
+{
+    App app("test", "1.0", "No shadow");
+    app.option<fixed_string("helper")>("--helper", "Helper").boolean();
+    app.option<fixed_string("host")>("--host", 'H', "Host").str();
+
+    {
+        Argv argv{"test", "--help"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        REQUIRE(r.is_ok());
+        CHECK(r.unwrap().help_requested());
+    }
+    {
+        Argv argv{"test", "-h"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        REQUIRE(r.is_ok());
+        CHECK(r.unwrap().help_requested());
+    }
+    {
+        Argv argv{"test", "--version"};
+        auto r = app.parse(argv.argc(), argv.argv());
+        REQUIRE(r.is_ok());
+        CHECK(r.unwrap().version_requested());
+    }
+}
+
+TEST_CASE("user -H option parses while -h stays help")
+{
+    App app("test", "1.0", "H vs h");
+    app.option<fixed_string("host")>("--host", 'H', "Host").str();
+    Argv argv{"test", "-H", "example.com"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("host")>() == "example.com");
+}

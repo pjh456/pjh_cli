@@ -96,6 +96,11 @@ auto color = ctx.get_enum<Color, fixed_string("color")>();
 context has `help_requested()` / `version_requested()` set (with pre-formatted
 `help_text()` / `version_text()`).
 
+`--help` / `-h` / `--version` are reserved and take precedence over user options.
+Registering a long option named `help` or `version`, or a short option `-h`,
+throws `LogicError` at construction. Use another short character (for example
+`-H` for `--host`) or a different long name.
+
 Dispatch on those predicates **before** reading any value: the meta-flag path
 skips `ParseFinalizer`, so defaults and environment fallbacks are not applied and
 `ctx.get()` may throw `LogicError`.

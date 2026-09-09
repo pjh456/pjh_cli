@@ -2,6 +2,7 @@
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/detail/help_formatter.hpp>
+#include <pjh_cli/detail/meta_flags.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
@@ -26,7 +27,7 @@ namespace pjh::cli
         bool double_dash,
         const HelpFormatterFn &help_fmt)
     {
-        if (double_dash || (a != "--help" && a != "-h"))
+        if (double_dash || !detail::is_meta_help_token(a))
             return pjh::result::Option<ParseContext>::None();
 
         ParseContextWriter::set_help_text(
@@ -43,7 +44,7 @@ namespace pjh::cli
     pjh::result::Option<ParseContext> Parser::try_handle_version(
         BaseCommand &root, ParseContext &&ctx, std::string_view a, bool double_dash)
     {
-        if (double_dash || a != "--version")
+        if (double_dash || !detail::is_meta_version_token(a))
             return pjh::result::Option<ParseContext>::None();
 
         ParseContextWriter::set_version_text(
