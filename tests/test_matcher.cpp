@@ -38,6 +38,10 @@ namespace
     };
 }
 
+static_assert(
+    !noexcept(edit_distance(std::string_view{}, std::string_view{})),
+    "edit_distance allocates; must not be noexcept");
+
 TEST_CASE("edit_distance")
 {
     CHECK(edit_distance("", "") == 0);

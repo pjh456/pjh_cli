@@ -50,7 +50,11 @@ namespace pjh::cli::detail
 #endif
         }
 
-        const std::string *get(std::string_view name) const noexcept
+        /// @brief Look up @p name in the captured environment.
+        /// @param name Environment variable name.
+        /// @return Pointer to the value, or nullptr if absent.
+        /// @throws std::bad_alloc if the temporary lookup key cannot be allocated.
+        const std::string *get(std::string_view name) const
         {
             auto it = m_env.find(std::string(name));
             if (it == m_env.end())

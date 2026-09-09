@@ -7,9 +7,15 @@
 #include <pjh_cli/option/option_def.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 
 using namespace pjh::cli;
 using namespace pjh::cli::detail;
+
+static_assert(
+    !noexcept(
+        is_visible_and_enabled(std::declval<const BaseCommand &>(), Visibility::Both)),
+    "is_visible_and_enabled invokes the user enabled predicate");
 
 TEST_CASE("is_visible_and_enabled both modes")
 {

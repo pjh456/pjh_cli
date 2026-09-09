@@ -13,9 +13,14 @@
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace pjh::cli;
+
+static_assert(
+    !noexcept(std::declval<const detail::EnvSnapshot &>().get(std::string_view{})),
+    "EnvSnapshot::get allocates a lookup key; must not be noexcept");
 
 struct Argv
 {

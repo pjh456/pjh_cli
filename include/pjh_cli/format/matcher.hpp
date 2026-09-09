@@ -14,7 +14,8 @@ namespace pjh::cli
     /// @param a First string.
     /// @param b Second string.
     /// @return Number of single-character edits (insert/delete/substitute) needed.
-    int edit_distance(std::string_view a, std::string_view b) noexcept;
+    /// @throws std::bad_alloc if the two DP rows cannot be allocated.
+    int edit_distance(std::string_view a, std::string_view b);
 
     /// @brief A fuzzy match result returned by fuzzy_find_subcommands().
     struct FuzzyMatch

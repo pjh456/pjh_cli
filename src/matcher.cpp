@@ -12,7 +12,7 @@
 
 namespace pjh::cli
 {
-    int edit_distance(std::string_view a, std::string_view b) noexcept
+    int edit_distance(std::string_view a, std::string_view b)
     {
         auto m = a.size();
         auto n = b.size();

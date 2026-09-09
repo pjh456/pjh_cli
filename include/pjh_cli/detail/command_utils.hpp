@@ -19,7 +19,8 @@ namespace pjh::cli::detail
     /// @param cmd   The command to check.
     /// @param mode  The active visibility mode (Repl, Cli, Both, Hidden).
     /// @return true if the command is visible and enabled.
-    inline bool is_visible_and_enabled(const BaseCommand &cmd, Visibility mode) noexcept
+    /// @throws Any exception propagated by the user-supplied `enabled` predicate.
+    inline bool is_visible_and_enabled(const BaseCommand &cmd, Visibility mode)
     {
         if (!cmd.is_enabled())
             return false;
