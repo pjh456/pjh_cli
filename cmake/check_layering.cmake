@@ -79,6 +79,7 @@ set(_src_map
     "src/console/help_navigator.cpp=console"
     "src/console/in_memory_history.cpp=console"
     "src/console/ring_buffer_history.cpp=console"
+    "src/console/file_history.cpp=console"
     "src/console/line_editor.cpp=console"
     "src/console/tty_terminal.cpp=console")
 

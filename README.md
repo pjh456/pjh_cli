@@ -243,10 +243,24 @@ option **values** registered with `.completer(fn)`.  A unique candidate is
 appended (with a trailing space); zero or several candidates print the candidate
 list and a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the
 previous/next line from the injected `IHistory` (`InMemoryHistory` by default,
-`RingBufferHistory` for bounded storage, `NoOpHistory`/`nullptr` to disable) and
-restore the draft typed before the first Up when Down passes the newest entry.
+`RingBufferHistory` for bounded storage, `FileHistory` for history that survives
+restarts, `NoOpHistory`/`nullptr` to disable) and restore the draft typed before
+the first Up when Down passes the newest entry.
 Every submitted non-empty line is recorded — including `help`/`?` meta lines and
 lines that fail to parse — so Up can recall a typo and fix it.
+`FileHistory` (granular include
+`#include <pjh_cli/console/file_history.hpp>`) stores one entry per line in the
+backing file, appending each stored line the moment it is recorded, so a crash
+or restart loses at most the in-flight line; a missing or unreadable file
+starts an empty history and write failures are silent.  `max_entries` bounds
+both memory and the file (`0` = unlimited), and the path is used verbatim
+(no `~` expansion, parent directories are not created):
+
+```cpp
+#include <pjh_cli/console/file_history.hpp>
+InteractiveConsole console(app, "> ", std::cin, std::cout, std::cerr, {}, {},
+                           std::make_unique<FileHistory>(".myapp_history"));
+```
 Redirecting stdout (e.g. `./app > log`) disables raw mode and falls back to
 `std::getline`, so the prompt is not written into the file while keystrokes are
 consumed invisibly.
@@ -374,6 +388,7 @@ via that form.
 | `complete_line_result(root, line, cursor)` | Same, plus the matched prefix length for inline/compact value insertion |
 | `complete_value_candidates(opt, prefix)` | Option-value candidates from `.completer(fn)` |
 | `InteractiveConsole(root, prompt)` | REPL console |
+| `std::make_unique<FileHistory>(path, max?)` | Persistent REPL history backend: one entry per line, appended on push, `max` `0` = unlimited |
 | `console.run()` / `console.stop()` | Start / stop REPL loop |
 | `console.set_prompt(s)` | Override prompt string |
 | `console.set_terminal(t)` | Install a custom `ITerminal` (nullptr = TTY detect / getline) |

@@ -39,6 +39,7 @@ target_sources(pjh_cli
     src/console/help_navigator.cpp
     src/console/in_memory_history.cpp
     src/console/ring_buffer_history.cpp
+    src/console/file_history.cpp
     src/console/line_editor.cpp
     src/console/tty_terminal.cpp
     src/hint.cpp
