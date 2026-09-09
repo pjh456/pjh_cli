@@ -158,8 +158,26 @@ namespace pjh::cli
             }
             return out;
         }
+
+        /// @brief Dependent-false helper for compile-time exhaustive
+        ///        `if constexpr` dispatch chains.
+        ///
+        /// Always `false`, but the value depends on the template parameter, so
+        /// a `static_assert(always_false_v<T>)` inside a discarded `else`
+        /// branch only fires once that branch is instantiated for an unhandled
+        /// type.  Used by format_error() and detail::dispatch_default().
+        /// @tparam Ts Ignored; present so the name is usable as a pack.
+        template <typename... Ts>
+        inline constexpr bool always_false_v = false;
     }
 
+    /// @brief Render an ErrorInfo variant to its human-readable message.
+    ///
+    /// Exhaustive by construction: the visitor has a final dependent
+    /// `static_assert`, so adding an ErrorInfo alternative without a matching
+    /// branch is a compile-time error here, not undefined behaviour.
+    /// @param info Structured error payload.
+    /// @return Rendered message without the "Parse Error: " prefix.
     inline std::string format_error(const ErrorInfo &info)
     {
         return std::visit(
@@ -252,6 +270,12 @@ namespace pjh::cli
                 else if constexpr (std::same_as<T, NoCommandMatchedError>)
                 {
                     return std::string("no command matched");
+                }
+                else
+                {
+                    static_assert(
+                        detail::always_false_v<T>,
+                        "unhandled ErrorInfo alternative: add a format_error branch");
                 }
             },
             info);

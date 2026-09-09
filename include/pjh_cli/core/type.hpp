@@ -30,12 +30,14 @@ namespace pjh::cli
     /// Usage: `return CliFailure{ErrorFactory::unknown_option("--foo")};`
     using CliFailure = pjh::result::Failure<CliError>;
 
-    /// @brief Runtime type tag for the five builtin option types.
+    /// @brief Runtime type tag for the builtin option types.
     ///
     /// Used for runtime dispatch in ValueWriter::apply_arg_value() and
-    /// HintBuilder's type_name().  Each enumerator corresponds to one
+    /// HintBuilder's type_name().  Each real enumerator corresponds to one
     /// detail::BuiltinTraits row; its ordinal must equal the storage index in
-    /// detail::BuiltinTypes, which the static_asserts below enforce.
+    /// detail::BuiltinTypes, which the static_asserts below enforce.  Count is
+    /// a sentinel, never stored or indexed, and pins the enum cardinality so a
+    /// stray enumerator is a compile-time error; it must stay last.
     enum class ValueTag : uint8_t
     {
         Bool,    ///< bool flag / negatable option
@@ -43,6 +45,7 @@ namespace pjh::cli
         Double,  ///< double / float option
         String,  ///< std::string option
         Path,    ///< std::filesystem::path option
+        Count    ///< Sentinel: number of real tags; must stay last, never stored.
     };
 
     namespace detail
@@ -129,8 +132,9 @@ namespace pjh::cli
         ///
         /// Position in this tuple is the ParseContext storage index and must
         /// equal the ValueTag ordinal; the static_asserts below enforce that.
-        /// Adding a storage type means adding one row here, one ValueTag
-        /// enumerator and one BuiltinTraits specialization.
+        /// Adding a storage type means adding one row here, one BuiltinTraits
+        /// specialization, and one ValueTag enumerator before ValueTag::Count,
+        /// plus a branch in detail::dispatch_default().
         using BuiltinTypes =
             std::tuple<bool, int, double, std::string, std::filesystem::path>;
 
@@ -187,27 +191,14 @@ namespace pjh::cli
                 (static_cast<size_t>(BuiltinTraits<Ts>::tag) == type_index_v<Ts>) && ...);
         }
 
-        /// @brief Highest tag ordinal among the BuiltinTypes rows.
-        /// @tparam Ts BuiltinTypes elements.
-        /// @return The maximum ValueTag ordinal.
-        template <typename... Ts>
-        constexpr size_t builtin_max_tag(std::tuple<Ts...> *) noexcept
-        {
-            size_t m = 0;
-            ((m = static_cast<size_t>(BuiltinTraits<Ts>::tag) > m
-                      ? static_cast<size_t>(BuiltinTraits<Ts>::tag)
-                      : m),
-             ...);
-            return m;
-        }
-
         static_assert(
             builtin_tags_match_order(static_cast<BuiltinTypes *>(nullptr)),
             "ValueTag ordinal must equal the BuiltinTypes storage index");
         static_assert(
-            builtin_max_tag(static_cast<BuiltinTypes *>(nullptr)) + 1 ==
-                std::tuple_size_v<BuiltinTypes>,
-            "ValueTag must enumerate exactly the BuiltinTypes rows");
+            static_cast<size_t>(ValueTag::Count) == std::tuple_size_v<BuiltinTypes>,
+            "ValueTag::Count must equal the number of BuiltinTypes rows: add the "
+            "BuiltinTypes row + BuiltinTraits specialization, or remove the stray "
+            "ValueTag enumerator");
 
         /// @brief Hint labels for the BuiltinTypes rows, in storage order.
         /// @tparam Ts BuiltinTypes elements.

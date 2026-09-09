@@ -4,6 +4,7 @@
 #include <pjh_cli/core/error.hpp>
 #include <stdexcept>
 #include <string_view>
+#include <vector>
 
 using namespace pjh::cli;
 
@@ -230,4 +231,32 @@ TEST_CASE("command_disabled empty")
 {
     auto e = ErrorFactory::command_disabled("");
     CHECK(std::string_view(e.what()) == "Parse Error: command '' is not available");
+}
+
+TEST_CASE("format_error covers every ErrorInfo alternative")
+{
+    const std::vector<ErrorInfo> all = {
+        RawMessageError{"raw"},
+        ParseError{"--x", 1},
+        UnknownOptionError{"--x"},
+        MissingValueError{"--x"},
+        MissingRequiredOptionError{"--x"},
+        MissingRequiredArgError{"x"},
+        TypeConversionError{"--x", "v", "integer"},
+        AmbiguousCommandError{"x", {"a", "b"}},
+        UnknownCommandError{"x", {"y"}},
+        ValueOutOfRangeError{"--x", "9", "0", "5"},
+        EnumValueError{"--x", "v", {"a"}},
+        CommandDisabledError{"x"},
+        ConflictingOptionsError{{"a", "b"}},
+        RequiredOptionGroupError{{"a"}, true},
+        OptionDoesNotAcceptValueError{"--x"},
+        NoCommandMatchedError{},
+    };
+    REQUIRE(all.size() == 16u);
+    for (const auto &info : all)
+    {
+        CliError e(info);
+        CHECK(std::string_view(e.what()).starts_with("Parse Error: "));
+    }
 }

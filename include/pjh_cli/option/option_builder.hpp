@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_OPTION_BUILDER_HPP
 
 #include <filesystem>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/concept.hpp>
 #include <pjh_cli/option/option_def.hpp>
@@ -93,6 +94,10 @@ namespace pjh::cli::detail
 
     /// @brief Dispatch an OptionBuilder to the correct typed subclass and
     ///        set a default value.
+    ///
+    /// Exhaustive by construction: the final dependent `static_assert` makes a
+    /// new BuiltinType without a branch a compile-time error at the first
+    /// inferred-default call, not undefined behaviour.
     template <typename T, typename Builder>
         requires detail::BuiltinType<T>
     OptionDef &dispatch_default(Builder &builder, T default_value)
@@ -107,6 +112,10 @@ namespace pjh::cli::detail
             return builder.str().default_value(default_value);
         else if constexpr (std::same_as<T, std::filesystem::path>)
             return builder.path().default_value(default_value);
+        else
+            static_assert(
+                always_false_v<T>,
+                "unhandled BuiltinType: add a dispatch_default branch");
     }
 
 }  // namespace pjh::cli::detail

@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
 #include <pjh_cli/command/command_builder.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
@@ -49,6 +50,23 @@ TEST_CASE("Command builder aggregator resolves the inferred default overload")
 
     CHECK(port.long_name() == "port");
     CHECK(port.has_default());
+}
+
+TEST_CASE("Command builder inferred default covers every builtin type")
+{
+    LeafCommand cmd("build", "Inferred defaults");
+    cmd.option<fixed_string("flag")>("--flag", "Bool", true);
+    cmd.option<fixed_string("num")>("--num", "Int", 1);
+    cmd.option<fixed_string("ratio")>("--ratio", "Double", 1.5);
+    cmd.option<fixed_string("name")>("--name", "Str", std::string("s"));
+    cmd.option<fixed_string("out")>("--out", "Path", std::filesystem::path("p"));
+
+    REQUIRE(cmd.options().size() == 5u);
+    CHECK(cmd.find_option_by_long("flag")->has_default());
+    CHECK(cmd.find_option_by_long("num")->has_default());
+    CHECK(cmd.find_option_by_long("ratio")->has_default());
+    CHECK(cmd.find_option_by_long("name")->has_default());
+    CHECK(cmd.find_option_by_long("out")->has_default());
 }
 
 TEST_CASE("Command builder aggregator resolves option groups")

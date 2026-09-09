@@ -52,9 +52,10 @@ TEST_CASE("type_index_v is stable and ordered")
 TEST_CASE("BuiltinTypes order matches tag ordinals")
 {
     CHECK(detail::builtin_tags_match_order(static_cast<detail::BuiltinTypes *>(nullptr)));
+    static_assert(
+        static_cast<size_t>(ValueTag::Count) == std::tuple_size_v<detail::BuiltinTypes>);
     CHECK(
-        detail::builtin_max_tag(static_cast<detail::BuiltinTypes *>(nullptr)) + 1 ==
-        std::tuple_size_v<detail::BuiltinTypes>);
+        static_cast<size_t>(ValueTag::Count) == std::tuple_size_v<detail::BuiltinTypes>);
 }
 
 TEST_CASE("BuiltinTraits hint labels")
