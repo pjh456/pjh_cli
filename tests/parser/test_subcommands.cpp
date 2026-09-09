@@ -375,7 +375,9 @@ TEST_CASE("Parser alias on branch subcommand")
     Argv argv{"test", "db", "migrate"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
-    CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "database migrate");
+    CHECK(
+        MatchedPathResolver::to_path_string(r.unwrap().matched_command()) ==
+        "database migrate");
 }
 
 TEST_CASE("Parser alias with fuzzy match")
@@ -629,4 +631,119 @@ TEST_CASE("Ancestor option conversion error after descent")
     REQUIRE(r.is_err());
     CHECK(
         std::string_view(r.unwrap_err().what()).find("--port") != std::string_view::npos);
+}
+
+// ──────────────────────────────────────────
+//  Extra args accumulate across subcommand descent (task 37)
+// ──────────────────────────────────────────
+
+TEST_CASE("Store extra args before subcommand descent are preserved")
+{
+    App app("test", "1.0", "Store across descent");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    app.add_leaf("sub", "Sub");
+    Argv argv{"test", "foo", "sub", "bar"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 2);
+    CHECK(extra[0] == "foo");
+    CHECK(extra[1] == "bar");
+}
+
+TEST_CASE("Store extra args accumulate across deep nesting")
+{
+    App app("test", "1.0", "Store deep");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    auto &mid = app.add_branch("mid", "Middle");
+    mid.add_leaf("leaf", "Leaf");
+    Argv argv{"test", "a", "mid", "b", "leaf", "c"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 3);
+    CHECK(extra[0] == "a");
+    CHECK(extra[1] == "b");
+    CHECK(extra[2] == "c");
+}
+
+TEST_CASE("Store extra args coexist with leaf positional after descent")
+{
+    App app("test", "1.0", "Store positional");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    auto &sub = app.add_leaf("sub", "Sub");
+    sub.arg<std::string, 0>("file", "File");
+    Argv argv{"test", "foo", "sub", "data.txt", "bar"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<std::string, 0>() == "data.txt");
+    auto extra = ctx.extra_args();
+    REQUIRE(extra.size() == 2);
+    CHECK(extra[0] == "foo");
+    CHECK(extra[1] == "bar");
+}
+
+TEST_CASE("Store extra arg after descent with leaf-only policy")
+{
+    App app("test", "1.0", "Store leaf only");
+    auto &sub = app.add_leaf("sub", "Sub");
+    sub.set_extra_args(ExtraArgsPolicy::Store);
+    Argv argv{"test", "sub", "bar"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 1);
+    CHECK(extra[0] == "bar");
+}
+
+TEST_CASE("Store extra args with double dash before descent")
+{
+    App app("test", "1.0", "Store double dash");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    app.add_leaf("sub", "Sub");
+    Argv argv{"test", "--", "foo", "sub"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 2);
+    CHECK(extra[0] == "foo");
+    CHECK(extra[1] == "sub");
+}
+
+TEST_CASE("Explicit ignore before subcommand descent discards token")
+{
+    App app("test", "1.0", "Ignore before descent");
+    app.set_extra_args(ExtraArgsPolicy::Ignore);
+    app.add_leaf("sub", "Sub");
+    Argv argv{"test", "foo", "sub", "bar"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "sub");
+    CHECK(ctx.extra_args().empty());
+}
+
+TEST_CASE("Error policy before subcommand descent still errors")
+{
+    App app("test", "1.0", "Error before descent");
+    app.set_extra_args(ExtraArgsPolicy::Error);
+    app.add_leaf("sub", "Sub");
+    Argv argv{"test", "foo", "sub"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Store extra args across fuzzy descent")
+{
+    App app("test", "1.0", "Store fuzzy descent");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    app.add_leaf("server", "Server");
+    Argv argv{"test", "foo", "servr", "bar"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 2);
+    CHECK(extra[0] == "foo");
+    CHECK(extra[1] == "bar");
 }

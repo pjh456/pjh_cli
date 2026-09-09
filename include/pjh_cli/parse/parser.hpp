@@ -127,8 +127,9 @@ namespace pjh::cli
         /// On a branch that has subcommands, the implicit `Ignore` default is
         /// overridden to an unknown-command error with fuzzy suggestions,
         /// unless the policy was set explicitly or a `--` barrier is active.
-        /// Otherwise: Error returns a parse_error, Store appends to
-        /// extra_args(), Ignore is a no-op.
+        /// Otherwise: Error returns a parse_error, Store appends to the parse
+        /// root's extra_args() so tokens survive subcommand descent, Ignore is a
+        /// no-op.
         ///
         /// @param cmd          Current command whose policy is read.
         /// @param ctx          Parse context (extra args may be appended).

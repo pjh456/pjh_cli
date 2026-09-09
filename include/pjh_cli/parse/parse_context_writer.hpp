@@ -102,9 +102,13 @@ namespace pjh::cli
         }
 
         /// @brief Append an unrecognised positional argument.
+        ///
+        /// The token is routed to the root of @p ctx's parent chain so extra
+        /// args accumulate across subcommand descent instead of being stranded
+        /// in an ancestor context that the caller never observes.
         static void add_extra_arg(ParseContext &ctx, std::string s)
         {
-            ctx.m_extra_args.push_back(std::move(s));
+            ctx.root_context().m_extra_args.push_back(std::move(s));
         }
     };
 

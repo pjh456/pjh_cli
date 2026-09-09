@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <memory>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
@@ -242,4 +242,28 @@ TEST_CASE("parent chain deep nesting all levels visible")
     CHECK(leaf.get<int, fixed_string("level3")>() == 3);
     CHECK(leaf.get<int, fixed_string("level2")>() == 2);
     CHECK(leaf.get<int, fixed_string("level1")>() == 1);
+}
+
+TEST_CASE("extra args accumulate at the root of the parent chain")
+{
+    auto parent = std::make_shared<ParseContext>();
+    ParseContextWriter::add_extra_arg(*parent, "a");
+
+    ParseContext child;
+    ParseContextWriter::set_parent(child, parent);
+    ParseContextWriter::add_extra_arg(child, "b");
+
+    REQUIRE(child.extra_args().size() == 2);
+    CHECK(child.extra_args()[0] == "a");
+    CHECK(child.extra_args()[1] == "b");
+    // Root-owner: the parent exposes the same collection.
+    CHECK(parent->extra_args().size() == 2);
+}
+
+TEST_CASE("extra args on a standalone context are unchanged")
+{
+    ParseContext ctx;
+    ParseContextWriter::add_extra_arg(ctx, "x");
+    REQUIRE(ctx.extra_args().size() == 1);
+    CHECK(ctx.extra_args()[0] == "x");
 }

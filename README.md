@@ -292,7 +292,7 @@ via that form.
 | `ctx.matched_path()` | Matched subcommand path, e.g. `"server start"` |
 | `ctx.matched_path_info()` | MatchedPath{commands} struct |
 | `ctx.matched_command()` | Deepest matched command pointer |
-| `ctx.extra_args()` | Extra positional args (when policy is `Store`) |
+| `ctx.extra_args()` | Extra positional args (when policy is `Store`); parse-wide, includes tokens seen before a subcommand |
 | `ctx.help_requested()` | True if --help / -h was passed; caller prints `help_text()` and exits |
 | `ctx.help_text()` | Pre-formatted help string (non-empty when help requested) |
 | `ctx.version_requested()` | True if --version was passed; caller prints `version_text()` and exits |

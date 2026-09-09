@@ -164,11 +164,15 @@ namespace pjh::cli
         }
 
         /// @brief Extra positional arguments collected under
-        ///        ExtraArgsPolicy::Store.
+        ///        ExtraArgsPolicy::Store anywhere in this parse.
+        ///
+        /// Storage lives at the root of the parent chain, so tokens collected
+        /// before subcommand descent are preserved; reads from a descendant
+        /// return the whole parse-wide collection in command-line order.
         /// @return Vector of raw string tokens, in order.
         const std::vector<std::string> &extra_args() const noexcept
         {
-            return m_extra_args;
+            return root_context().m_extra_args;
         }
 
         /// @brief The leaf command matched during parsing.
@@ -282,6 +286,22 @@ namespace pjh::cli
             if (m_present.contains(hash))
                 return true;
             return m_parent ? m_parent->has_in_chain(hash) : false;
+        }
+
+        /// @brief Deepest ancestor of this context (the parse root).
+        ParseContext &root_context() noexcept
+        {
+            auto *c = this;
+            while (c->m_parent) c = c->m_parent.get();
+            return *c;
+        }
+
+        /// @brief Const overload of root_context().
+        const ParseContext &root_context() const noexcept
+        {
+            auto *c = this;
+            while (c->m_parent) c = c->m_parent.get();
+            return *c;
         }
 
         ScalarMaps m_scalars;
