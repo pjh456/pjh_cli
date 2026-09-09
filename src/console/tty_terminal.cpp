@@ -277,12 +277,18 @@ namespace pjh::cli
         std::istream &input, std::ostream &output)
     {
 #if defined(_WIN32)
-        if (&input != &std::cin || !::_isatty(::_fileno(stdin)))
+        const bool stdin_tty = ::_isatty(::_fileno(stdin)) != 0;
+        const bool stdout_tty = ::_isatty(::_fileno(stdout)) != 0;
+#else
+        const bool stdin_tty = ::isatty(STDIN_FILENO) != 0;
+        const bool stdout_tty = ::isatty(STDOUT_FILENO) != 0;
+#endif
+        if (!detail::raw_mode_available(
+                &input == &std::cin, &output == &std::cout, stdin_tty, stdout_tty))
             return nullptr;
+#if defined(_WIN32)
         return std::make_unique<WindowsTerminal>(output);
 #else
-        if (&input != &std::cin || !::isatty(STDIN_FILENO))
-            return nullptr;
         return std::make_unique<PosixTerminal>(output);
 #endif
     }

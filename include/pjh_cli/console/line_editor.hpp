@@ -161,14 +161,43 @@ namespace pjh::cli
         bool m_navigating = false;      ///< True between first Up and reset.
     };
 
+    namespace detail
+    {
+        /// @brief Whether raw-mode interactive editing is available.
+        ///
+        /// Raw mode is only safe on the process console: the POSIX and Windows
+        /// backends read the stdin descriptor directly and echo through the
+        /// passed output stream, so a redirected stdout would receive the
+        /// prompt/echo while the user's keystrokes are consumed invisibly.
+        /// Injected test streams and non-console embedders must fall back to
+        /// std::getline.
+        ///
+        /// @param input_is_stdin    @p input is exactly @c std::cin.
+        /// @param output_is_stdout  @p output is exactly @c std::cout.
+        /// @param stdin_is_tty      fd 0 is an interactive terminal.
+        /// @param stdout_is_tty     fd 1 is an interactive terminal.
+        /// @return true only when all four hold.
+        constexpr bool raw_mode_available(
+            bool input_is_stdin,
+            bool output_is_stdout,
+            bool stdin_is_tty,
+            bool stdout_is_tty) noexcept
+        {
+            return input_is_stdin && output_is_stdout && stdin_is_tty && stdout_is_tty;
+        }
+    }  // namespace detail
+
     /// @brief Build a raw-mode TTY terminal for @p input / @p output.
     ///
-    /// Returns nullptr unless @p input is exactly std::cin and its descriptor
-    /// is an interactive terminal, so injected test streams and non-console
-    /// embedders transparently fall back to line-based reading.
+    /// Returns nullptr unless @p input / @p output are exactly std::cin /
+    /// std::cout and both descriptors are interactive terminals, so injected
+    /// test streams and non-console embedders transparently fall back to
+    /// line-based reading.  A redirected stdout (e.g. `app > log`) disables raw
+    /// mode and falls back to std::getline, so the prompt/echo cannot be
+    /// written into the file while keys are consumed invisibly.
     ///
     /// @param input   Input stream to probe (must be std::cin).
-    /// @param output  Stream used for echo.
+    /// @param output  Stream used for echo (must be std::cout).
     /// @return Owned terminal, or nullptr when no interactive TTY is available.
     std::unique_ptr<ITerminal> make_tty_terminal(
         std::istream &input, std::ostream &output);

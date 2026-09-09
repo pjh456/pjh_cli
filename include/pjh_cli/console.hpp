@@ -48,8 +48,9 @@ namespace pjh::cli
     /// to std::cin / std::cout / std::cerr), making the console embeddable in
     /// GUI, WebSocket, server, or test contexts without global stream redirection.
     ///
-    /// When the input stream is an interactive TTY, run() reads through a raw-mode
-    /// LineEditor: Tab completes the token under the cursor via
+    /// When stdin and stdout are both the process console and both are
+    /// interactive TTYs, run() reads through a raw-mode LineEditor: Tab completes
+    /// the token under the cursor via
     /// complete_line_result()
     /// (subcommand names, option names, and `.completer` option values).  A unique
     /// candidate is appended in place; zero or several candidates print the
@@ -58,9 +59,10 @@ namespace pjh::cli
     /// draft typed before the first Up when Down passes the newest entry.
     /// Recall covers every submitted non-empty line, including `help` / `?query`
     /// meta lines and lines that fail to parse.
-    /// Non-TTY input (pipes, files, injected test streams) keeps the line-based
-    /// std::getline path unchanged and cannot observe arrow keys.  A custom
-    /// terminal can be injected with set_terminal(), e.g. a scripted one in tests.
+    /// A redirected stdout (e.g. `app > log`) or any injected stream keeps the
+    /// line-based std::getline path unchanged and cannot observe arrow keys.  A
+    /// custom terminal can be injected with set_terminal(), e.g. a scripted one in
+    /// tests.
     ///
     /// The console does not own the command tree; the caller must keep the
     /// root BranchCommand alive for the console's lifetime.
@@ -78,7 +80,9 @@ namespace pjh::cli
         ///                   outlive the console.
         /// @param prompt     Prompt string shown before each input line.
         /// @param input      Input stream (default std::cin).
-        /// @param output     Output stream (default std::cout).
+        /// @param output     Output stream (default std::cout).  Also the echo
+        ///                   sink for raw-mode editing; must be std::cout for the
+        ///                   auto-probe to enter raw mode.
         /// @param error      Error stream (default std::cerr).
         /// @param query_fmt  Query result formatter (default: QueryOutput::format).
         ///                   Replace to customise how query results are rendered.
@@ -117,11 +121,11 @@ namespace pjh::cli
         /// continues.  stop() from a nested invocation stops only the innermost
         /// active loop.
         ///
-        /// When an interactive TTY (or a terminal installed via set_terminal())
-        /// is available, input is read through a LineEditor that handles Tab
-        /// completion, hint rendering, and Up/Down recall from the injected
-        /// IHistory.  The active terminal is resolved and pinned once per line,
-        /// so set_terminal() may be called from an action: the current line
+        /// When both stdin and stdout are interactive TTYs — or a terminal is
+        /// installed via set_terminal() — input is read through a LineEditor that
+        /// handles Tab completion, hint rendering, and Up/Down recall from the
+        /// injected IHistory.  The active terminal is resolved and pinned once per
+        /// line, so set_terminal() may be called from an action: the current line
         /// finishes on the terminal it was read on and the replacement takes
         /// effect on the next line.  On that path Ctrl-C cancels the current
         /// line (buffer discarded, `^C` echoed, fresh prompt) and the REPL keeps

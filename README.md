@@ -205,16 +205,19 @@ console.run();
 // help / --help / -h for formatted help
 ```
 
-When the input is an interactive TTY, `run()` reads keys in raw mode and Tab
-completes the token under the cursor: subcommand names, option names, and option
-**values** registered with `.completer(fn)`.  A unique candidate is appended
-(with a trailing space); zero or several candidates print the candidate list and
-a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the previous/next
-line from the injected `IHistory` (`InMemoryHistory` by default,
+When stdin and stdout are both interactive TTYs, `run()` reads keys in raw mode
+and Tab completes the token under the cursor: subcommand names, option names, and
+option **values** registered with `.completer(fn)`.  A unique candidate is
+appended (with a trailing space); zero or several candidates print the candidate
+list and a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the
+previous/next line from the injected `IHistory` (`InMemoryHistory` by default,
 `RingBufferHistory` for bounded storage, `NoOpHistory`/`nullptr` to disable) and
 restore the draft typed before the first Up when Down passes the newest entry.
 Every submitted non-empty line is recorded — including `help`/`?` meta lines and
 lines that fail to parse — so Up can recall a typo and fix it.
+Redirecting stdout (e.g. `./app > log`) disables raw mode and falls back to
+`std::getline`, so the prompt is not written into the file while keystrokes are
+consumed invisibly.
 Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
 navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.

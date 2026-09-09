@@ -5,6 +5,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/in_memory_history.hpp>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -436,4 +437,24 @@ TEST_CASE("InteractiveConsole Ctrl-C cancels the line and keeps running")
     CHECK(term_ptr->written.find("^C\n") != std::string::npos);
     CHECK(
         streams.error.str().find("bad") == std::string::npos);  // cancelled, not executed
+}
+
+TEST_CASE("detail::raw_mode_available requires console streams and both TTYs")
+{
+    using pjh::cli::detail::raw_mode_available;
+
+    CHECK(raw_mode_available(true, true, true, true));
+    CHECK_FALSE(raw_mode_available(false, true, true, true));  // injected input
+    CHECK_FALSE(raw_mode_available(true, false, true, true));  // injected output
+    CHECK_FALSE(raw_mode_available(true, true, false, true));  // stdin not a tty
+    CHECK_FALSE(raw_mode_available(true, true, true, false));  // stdout redirected
+}
+
+TEST_CASE("make_tty_terminal rejects injected streams")
+{
+    std::stringstream in, out;
+
+    CHECK(make_tty_terminal(in, out) == nullptr);        // both injected
+    CHECK(make_tty_terminal(in, std::cout) == nullptr);  // input not std::cin
+    CHECK(make_tty_terminal(std::cin, out) == nullptr);  // output not std::cout
 }
