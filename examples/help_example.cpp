@@ -2,9 +2,8 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
-#include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/format/matcher.hpp>
-#include <string_view>
+#include <pjh_cli/parse/matched_path_resolver.hpp>
 
 using namespace pjh::cli;
 
@@ -24,8 +23,7 @@ int main(int argc, char **argv)
     auto &search = app.add_leaf("search", "Search packages");
     search.arg<std::string, 0>("query", "Search query").required();
 
-    if (argc < 2 || std::string_view(argv[1]) == "--help" ||
-        std::string_view(argv[1]) == "-h")
+    if (argc < 2)
     {
         std::cout << HelpFormatter::format_help(app, "pkg");
         return 0;
@@ -41,7 +39,18 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
-    std::cout << "command: " << MatchedPathResolver::to_path_string(ctx.matched_command()) << "\n";
+    if (ctx.help_requested())
+    {
+        std::cout << ctx.help_text();
+        return 0;
+    }
+    if (ctx.version_requested())
+    {
+        std::cout << ctx.version_text();
+        return 0;
+    }
+    std::cout << "command: " << MatchedPathResolver::to_path_string(ctx.matched_command())
+              << "\n";
 
     auto v = ctx.try_get<int, fixed_string("verbose")>();
     if (v.is_some())

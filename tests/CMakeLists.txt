@@ -27,6 +27,7 @@ set(PJH_CLI_TEST_SOURCES
     parser/test_subcommands.cpp
     parser/test_dash.cpp
     parser/test_errors.cpp
+    parser/test_help_version.cpp
     parser/test_groups.cpp
     console/test_basics.cpp
     console/test_process_line_help.cpp

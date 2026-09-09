@@ -52,8 +52,44 @@ auto r = app.parse(argc, argv);
 if (r.is_err()) { /* r.unwrap_err().what() */ return 1; }
 
 auto &ctx = r.unwrap();
+if (ctx.help_requested())
+{
+    std::cout << ctx.help_text();
+    return 0;
+}
+if (ctx.version_requested())
+{
+    std::cout << ctx.version_text();
+    return 0;
+}
 int port = ctx.get<int, fixed_string("port")>();
 auto color = ctx.get_enum<Color, fixed_string("color")>();
+```
+
+### Help and version
+
+`parse()` / `parse_fuzzy()` never print help or version and never exit. When
+`--help` / `-h` or `--version` is seen, parsing stops early and the returned `Ok`
+context has `help_requested()` / `version_requested()` set (with pre-formatted
+`help_text()` / `version_text()`).
+
+Dispatch on those predicates **before** reading any value: the meta-flag path
+skips `ParseFinalizer`, so defaults and environment fallbacks are not applied and
+`ctx.get()` may throw `LogicError`.
+
+```cpp
+auto &ctx = r.unwrap();
+if (ctx.help_requested())
+{
+    std::cout << ctx.help_text();
+    return 0;
+}
+if (ctx.version_requested())
+{
+    std::cout << ctx.version_text();
+    return 0;
+}
+// safe to read values from here
 ```
 
 ### Positional arguments
@@ -181,8 +217,10 @@ subcommands.
 | `ctx.matched_path_info()` | MatchedPath{commands} struct |
 | `ctx.matched_command()` | Deepest matched command pointer |
 | `ctx.extra_args()` | Extra positional args (when policy is `Store`) |
-| `ctx.help_requested()` | True if --help / -h was passed |
-| `ctx.version_requested()` | True if --version was passed |
+| `ctx.help_requested()` | True if --help / -h was passed; caller prints `help_text()` and exits |
+| `ctx.help_text()` | Pre-formatted help string (non-empty when help requested) |
+| `ctx.version_requested()` | True if --version was passed; caller prints `version_text()` and exits |
+| `ctx.version_text()` | Pre-formatted version string (non-empty when version requested) |
 | `HelpFormatter::format_help(cmd)` | Formatted help string |
 | `HelpFormatter::format_usage(cmd)` | One-line usage string |
 | `HelpFormatter::collect_help(cmd)` | Structured HelpInfo data |

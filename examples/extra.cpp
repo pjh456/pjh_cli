@@ -23,6 +23,17 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
+    if (ctx.help_requested())
+    {
+        std::cout << ctx.help_text();
+        return 0;
+    }
+    // LeafCommand has no version; --version still short-circuits the parse.
+    if (ctx.version_requested())
+    {
+        std::cout << ctx.version_text();
+        return 0;
+    }
     std::cout << "output: " << ctx.get<std::string, 0>() << "\n";
 
     auto extra = ctx.extra_args();

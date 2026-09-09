@@ -21,6 +21,17 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
+    if (ctx.help_requested())
+    {
+        std::cout << ctx.help_text();
+        return 0;
+    }
+    // LeafCommand has no version; --version still short-circuits the parse.
+    if (ctx.version_requested())
+    {
+        std::cout << ctx.version_text();
+        return 0;
+    }
     auto src = ctx.get<std::string, 0>();
     auto dst = ctx.get<std::string, 1>();
     std::cout << "Copy " << src << " -> " << dst << "\n";

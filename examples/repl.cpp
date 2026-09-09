@@ -47,8 +47,19 @@ int main(int argc, char **argv)
             return 1;
         }
         auto &ctx = r.unwrap();
+        if (ctx.help_requested())
+        {
+            std::cout << ctx.help_text();
+            return 0;
+        }
+        if (ctx.version_requested())
+        {
+            std::cout << ctx.version_text();
+            return 0;
+        }
         for (const auto &sub_ptr : app.subcommands())
-            if (MatchedPathResolver::to_path_string(ctx.matched_command()) == sub_ptr->name())
+            if (MatchedPathResolver::to_path_string(ctx.matched_command()) ==
+                sub_ptr->name())
             {
                 auto e = sub_ptr->execute(ctx);
                 if (e.is_err())

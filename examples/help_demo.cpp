@@ -42,15 +42,17 @@ int main()
         std::cout << HelpFormatter::format_help(app, "pkg") << "\n";
     }
 
-    // ── 3. App::parse with --help (auto-detection) ──
-    // When --help / -h is in argv, App::parse() / parse_fuzzy()
-    // prints format_help() and calls std::exit(0) automatically.
-    // Uncomment to see it in action (will exit after this line):
-    // char *argv[] = { (char*)"demo", (char*)"--help" };
-    // App("demo", "1.0", "Demo").parse(2, argv);
+    // ── 3. App::parse does not print or exit ──
+    // parse() / parse_fuzzy() set ctx.help_requested() / ctx.version_requested()
+    // on the returned Ok context.  The caller must dispatch before reading any
+    // value: the meta-flag path skips ParseFinalizer, so defaults and env
+    // fallbacks are not applied and ctx.get() may throw LogicError.
+    //   auto &ctx = r.unwrap();
+    //   if (ctx.help_requested()) { std::cout << ctx.help_text(); return 0; }
+    //   if (ctx.version_requested()) { std::cout << ctx.version_text(); return 0; }
 
-    std::cout << "=== 3. App::parse auto --help ===\n";
-    std::cout << "  (runs when --help/-h in argv, prints then exit(0))\n";
-    std::cout << "  Try: echo ${your_app} --help | xargs ./build/examples/help_example\n";
+    std::cout << "=== 3. App::parse does not print or exit ===\n";
+    std::cout << "  (caller dispatches on help_requested()/version_requested())\n";
+    std::cout << "  Try: ./build/examples/help_example --help\n";
     return 0;
 }

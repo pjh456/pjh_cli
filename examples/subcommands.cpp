@@ -35,6 +35,16 @@ int main(int argc, char **argv)
     }
 
     auto &ctx = r.unwrap();
+    if (ctx.help_requested())
+    {
+        std::cout << ctx.help_text();
+        return 0;
+    }
+    if (ctx.version_requested())
+    {
+        std::cout << ctx.version_text();
+        return 0;
+    }
     std::cout << "path: " << MatchedPathResolver::to_path_string(ctx.matched_command());
 
     if (ctx.has<fixed_string("dryrun")>())

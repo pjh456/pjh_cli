@@ -47,6 +47,11 @@ namespace pjh::cli
         /// On success the returned ParseContext can be queried with
         /// get<T, Key>() / has<Key>().
         ///
+        /// @note This does not print help/version or exit.  When
+        ///       help_requested() / version_requested() is set, dispatch on it
+        ///       and print help_text() / version_text() before reading values,
+        ///       because the meta-flag path skips ParseFinalizer.
+        ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().
         /// @return Ok(ParseContext) on success, or Err(CliError) on parse failure.
@@ -57,6 +62,11 @@ namespace pjh::cli
         /// When an exact subcommand match fails, falls back to Levenshtein
         /// distance matching (max_distance = 3).  If exactly one close match
         /// is found, it is used transparently (no error).
+        ///
+        /// @note This does not print help/version or exit.  When
+        ///       help_requested() / version_requested() is set, dispatch on it
+        ///       and print help_text() / version_text() before reading values,
+        ///       because the meta-flag path skips ParseFinalizer.
         ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().
