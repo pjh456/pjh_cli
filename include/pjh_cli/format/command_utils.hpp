@@ -1,8 +1,7 @@
-#ifndef INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
-#define INCLUDE_PJH_CLI_DETAIL_COMMAND_UTILS_HPP
+#ifndef INCLUDE_PJH_CLI_COMMAND_UTILS_HPP
+#define INCLUDE_PJH_CLI_COMMAND_UTILS_HPP
 
 #include <format>
-#include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <string>
@@ -10,25 +9,6 @@
 
 namespace pjh::cli::detail
 {
-
-    /// @brief Check whether a command should be listed in UI output.
-    ///
-    /// Returns true only if the command is enabled and its visibility
-    /// mask includes the requested @p mode.
-    ///
-    /// @param cmd   The command to check.
-    /// @param mode  The active visibility mode (Repl, Cli, Both, Hidden).
-    /// @return true if the command is visible and enabled.
-    /// @throws Any exception propagated by the user-supplied `enabled` predicate.
-    inline bool is_visible_and_enabled(const BaseCommand &cmd, Visibility mode)
-    {
-        if (!cmd.is_enabled())
-            return false;
-        if ((cmd.visibility() & mode) == Visibility::Hidden)
-            return false;
-        return true;
-    }
-
     /// @brief Build a display label for an OptionDef (used in usage lines).
     ///
     /// Produces labels like:
@@ -68,4 +48,4 @@ namespace pjh::cli::detail
 
 }  // namespace pjh::cli::detail
 
-#endif
+#endif  // INCLUDE_PJH_CLI_COMMAND_UTILS_HPP

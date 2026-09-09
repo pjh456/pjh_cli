@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/format/info.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <sstream>
 #include <string>

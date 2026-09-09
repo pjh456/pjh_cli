@@ -52,6 +52,20 @@ TEST_CASE("Parser deep subcommand nesting")
     CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "db migrate");
 }
 
+TEST_CASE("MatchedPathResolver::to_path_info returns commands")
+{
+    App app("test", "1.0", "Path info test");
+    auto &db = app.add_branch("db", "Database commands");
+    db.add_leaf("migrate", "Run migrations");
+    Argv argv{"test", "db", "migrate"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    MatchedPath path = MatchedPathResolver::to_path_info(r.unwrap().matched_command());
+    REQUIRE(path.commands.size() == 2);
+    CHECK(path.commands[0] == "db");
+    CHECK(path.commands[1] == "migrate");
+}
+
 TEST_CASE("Parser disabled subcommand skipped")
 {
     App app("test", "1.0", "Disabled test");

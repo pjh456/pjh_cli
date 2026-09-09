@@ -3,7 +3,8 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
-#include <pjh_cli/detail/command_utils.hpp>
+#include <pjh_cli/command/matcher.hpp>
+#include <pjh_cli/detail/help_formatter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
@@ -308,5 +309,13 @@ namespace pjh::cli
             program_name.empty() ? command_path(cmd) : std::string(program_name);
         return format_help(collect_help(cmd, resolved));
     }
+
+    namespace detail
+    {
+        std::string default_format_help(const BaseCommand &cmd)
+        {
+            return HelpFormatter::format_help(cmd);
+        }
+    }  // namespace detail
 
 }  // namespace pjh::cli

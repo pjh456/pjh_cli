@@ -3,7 +3,8 @@
 #include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
-#include <pjh_cli/detail/command_utils.hpp>
+#include <pjh_cli/command/matcher.hpp>
+#include <pjh_cli/format/command_utils.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <string>
 #include <string_view>

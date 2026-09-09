@@ -1,9 +1,8 @@
 #include <format>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
+#include <pjh_cli/detail/help_formatter.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
-#include <pjh_cli/format/help_formatter.hpp>
-#include <pjh_cli/format/info.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
@@ -31,7 +30,7 @@ namespace pjh::cli
             return pjh::result::Option<ParseContext>::None();
 
         ParseContextWriter::set_help_text(
-            ctx, help_fmt ? help_fmt(*cmd) : HelpFormatter::format_help(*cmd));
+            ctx, help_fmt ? help_fmt(*cmd) : detail::default_format_help(*cmd));
         ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
@@ -47,9 +46,8 @@ namespace pjh::cli
         if (double_dash || a != "--version")
             return pjh::result::Option<ParseContext>::None();
 
-        VersionInfo vi{std::string(root.name()), root.version()};
-        ParseContextWriter::set_version_text(ctx,
-            std::format("{} version {}\n", vi.program_name, vi.version));
+        ParseContextWriter::set_version_text(
+            ctx, std::format("{} version {}\n", root.name(), root.version()));
         ParseContextWriter::set_matched_command(ctx, &root);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }

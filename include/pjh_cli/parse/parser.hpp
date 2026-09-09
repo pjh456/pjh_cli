@@ -4,6 +4,7 @@
 #include <functional>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/help_formatter.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <span>
 #include <string_view>
@@ -17,7 +18,7 @@ namespace pjh::cli
     /// in ParseContext::help_text().  An empty std::function selects the built-in
     /// HelpFormatter::format_help.  A custom formatter must return a non-empty
     /// string: help_requested() is derived from help_text() being non-empty.
-    using HelpFormatterFn = std::function<std::string(const BaseCommand &)>;
+    using HelpFormatterFn = detail::HelpFormatterFn;
 
     /// @brief Command-line argument parser for a command tree.
     ///
@@ -67,7 +68,7 @@ namespace pjh::cli
             BaseCommand &root,
             std::span<const std::string_view> args,
             int max_fuzzy_distance = 0,
-            HelpFormatterFn help_fmt = {});
+            HelpFormatterFn help_fmt = detail::default_format_help);
 
         /// @brief Convenience: converts argv[1..argc-1] to a span and
         ///        delegates to the span overload.
@@ -84,7 +85,7 @@ namespace pjh::cli
             int argc,
             char **argv,
             int max_fuzzy_distance = 0,
-            HelpFormatterFn help_fmt = {});
+            HelpFormatterFn help_fmt = detail::default_format_help);
 
     private:
         /// @brief If the current token is --help or -h, return a help-only

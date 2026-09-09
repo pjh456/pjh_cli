@@ -1,6 +1,6 @@
 #include <memory>
+#include <pjh_cli/command/matcher.hpp>
 #include <pjh_cli/core/error.hpp>
-#include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
 #include <string>

@@ -1,0 +1,75 @@
+#ifndef INCLUDE_PJH_CLI_COMMAND_MATCHER_HPP
+#define INCLUDE_PJH_CLI_COMMAND_MATCHER_HPP
+
+#include <cstddef>
+#include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/branch_command.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace pjh::cli
+{
+    /// @brief Compute Levenshtein edit distance between two strings.
+    /// @param a First string.
+    /// @param b Second string.
+    /// @return Number of single-character edits (insert/delete/substitute) needed.
+    /// @throws std::bad_alloc if the two DP rows cannot be allocated.
+    int edit_distance(std::string_view a, std::string_view b);
+
+    /// @brief A fuzzy match result returned by fuzzy_find_subcommands().
+    struct FuzzyMatch
+    {
+        BaseCommand *command;  ///< The matched subcommand.
+        int distance;          ///< Levenshtein distance (lower = closer).
+    };
+
+    /// @brief Find subcommands whose name fuzzily matches @p input.
+    ///
+    /// Enumerates all direct children of @p parent, applies the visibility
+    /// + enabled filter, then computes edit_distance() against each name.
+    /// Results within @p max_distance are returned sorted by distance.
+    ///
+    /// @param parent       Parent branch to search.
+    /// @param input        User input (potentially misspelled).
+    /// @param max_distance  Max edit distance to accept (default 3).
+    /// @param mode         Visibility filter (default Both).
+    /// @return Sorted vector of FuzzyMatch results (empty if none found).
+    std::vector<FuzzyMatch> fuzzy_find_subcommands(
+        BranchCommand &parent,
+        std::string_view input,
+        int max_distance = 3,
+        Visibility mode = Visibility::Both);
+
+    /// @brief Sorted list of all visible + enabled subcommand names under @p cmd.
+    /// @param cmd  Parent branch command.
+    /// @param mode Visibility filter (default Both).
+    /// @return Alphabetically sorted name list.
+    std::vector<std::string> list_subcommands(
+        const BranchCommand &cmd, Visibility mode = Visibility::Both);
+
+}  // namespace pjh::cli
+
+namespace pjh::cli::detail
+{
+    /// @brief Check whether a command should be listed in UI output.
+    ///
+    /// Returns true only if the command is enabled and its visibility
+    /// mask includes the requested @p mode.
+    ///
+    /// @param cmd   The command to check.
+    /// @param mode  The active visibility mode (Repl, Cli, Both, Hidden).
+    /// @return true if the command is visible and enabled.
+    /// @throws Any exception propagated by the user-supplied `enabled` predicate.
+    inline bool is_visible_and_enabled(const BaseCommand &cmd, Visibility mode)
+    {
+        if (!cmd.is_enabled())
+            return false;
+        if ((cmd.visibility() & mode) == Visibility::Hidden)
+            return false;
+        return true;
+    }
+
+}  // namespace pjh::cli::detail
+
+#endif  // INCLUDE_PJH_CLI_COMMAND_MATCHER_HPP

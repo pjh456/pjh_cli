@@ -1,13 +1,18 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_MATCHED_PATH_RESOLVER_HPP
 #define INCLUDE_PJH_CLI_PARSE_MATCHED_PATH_RESOLVER_HPP
 
-#include <pjh_cli/format/info.hpp>
 #include <string>
 #include <vector>
 
 namespace pjh::cli
 {
     class BaseCommand;
+
+    /// @brief Matched subcommand path as a list of command name strings.
+    struct MatchedPath
+    {
+        std::vector<std::string> commands;
+    };
 
     /// @brief Utility for resolving matched subcommand paths from a parsed
     ///        command tree.

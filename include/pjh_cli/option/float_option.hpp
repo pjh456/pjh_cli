@@ -1,12 +1,12 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_FLOAT_OPTION_HPP
 #define INCLUDE_PJH_CLI_OPTION_FLOAT_OPTION_HPP
 
-#include <pjh_cli/detail/option_chain.hpp>
 #include <pjh_cli/option/mixin/with_default.hpp>
 #include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_range.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
 #include <pjh_cli/option/mixin/with_required.hpp>
+#include <pjh_cli/option/option_chain.hpp>
 
 namespace pjh::cli
 {

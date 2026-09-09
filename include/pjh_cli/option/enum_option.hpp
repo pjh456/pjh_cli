@@ -4,11 +4,11 @@
 #include <concepts>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
-#include <pjh_cli/detail/option_chain.hpp>
 #include <pjh_cli/option/mixin/with_default.hpp>
 #include <pjh_cli/option/mixin/with_env.hpp>
 #include <pjh_cli/option/mixin/with_repeatable.hpp>
 #include <pjh_cli/option/mixin/with_required.hpp>
+#include <pjh_cli/option/option_chain.hpp>
 #include <string>
 #include <string_view>
 #include <type_traits>

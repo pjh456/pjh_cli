@@ -134,6 +134,20 @@ TEST_CASE("list_subcommands")
     CHECK(names.size() == 3);
 }
 
+TEST_CASE("command-layer matcher re-exported by format/matcher.hpp")
+{
+    App app("test", "1.0", "Re-export test");
+    app.add_leaf("server", "Start server");
+    app.add_leaf("serve", "Serve");
+
+    CHECK(edit_distance("serve", "server") == 1);
+    auto matches = fuzzy_find_subcommands(app, "server", 2);
+    CHECK(!matches.empty());
+    CHECK(matches[0].command->name() == "server");
+    auto names = list_subcommands(app);
+    CHECK(names.size() == 2);
+}
+
 TEST_CASE("complete subcommand prefix")
 {
     App app("test", "1.0", "Complete test");

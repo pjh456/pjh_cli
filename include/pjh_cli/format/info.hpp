@@ -201,14 +201,6 @@ namespace pjh::cli
         std::string version;
     };
 
-    // ── Path info ──
-
-    /// @brief Matched subcommand path as a list of command name strings.
-    struct MatchedPath
-    {
-        std::vector<std::string> commands;
-    };
-
 }  // namespace pjh::cli
 
 #endif

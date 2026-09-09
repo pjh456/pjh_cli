@@ -1,8 +1,8 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
+#include <pjh_cli/command/matcher.hpp>
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
-#include <pjh_cli/detail/command_utils.hpp>
 #include <pjh_cli/format/console_output.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
