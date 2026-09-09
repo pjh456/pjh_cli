@@ -179,7 +179,10 @@ namespace pjh::cli
     }
 
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
-        BranchCommand &parent, std::string_view input, int max_distance, Visibility mode)
+        const BranchCommand &parent,
+        std::string_view input,
+        int max_distance,
+        Visibility mode)
     {
         std::vector<FuzzyMatch> results;
 

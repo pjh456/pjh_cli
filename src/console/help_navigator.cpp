@@ -42,9 +42,8 @@ namespace pjh::cli
                 result.kind = HelpNavigationKind::UnknownCommand;
                 result.failed_token = tokens[i];
 
-                auto fuzzy = fuzzy_find_subcommands(
-                    const_cast<BranchCommand &>(*branch),
-                    tokens[i], 3, Visibility::Repl);
+                auto fuzzy =
+                    fuzzy_find_subcommands(*branch, tokens[i], 3, Visibility::Repl);
                 result.suggestions.matches.reserve(fuzzy.size());
                 for (auto &f : fuzzy)
                     result.suggestions.matches.push_back(

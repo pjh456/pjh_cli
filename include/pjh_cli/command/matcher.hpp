@@ -31,13 +31,19 @@ namespace pjh::cli
     /// + enabled filter, then computes edit_distance() against each name.
     /// Results within @p max_distance are returned sorted by distance.
     ///
-    /// @param parent       Parent branch to search.
+    /// Read-only: @p parent is not mutated.  The returned FuzzyMatch::command
+    /// pointers are non-owning aliases into the live command tree (valid only
+    /// while the tree lives); their pointee is mutable because the parse path
+    /// uses a match to descend and execute, mirroring subcommands().
+    ///
+    /// @param parent       Parent branch to search (read-only).
     /// @param input        User input (potentially misspelled).
     /// @param max_distance  Max edit distance to accept (default 3).
     /// @param mode         Visibility filter (default Both).
     /// @return Sorted vector of FuzzyMatch results (empty if none found).
+    /// @throws std::bad_alloc if the result vector cannot be allocated.
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
-        BranchCommand &parent,
+        const BranchCommand &parent,
         std::string_view input,
         int max_distance = 3,
         Visibility mode = Visibility::Both);

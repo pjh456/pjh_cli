@@ -52,8 +52,7 @@ namespace pjh::cli
             return result;
         }
 
-        auto fuzzy = fuzzy_find_subcommands(
-            const_cast<BranchCommand &>(root), query, 3, Visibility::Repl);
+        auto fuzzy = fuzzy_find_subcommands(root, query, 3, Visibility::Repl);
         if (!fuzzy.empty())
         {
             result.kind = QueryKind::Fuzzy;

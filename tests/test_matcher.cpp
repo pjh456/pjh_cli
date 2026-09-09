@@ -13,6 +13,7 @@
 #include <pjh_cli/parse/subcommand_resolver.hpp>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -59,6 +60,17 @@ namespace
 static_assert(
     !noexcept(edit_distance(std::string_view{}, std::string_view{})),
     "edit_distance allocates; must not be noexcept");
+
+// Contract pin: the matcher takes a read-only branch, so const render paths
+// (HelpNavigator::navigate / QueryExplorer::explore) need no const_cast.
+static_assert(
+    std::is_invocable_v<
+        decltype(&fuzzy_find_subcommands),
+        const BranchCommand &,
+        std::string_view,
+        int,
+        Visibility>,
+    "fuzzy_find_subcommands must accept a const BranchCommand");
 
 TEST_CASE("edit_distance")
 {
@@ -121,6 +133,19 @@ TEST_CASE("fuzzy find respects visibility")
 
     CHECK(!fuzzy_find_subcommands(app, "visible", 2).empty());
     CHECK(fuzzy_find_subcommands(app, "hidden", 2).empty());
+}
+
+TEST_CASE("fuzzy_find_subcommands accepts a const branch")
+{
+    App app("test", "1.0", "Const fuzzy");
+    app.add_leaf("server", "Start server");
+    app.add_leaf("config", "Configuration");
+
+    const BranchCommand &croot = app;
+    auto matches = fuzzy_find_subcommands(croot, "servr", 2);
+    REQUIRE(matches.size() == 1);
+    CHECK(matches[0].command->name() == "server");
+    CHECK(matches[0].distance == 1);
 }
 
 TEST_CASE("list_subcommands")
