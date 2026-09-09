@@ -3,6 +3,7 @@
 #include <memory>
 #include <ostream>
 #include <pjh_cli/console/line_editor.hpp>
+#include <pjh_cli/detail/io_retry.hpp>
 #include <string_view>
 
 #if defined(_WIN32)
@@ -160,7 +161,11 @@ namespace
         pjh::cli::KeyEvent read_key() override
         {
             char c = 0;
-            if (::read(STDIN_FILENO, &c, 1) != 1)
+            // EINTR is retried inside the helper; a true EOF (0) and any other
+            // read error (< 0) still end the session.
+            const auto n = pjh::cli::detail::retry_on_eintr(
+                [&c] { return ::read(STDIN_FILENO, &c, 1); });
+            if (n != 1)
                 return {pjh::cli::KeyEvent::Code::Eof, 0};
 
             switch (c)
@@ -223,9 +228,14 @@ namespace
             pollfd pfd{};
             pfd.fd = STDIN_FILENO;
             pfd.events = POLLIN;
-            if (::poll(&pfd, 1, 30) <= 0)
+            // A signal (EINTR) is retried, not mistaken for the 30 ms timeout.
+            const int rc =
+                pjh::cli::detail::retry_on_eintr([&pfd] { return ::poll(&pfd, 1, 30); });
+            if (rc <= 0)
                 return false;
-            return ::read(STDIN_FILENO, &out, 1) == 1;
+            const auto n = pjh::cli::detail::retry_on_eintr(
+                [&out] { return ::read(STDIN_FILENO, &out, 1); });
+            return n == 1;
         }
 
         /// @brief Disable canonical mode and echo so read() sees every key.
