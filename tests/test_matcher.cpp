@@ -30,6 +30,12 @@ namespace
         int argc() const { return static_cast<int>(ptrs.size()); }
         char **argv() { return ptrs.data(); }
     };
+
+    class PlainCommand : public BaseCommand
+    {
+    public:
+        using BaseCommand::BaseCommand;
+    };
 }
 
 TEST_CASE("edit_distance")
@@ -156,6 +162,14 @@ TEST_CASE("complete short option prefix")
     }
     CHECK(has_v);
     CHECK(has_p);
+}
+
+TEST_CASE("complete_candidates on a non-branch non-leaf command is empty")
+{
+    PlainCommand plain("plain", "Plain");
+    CHECK(complete(plain, "").empty());
+    CHECK(complete(plain, "--x").empty());
+    CHECK(complete(plain, "-").empty());
 }
 
 TEST_CASE("format_usage")

@@ -176,11 +176,15 @@ namespace pjh::cli
 
     /// @brief Convenience: converts argv[1..argc-1] to a span and delegates
     ///        to the span overload.
+    ///
+    /// @p argc <= 1 (including 0 and negative) yields an empty token span,
+    /// which parses to a root-only Ok context.
     CliResult<ParseContext> Parser::parse_command(
         BaseCommand &root, int argc, char **argv, int max_fuzzy_distance)
     {
         std::vector<std::string_view> args;
-        args.reserve(static_cast<size_t>(argc) - 1);
+        if (argc > 1)
+            args.reserve(static_cast<size_t>(argc - 1));
         for (int a = 1; a < argc; a++) args.emplace_back(argv[a]);
         return parse_command(root, args, max_fuzzy_distance);
     }

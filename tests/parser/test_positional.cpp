@@ -144,3 +144,20 @@ TEST_CASE("Parser positional conversion error names the argument")
         std::string_view(r.unwrap_err().what()).find("for 'count': expected integer") !=
         std::string_view::npos);
 }
+
+TEST_CASE("Parser argc zero parses root without throwing")
+{
+    App app("test", "1.0", "argc zero");
+    auto r = app.parse(0, nullptr);
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().matched_command() == &app);
+}
+
+TEST_CASE("Parser argc one parses root without throwing")
+{
+    App app("test", "1.0", "argc one");
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().matched_command() == &app);
+}

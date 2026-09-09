@@ -77,19 +77,18 @@ namespace pjh::cli
     {
         std::vector<CompletionCandidate> candidates;
 
-        if (!cmd.is_leaf())
+        if (const auto *branch = cmd.as_branch())
         {
-            auto &branch = static_cast<const BranchCommand &>(cmd);
-            for (const auto &sub_ptr : branch.subcommands())
-                {
-                    if (!detail::is_visible_and_enabled(*sub_ptr, mode))
-                        continue;
-                    if (sub_ptr->name().starts_with(prefix))
-                        candidates.push_back({std::string(sub_ptr->name())});
-                    for (const auto &a : sub_ptr->aliases())
-                        if (a.starts_with(prefix))
-                            candidates.push_back({a});
-                }
+            for (const auto &sub_ptr : branch->subcommands())
+            {
+                if (!detail::is_visible_and_enabled(*sub_ptr, mode))
+                    continue;
+                if (sub_ptr->name().starts_with(prefix))
+                    candidates.push_back({std::string(sub_ptr->name())});
+                for (const auto &a : sub_ptr->aliases())
+                    if (a.starts_with(prefix))
+                        candidates.push_back({a});
+            }
         }
 
         if (!prefix.empty() && prefix[0] == '-')

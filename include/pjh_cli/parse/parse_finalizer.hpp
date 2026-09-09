@@ -35,6 +35,7 @@ namespace pjh::cli
         /// @param cmd  The deepest matched command.
         /// @param ctx  Parse context (parent chain already linked).
         /// @return Ok with the finalised context, or Err on validation failure.
+        /// @throws LogicError if @p cmd is null.
         static CliResult<ParseContext> finalize(BaseCommand *cmd, ParseContext ctx);
 
     private:

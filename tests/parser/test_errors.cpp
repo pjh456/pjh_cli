@@ -4,8 +4,10 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string_view>
+#include <utility>
 
 #include "test_helpers.hpp"
 
@@ -291,4 +293,10 @@ TEST_CASE("Parser unmatched subcommand after double dash honors store")
     auto extra = r.unwrap().extra_args();
     REQUIRE(extra.size() == 1);
     CHECK(extra[0] == "instal");
+}
+
+TEST_CASE("ParseFinalizer rejects null command")
+{
+    ParseContext ctx;
+    CHECK_THROWS_AS((void)ParseFinalizer::finalize(nullptr, std::move(ctx)), LogicError);
 }

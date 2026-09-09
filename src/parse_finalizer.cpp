@@ -147,6 +147,8 @@ namespace pjh::cli
     /// first, then defaults fill whatever env did not.
     CliResult<ParseContext> ParseFinalizer::finalize(BaseCommand *cmd, ParseContext ctx)
     {
+        if (!cmd)
+            throw LogicError("ParseFinalizer::finalize: cmd must not be null");
         ParseContextWriter::set_matched_command(ctx, cmd);
 
         std::vector<BaseCommand *> chain;
