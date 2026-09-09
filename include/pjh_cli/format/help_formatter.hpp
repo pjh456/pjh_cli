@@ -3,6 +3,7 @@
 
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/format/info.hpp>
+#include <sstream>
 #include <string>
 #include <string_view>
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_ERROR_HPP
 #define INCLUDE_PJH_CLI_ERROR_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <format>
 #include <stdexcept>

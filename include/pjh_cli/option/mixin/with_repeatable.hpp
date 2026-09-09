@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_MIXIN_WITH_REPEATABLE_HPP
 #define INCLUDE_PJH_CLI_OPTION_MIXIN_WITH_REPEATABLE_HPP
 
+#include <concepts>
 #include <pjh_cli/option/option_def.hpp>
-#include <type_traits>
 
 namespace pjh::cli
 {

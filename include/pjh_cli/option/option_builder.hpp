@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_BUILDER_HPP
 #define INCLUDE_PJH_CLI_OPTION_BUILDER_HPP
 
+#include <concepts>
 #include <filesystem>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
