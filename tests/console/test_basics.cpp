@@ -4,6 +4,7 @@
 #include <memory>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/console/in_memory_history.hpp>
 #include <string>
 
 #include "test_helpers.hpp"
@@ -70,4 +71,35 @@ TEST_CASE("InteractiveConsole Tab completion executes completed line")
 
     CHECK(ran);
     CHECK(term_ptr->written.find("serve ") != std::string::npos);
+}
+
+TEST_CASE("InteractiveConsole Up recalls and executes history")
+{
+    App app("test", "1.0", "History nav");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    raw->push("do-something");
+
+    StreamFixture streams;
+    InteractiveConsole console(
+        app, "> ", streams.input, streams.output, streams.error, {}, {}, std::move(hist));
+
+    auto term = std::make_unique<ScriptedTerminal>();
+    term->keys.push_back({KeyEvent::Code::Up, 0});
+    term->keys.push_back({KeyEvent::Code::Enter, 0});
+    term->keys.push_back({KeyEvent::Code::Eof, 0});
+    console.set_terminal(std::move(term));
+
+    console.run();
+
+    CHECK(called == 1);
+    CHECK(raw->size() == 1);
 }

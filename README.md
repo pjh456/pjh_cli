@@ -158,10 +158,13 @@ When the input is an interactive TTY, `run()` reads keys in raw mode and Tab
 completes the token under the cursor: subcommand names, option names, and option
 **values** registered with `.completer(fn)`.  A unique candidate is appended
 (with a trailing space); zero or several candidates print the candidate list and
-a `HintBuilder` hint, then redraw the prompt.  Up/Down arrow keys are decoded but
-reserved for history navigation.  Non-TTY input (pipes, files, injected test
-streams) keeps the line-based `std::getline` path unchanged, and a custom
-`ITerminal` can be installed with `console.set_terminal(...)`.
+a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the previous/next
+line from the injected `IHistory` (`InMemoryHistory` by default,
+`RingBufferHistory` for bounded storage, `NoOpHistory`/`nullptr` to disable) and
+restore the draft typed before the first Up when Down passes the newest entry.
+Non-TTY input (pipes, files, injected test streams) keeps the line-based
+`std::getline` path unchanged — history is still recorded but arrow keys cannot
+navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.
 
 ### Fuzzy matching
 

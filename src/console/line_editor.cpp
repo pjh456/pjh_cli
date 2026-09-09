@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <pjh_cli/console/history.hpp>
 #include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <string>
@@ -32,8 +33,8 @@ namespace pjh::cli
         }
     }  // namespace
 
-    LineEditor::LineEditor(ITerminal &terminal, std::string prompt) :
-        m_terminal(terminal), m_prompt(std::move(prompt))
+    LineEditor::LineEditor(ITerminal &terminal, std::string prompt, IHistory *history) :
+        m_terminal(terminal), m_prompt(std::move(prompt)), m_history(history)
     {
     }
 
@@ -41,6 +42,10 @@ namespace pjh::cli
         std::string &out, const CompletionFn &complete, const HintFn &hint)
     {
         std::string buffer;
+        if (m_history)
+            m_history->reset_cursor();
+        m_navigating = false;
+        m_draft.clear();
         m_terminal.write(m_prompt);
 
         for (;;)
@@ -65,14 +70,21 @@ namespace pjh::cli
             case KeyEvent::Code::Enter:
                 m_terminal.write("\n");
                 out = std::move(buffer);
+                m_navigating = false;
+                m_draft.clear();
                 return true;
             case KeyEvent::Code::Eof:
                 m_terminal.write("\n");
+                m_navigating = false;
+                m_draft.clear();
                 return false;
             case KeyEvent::Code::Up:
+                recall_prev(buffer);
+                break;
             case KeyEvent::Code::Down:
+                recall_next(buffer);
+                break;
             case KeyEvent::Code::Unknown:
-                // task 14 seam: history navigation owns Up/Down; for now no-op.
                 break;
             }
         }
@@ -118,6 +130,46 @@ namespace pjh::cli
         if (candidates.empty())
             return;
         m_terminal.write("\n" + join_candidates(candidates) + "\n");
+    }
+
+    void LineEditor::recall_prev(std::string &buffer)
+    {
+        if (!m_history)
+            return;
+        if (!m_navigating)
+        {
+            m_draft = buffer;
+            m_navigating = true;
+        }
+        auto entry = m_history->prev();
+        if (entry.is_some())
+            replace_buffer(buffer, entry.unwrap());
+    }
+
+    void LineEditor::recall_next(std::string &buffer)
+    {
+        if (!m_history)
+            return;
+        auto entry = m_history->next();
+        if (entry.is_some())
+        {
+            replace_buffer(buffer, entry.unwrap());
+            return;
+        }
+        if (m_navigating)
+        {
+            replace_buffer(buffer, m_draft);
+            m_navigating = false;
+        }
+    }
+
+    void LineEditor::replace_buffer(std::string &buffer, std::string_view text)
+    {
+        if (buffer == text)
+            return;
+        m_terminal.erase_last(buffer.size());
+        buffer.assign(text);
+        m_terminal.write(buffer);
     }
 
 }  // namespace pjh::cli

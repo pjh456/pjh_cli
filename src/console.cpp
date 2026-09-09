@@ -71,7 +71,7 @@ namespace pjh::cli
         std::string line;
         if (term)
         {
-            LineEditor editor(*term, m_prompt);
+            LineEditor editor(*term, m_prompt, m_history.get());
             while (m_running)
             {
                 if (!editor.read_line(line, complete, hint))

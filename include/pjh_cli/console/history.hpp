@@ -13,6 +13,10 @@ namespace pjh::cli
     /// lines for up/down-arrow navigation.  The default implementation
     /// (InMemoryHistory in <pjh_cli/console/in_memory_history.hpp>) stores
     /// lines in a ring-like vector.
+    ///
+    /// @note LineEditor consumes prev()/next()/reset_cursor() during interactive
+    ///       input.  An implementation that returns None from next() at a
+    ///       non-end cursor triggers the editor's draft restore.
     class IHistory
     {
     public:

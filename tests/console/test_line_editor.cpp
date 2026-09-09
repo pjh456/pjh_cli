@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <pjh_cli/console/in_memory_history.hpp>
 #include <pjh_cli/console/line_editor.hpp>
 #include <string>
 #include <string_view>
@@ -15,6 +16,18 @@ namespace
     void chars(ScriptedTerminal &term, std::string_view text)
     {
         for (char c : text) term.keys.push_back({KeyEvent::Code::Character, c});
+    }
+
+    /// @brief Push one Up arrow KeyEvent.
+    void press_up(ScriptedTerminal &term)
+    {
+        term.keys.push_back({KeyEvent::Code::Up, 0});
+    }
+
+    /// @brief Push one Down arrow KeyEvent.
+    void press_down(ScriptedTerminal &term)
+    {
+        term.keys.push_back({KeyEvent::Code::Down, 0});
     }
 
     /// @brief Completion callback that always returns an empty candidate list.
@@ -155,4 +168,147 @@ TEST_CASE("LineEditor echoes prompt once")
     CHECK(editor.read_line(line, no_candidates, no_hint));
     CHECK(term.written.starts_with("> "));
     CHECK(term.written.find("> >") == std::string::npos);
+}
+
+TEST_CASE("LineEditor Up recalls most recent history")
+{
+    InMemoryHistory h;
+    h.push("first");
+    h.push("second");
+
+    ScriptedTerminal term;
+    chars(term, "x");
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "second");
+}
+
+TEST_CASE("LineEditor Up Up Up Down navigates history")
+{
+    InMemoryHistory h;
+    h.push("a");
+    h.push("b");
+    h.push("c");
+
+    ScriptedTerminal term;
+    press_up(term);
+    press_up(term);
+    press_up(term);
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "b");
+}
+
+TEST_CASE("LineEditor Down past newest restores draft")
+{
+    InMemoryHistory h;
+    h.push("a");
+    h.push("b");
+
+    ScriptedTerminal term;
+    chars(term, "x");
+    press_up(term);
+    press_up(term);
+    press_down(term);
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "x");
+}
+
+TEST_CASE("LineEditor Up at oldest is no-op")
+{
+    InMemoryHistory h;
+    h.push("only");
+
+    ScriptedTerminal term;
+    press_up(term);
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "only");
+}
+
+TEST_CASE("LineEditor Down with empty history is no-op")
+{
+    InMemoryHistory h;
+
+    ScriptedTerminal term;
+    chars(term, "ab");
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ab");
+}
+
+TEST_CASE("LineEditor Up then Down restores empty draft")
+{
+    InMemoryHistory h;
+    h.push("a");
+    h.push("b");
+
+    ScriptedTerminal term;
+    press_up(term);
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line.empty());
+}
+
+TEST_CASE("LineEditor recalls entry across read_line calls")
+{
+    InMemoryHistory h;
+    h.push("a");
+    h.push("b");
+
+    ScriptedTerminal term;
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "b");
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "b");
+}
+
+TEST_CASE("LineEditor history recall redraws buffer")
+{
+    InMemoryHistory h;
+    h.push("second");
+
+    ScriptedTerminal term;
+    chars(term, "x");
+    press_up(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "second");
+    CHECK(term.written.find("> second") != std::string::npos);
+    CHECK(term.written.find("> x") == std::string::npos);
 }

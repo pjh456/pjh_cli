@@ -32,10 +32,12 @@ namespace pjh::cli
     /// LineEditor: Tab completes the token under the cursor via complete_line()
     /// (subcommand names, option names, and `.completer` option values).  A unique
     /// candidate is appended in place; zero or several candidates print the
-    /// candidate list plus a HintBuilder hint and redraw the prompt.  Non-TTY
-    /// input (pipes, files, injected test streams) keeps the line-based
-    /// std::getline path unchanged.  A custom terminal can be injected with
-    /// set_terminal(), e.g. a scripted one in tests.
+    /// candidate list plus a HintBuilder hint and redraw the prompt.  Up/Down
+    /// recall the previous/next line from the injected IHistory, restoring the
+    /// draft typed before the first Up when Down passes the newest entry.
+    /// Non-TTY input (pipes, files, injected test streams) keeps the line-based
+    /// std::getline path unchanged and cannot observe arrow keys.  A custom
+    /// terminal can be injected with set_terminal(), e.g. a scripted one in tests.
     ///
     /// The console does not own the command tree; the caller must keep the
     /// root BranchCommand alive for the console's lifetime.
@@ -79,9 +81,11 @@ namespace pjh::cli
         ///
         /// When an interactive TTY (or a terminal installed via set_terminal())
         /// is available, input is read through a LineEditor that handles Tab
-        /// completion and hint rendering.  Otherwise each iteration:
+        /// completion, hint rendering, and Up/Down recall from the injected
+        /// IHistory.  Otherwise each iteration:
         ///   1. Prints @p m_prompt to m_output.
-        ///   2. Reads a line from m_input with std::getline.
+        ///   2. Reads a line from m_input with std::getline (arrow keys are
+        ///      consumed by the terminal line discipline and cannot navigate).
         ///   3. Skips empty lines.
         ///   4. Exits on "quit" / "exit" / "q".
         ///   5. Calls process_line() and prints errors to m_error.

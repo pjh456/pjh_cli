@@ -62,21 +62,28 @@ namespace pjh::cli
     /// @brief (line, cursor) -> hint text (empty for none).
     using HintFn = std::function<std::string(std::string_view line, std::size_t cursor)>;
 
+    class IHistory;  ///< Forward declaration; full type in console/history.hpp.
+
     /// @brief Platform-independent interactive line editor.
     ///
     /// Owns the input buffer and dispatches Tab to the completion/hint
     /// callbacks.  Only append-at-end editing is supported (no Left/Right,
-    /// no mid-line cursor).  Up/Down are decoded but intentionally ignored
-    /// here; IHistory navigation is wired into the same switch by a later task.
+    /// no mid-line cursor).  Up/Down navigate the injected IHistory: Up recalls
+    /// older entries and Down recalls newer ones, replacing the current buffer.
+    /// The line typed before the first Up is kept as a draft and restored when
+    /// Down moves past the newest entry.  Without a history, Up/Down are no-ops.
     ///
-    /// @note The editor does not own the terminal; the terminal must outlive it.
+    /// @note The editor owns neither the terminal nor the history; both must
+    ///       outlive it.
     class LineEditor
     {
     public:
         /// @param terminal  Terminal used for key input and echo.  Must outlive
         ///                  the editor.
         /// @param prompt    Prompt echoed once at the start of each line.
-        LineEditor(ITerminal &terminal, std::string prompt);
+        /// @param history   Optional history store; nullptr disables Up/Down.
+        ///                  Not owned; must outlive the editor.
+        LineEditor(ITerminal &terminal, std::string prompt, IHistory *history = nullptr);
 
         /// @brief Read one edited line.
         /// @param out       Receives the line (without the trailing newline).
@@ -100,8 +107,27 @@ namespace pjh::cli
         void show_candidates(
             const std::vector<CompletionCandidate> &candidates, std::string_view buffer);
 
+        /// @brief Recall the previous (older) history entry into @p buffer.
+        ///        Saves @p buffer as the draft on the first call after a reset.
+        /// @param buffer  Current edit buffer, replaced in place.
+        void recall_prev(std::string &buffer);
+
+        /// @brief Recall the next (newer) history entry into @p buffer, or the
+        ///        saved draft when already past the newest entry.
+        /// @param buffer  Current edit buffer, replaced in place.
+        void recall_next(std::string &buffer);
+
+        /// @brief Replace @p buffer with @p text, erasing the old rendering.
+        /// @param buffer  Current edit buffer, replaced in place.
+        /// @param text    New content; must not alias @p buffer.
+        void replace_buffer(std::string &buffer, std::string_view text);
+
         ITerminal &m_terminal;  ///< Non-owning terminal reference.
         std::string m_prompt;   ///< Prompt echoed at the start of each line.
+
+        IHistory *m_history = nullptr;  ///< Non-owning; nullptr disables Up/Down.
+        std::string m_draft;            ///< Line typed before the first Up.
+        bool m_navigating = false;      ///< True between first Up and reset.
     };
 
     /// @brief Build a raw-mode TTY terminal for @p input / @p output.
