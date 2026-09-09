@@ -128,14 +128,16 @@ namespace pjh::cli
     {
         if (!m_history)
             return;
-        if (!m_navigating)
-        {
-            m_draft = buffer;
-            m_navigating = true;
-        }
         auto entry = m_history->prev();
         if (entry.is_some())
+        {
+            if (!m_navigating)
+            {
+                m_draft = buffer;
+                m_navigating = true;
+            }
             replace_buffer(buffer, entry.unwrap());
+        }
     }
 
     void LineEditor::recall_next(std::string &buffer)

@@ -2,6 +2,7 @@
 
 #include <pjh_cli/console/in_memory_history.hpp>
 #include <pjh_cli/console/line_editor.hpp>
+#include <pjh_cli/console/noop_history.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -323,6 +324,40 @@ TEST_CASE("LineEditor Down with empty history is no-op")
     std::string line;
     CHECK(editor.read_line(line, no_candidates, no_hint));
     CHECK(line == "ab");
+}
+
+TEST_CASE("LineEditor no-op Up on empty history preserves later edits")
+{
+    InMemoryHistory h;  // empty: prev() returns None.
+
+    ScriptedTerminal term;
+    chars(term, "ls");
+    press_up(term);
+    chars(term, " -la");
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ls -la");
+}
+
+TEST_CASE("LineEditor no-op history Up then Down preserves later edits")
+{
+    NoOpHistory h;  // prev()/next() always return None.
+
+    ScriptedTerminal term;
+    chars(term, "ls");
+    press_up(term);
+    chars(term, " -la");
+    press_down(term);
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ls -la");
 }
 
 TEST_CASE("LineEditor Up then Down restores empty draft")
