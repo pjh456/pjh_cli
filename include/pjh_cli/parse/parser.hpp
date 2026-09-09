@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_PARSER_HPP
 #define INCLUDE_PJH_CLI_PARSER_HPP
 
+#include <functional>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
@@ -10,6 +11,14 @@
 
 namespace pjh::cli
 {
+    /// @brief Signature of an injectable batch help formatter.
+    ///
+    /// Receives the command whose help was requested and returns the text stored
+    /// in ParseContext::help_text().  An empty std::function selects the built-in
+    /// HelpFormatter::format_help.  A custom formatter must return a non-empty
+    /// string: help_requested() is derived from help_text() being non-empty.
+    using HelpFormatterFn = std::function<std::string(const BaseCommand &)>;
+
     /// @brief Command-line argument parser for a command tree.
     ///
     /// Walks the argument list once, delegating to helper components:
@@ -19,7 +28,9 @@ namespace pjh::cli
     ///   - ParseFinalizer  for post-parse validation
     ///
     /// The class has no instance data — all state lives on the stack during
-    /// the parse_command() call.  Thread-safe.
+    /// the parse_command() call.  Thread-safe.  `--help` / `-h` text is produced
+    /// by an injectable formatter (see HelpFormatterFn), defaulting to
+    /// HelpFormatter.
     ///
     /// Usage:
     /// @code
@@ -49,11 +60,14 @@ namespace pjh::cli
         /// @param args               Tokenised CLI arguments (argv[1..]).
         /// @param max_fuzzy_distance  Max Levenshtein distance for subcommand
         ///                           fuzzy matching.  0 = exact only (default).
+        /// @param help_fmt           Help renderer for --help / -h; empty selects
+        ///                           HelpFormatter::format_help (the default).
         /// @return Ok(ParseContext) on success, or Err(CliError) on failure.
         static CliResult<ParseContext> parse_command(
             BaseCommand &root,
             std::span<const std::string_view> args,
-            int max_fuzzy_distance = 0);
+            int max_fuzzy_distance = 0,
+            HelpFormatterFn help_fmt = {});
 
         /// @brief Convenience: converts argv[1..argc-1] to a span and
         ///        delegates to the span overload.
@@ -62,9 +76,15 @@ namespace pjh::cli
         /// @param argc               Argument count from main().
         /// @param argv               Argument vector from main().
         /// @param max_fuzzy_distance  0 = exact only (default).
+        /// @param help_fmt           Help renderer for --help / -h; empty selects
+        ///                           HelpFormatter::format_help (the default).
         /// @return Ok(ParseContext) or Err(CliError).
         static CliResult<ParseContext> parse_command(
-            BaseCommand &root, int argc, char **argv, int max_fuzzy_distance = 0);
+            BaseCommand &root,
+            int argc,
+            char **argv,
+            int max_fuzzy_distance = 0,
+            HelpFormatterFn help_fmt = {});
 
     private:
         /// @brief If the current token is --help or -h, return a help-only
@@ -77,9 +97,15 @@ namespace pjh::cli
         /// @param ctx         Parse context (moved in).
         /// @param a           Current argument token.
         /// @param double_dash Whether we have already seen '--'.
+        /// @param help_fmt    Help renderer; empty selects
+        ///                    HelpFormatter::format_help.
         /// @return Some(ctx) if this was a help request, None() otherwise.
         static pjh::result::Option<ParseContext> try_handle_help(
-            BaseCommand *cmd, ParseContext &&ctx, std::string_view a, bool double_dash);
+            BaseCommand *cmd,
+            ParseContext &&ctx,
+            std::string_view a,
+            bool double_dash,
+            const HelpFormatterFn &help_fmt);
 
         /// @brief If the current token is --version, return a version-only
         ///        ParseContext immediately.

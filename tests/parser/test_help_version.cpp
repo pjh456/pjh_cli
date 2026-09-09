@@ -1,8 +1,13 @@
 #include <doctest/doctest.h>
 
+#include <functional>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/parse/parser.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "test_helpers.hpp"
 
@@ -143,4 +148,176 @@ TEST_CASE("Parser parse_fuzzy --help sets help_requested")
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
     REQUIRE(r.is_ok());
     CHECK(r.unwrap().help_requested());
+}
+
+TEST_CASE("Parser --help uses injected formatter")
+{
+    App app("test", "1.0", "Injected help test");
+    app.add_leaf("serve", "Start server");
+    std::string observed_name;
+    HelpFormatterFn fmt = [&observed_name](const BaseCommand &cmd)
+    {
+        observed_name = cmd.name();
+        return std::string("CUSTOM HELP");
+    };
+    Argv argv{"test", "serve", "--help"};
+    auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.help_requested());
+    CHECK(ctx.help_text() == "CUSTOM HELP");
+    CHECK(observed_name == "serve");
+}
+
+TEST_CASE("App --help uses injected formatter")
+{
+    App app("test", "1.0", "App injected help test");
+    app.set_help_formatter([](const BaseCommand &) { return std::string("APP CUSTOM"); });
+    Argv argv{"test", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().help_text() == "APP CUSTOM");
+}
+
+TEST_CASE("App parse_fuzzy --help uses injected formatter")
+{
+    App app("test", "1.0", "Fuzzy injected help test");
+    app.set_help_formatter([](const BaseCommand &)
+                           { return std::string("FUZZY CUSTOM"); });
+    Argv argv{"test", "--help"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().help_text() == "FUZZY CUSTOM");
+}
+
+TEST_CASE("Injected formatter receives the requested command")
+{
+    App app("test", "1.0", "Command observation test");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    std::vector<std::string> seen;
+    HelpFormatterFn fmt = [&seen](const BaseCommand &cmd)
+    {
+        seen.push_back(cmd.name());
+        return std::string("x");
+    };
+
+    {
+        Argv argv{"test", "--help"};
+        auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+        REQUIRE(r.is_ok());
+    }
+    {
+        Argv argv{"test", "container", "start", "--help"};
+        auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+        REQUIRE(r.is_ok());
+    }
+
+    REQUIRE(seen.size() == 2);
+    CHECK(seen[0] == "test");
+    CHECK(seen[1] == "start");
+}
+
+TEST_CASE("Injected formatter is not called without a help request")
+{
+    App app("test", "1.0", "No help call test");
+    app.add_leaf("serve", "Start server");
+    int calls = 0;
+    HelpFormatterFn fmt = [&calls](const BaseCommand &)
+    {
+        calls++;
+        return std::string("x");
+    };
+
+    {
+        Argv argv{"test"};
+        auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+        REQUIRE(r.is_ok());
+    }
+    {
+        Argv argv{"test", "serve"};
+        auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+        REQUIRE(r.is_ok());
+    }
+    CHECK(calls == 0);
+}
+
+TEST_CASE("Injected formatter is not called after double dash")
+{
+    App app("test", "1.0", "Double dash injection test");
+    int calls = 0;
+    HelpFormatterFn fmt = [&calls](const BaseCommand &)
+    {
+        calls++;
+        return std::string("x");
+    };
+    Argv argv{"test", "--", "--help"};
+    auto r = Parser::parse_command(app, argv.argc(), argv.argv(), 0, fmt);
+    REQUIRE(r.is_ok());
+    CHECK_FALSE(r.unwrap().help_requested());
+    CHECK(calls == 0);
+}
+
+TEST_CASE("Default help formatter used when none injected")
+{
+    App app("test", "1.0", "Default seam test");
+    Argv argv{"test", "--help"};
+    auto r = Parser::parse_command(app, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().help_text().starts_with("Usage: test"));
+}
+
+TEST_CASE("Clearing the help formatter restores the built-in")
+{
+    App app("test", "1.0", "Clear formatter test");
+    app.set_help_formatter([](const BaseCommand &) { return std::string("CUSTOM"); });
+    Argv argv{"test", "--help"};
+    {
+        auto r = app.parse(argv.argc(), argv.argv());
+        REQUIRE(r.is_ok());
+        CHECK(r.unwrap().help_text() == "CUSTOM");
+    }
+    app.set_help_formatter({});
+    CHECK_FALSE(app.help_formatter());
+    {
+        auto r = app.parse(argv.argc(), argv.argv());
+        REQUIRE(r.is_ok());
+        CHECK(r.unwrap().help_text().starts_with("Usage: test"));
+    }
+}
+
+TEST_CASE("Injected help formatter does not affect --version")
+{
+    App app("test", "1.0", "Version injection test");
+    int calls = 0;
+    app.set_help_formatter(
+        [&calls](const BaseCommand &)
+        {
+            calls++;
+            return std::string("x");
+        });
+    Argv argv{"test", "--version"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.version_text() == "test version 1.0\n");
+    CHECK(calls == 0);
+}
+
+TEST_CASE("App help_formatter is empty by default")
+{
+    App app("test", "1.0", "Default formatter state test");
+    CHECK_FALSE(app.help_formatter());
+}
+
+TEST_CASE("Empty injected help text cancels help_requested")
+{
+    App app("test", "1.0", "Empty help contract test");
+    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    Argv argv{"test", "--help"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK_FALSE(ctx.help_requested());
+    CHECK(ctx.help_text().empty());
 }

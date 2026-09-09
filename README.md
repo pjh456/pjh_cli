@@ -92,6 +92,20 @@ if (ctx.version_requested())
 // safe to read values from here
 ```
 
+The batch `--help` / `-h` text is rendered by `help_formatter()`, defaulting to
+`HelpFormatter::format_help`. Inject a custom renderer (it must return a
+non-empty string, because `help_requested()` is derived from `help_text()`):
+
+```cpp
+app.set_help_formatter([](const BaseCommand &cmd) {
+    return my_render_help(cmd);
+});
+```
+
+`Parser::parse_command(root, args, max_fuzzy_distance, help_fmt)` exposes the
+same seam to direct `Parser` users. The REPL's `help` command keeps using its own
+injected navigation formatter.
+
 `format_help` annotates options with `(env: VAR)`, `(negatable)`, `(counting)`,
 and `(repeatable)` in the Options table.
 

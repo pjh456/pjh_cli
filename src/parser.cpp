@@ -21,12 +21,17 @@ namespace pjh::cli
     /// should check this flag and print help_text() instead of executing
     /// the command action.
     pjh::result::Option<ParseContext> Parser::try_handle_help(
-        BaseCommand *cmd, ParseContext &&ctx, std::string_view a, bool double_dash)
+        BaseCommand *cmd,
+        ParseContext &&ctx,
+        std::string_view a,
+        bool double_dash,
+        const HelpFormatterFn &help_fmt)
     {
         if (double_dash || (a != "--help" && a != "-h"))
             return pjh::result::Option<ParseContext>::None();
 
-        ParseContextWriter::set_help_text(ctx, HelpFormatter::format_help(*cmd));
+        ParseContextWriter::set_help_text(
+            ctx, help_fmt ? help_fmt(*cmd) : HelpFormatter::format_help(*cmd));
         ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
@@ -100,7 +105,8 @@ namespace pjh::cli
     CliResult<ParseContext> Parser::parse_command(
         BaseCommand &root,
         std::span<const std::string_view> args,
-        int max_fuzzy_distance)
+        int max_fuzzy_distance,
+        HelpFormatterFn help_fmt)
     {
         BaseCommand *cmd = &root;
         ParseContext ctx;
@@ -118,7 +124,8 @@ namespace pjh::cli
             }
 
             {
-                auto help = try_handle_help(cmd, std::move(ctx), a, double_dash);
+                auto help =
+                    try_handle_help(cmd, std::move(ctx), a, double_dash, help_fmt);
                 if (help.is_some())
                     return CliResult<ParseContext>::Ok(std::move(help).unwrap());
             }
@@ -183,12 +190,16 @@ namespace pjh::cli
     /// @p argc <= 1 (including 0 and negative) yields an empty token span,
     /// which parses to a root-only Ok context.
     CliResult<ParseContext> Parser::parse_command(
-        BaseCommand &root, int argc, char **argv, int max_fuzzy_distance)
+        BaseCommand &root,
+        int argc,
+        char **argv,
+        int max_fuzzy_distance,
+        HelpFormatterFn help_fmt)
     {
         std::vector<std::string_view> args;
         if (argc > 1)
             args.reserve(static_cast<size_t>(argc - 1));
         for (int a = 1; a < argc; a++) args.emplace_back(argv[a]);
-        return parse_command(root, args, max_fuzzy_distance);
+        return parse_command(root, args, max_fuzzy_distance, std::move(help_fmt));
     }
 }  // namespace pjh::cli

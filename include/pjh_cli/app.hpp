@@ -5,7 +5,9 @@
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parser.hpp>
 #include <string>
+#include <utility>
 
 namespace pjh::cli
 {
@@ -41,6 +43,25 @@ namespace pjh::cli
             return &m_env_snapshot;
         }
 
+        /// @brief Override how batch --help / -h is rendered.
+        ///
+        /// The formatter receives the command whose help was requested; its
+        /// non-empty return value becomes ParseContext::help_text().  Pass an
+        /// empty function to restore the built-in HelpFormatter::format_help.
+        /// The formatter must return a non-empty string: help_requested() is
+        /// derived from help_text() being non-empty.
+        /// @param formatter  Renderer, or {} for the built-in default.
+        void set_help_formatter(HelpFormatterFn formatter)
+        {
+            m_help_formatter = std::move(formatter);
+        }
+
+        /// @brief The current batch help formatter (empty = built-in).
+        const HelpFormatterFn &help_formatter() const noexcept
+        {
+            return m_help_formatter;
+        }
+
         /// @brief Parse CLI arguments (exact subcommand matching).
         ///
         /// Delegates to Parser::parse_command() with max_fuzzy_distance = 0.
@@ -51,6 +72,9 @@ namespace pjh::cli
         ///       help_requested() / version_requested() is set, dispatch on it
         ///       and print help_text() / version_text() before reading values,
         ///       because the meta-flag path skips ParseFinalizer.
+        ///
+        /// @note --help / -h text is rendered by help_formatter(), defaulting to
+        ///       HelpFormatter::format_help.
         ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().
@@ -70,6 +94,9 @@ namespace pjh::cli
         ///       and print help_text() / version_text() before reading values,
         ///       because the meta-flag path skips ParseFinalizer.
         ///
+        /// @note --help / -h text is rendered by help_formatter(), defaulting to
+        ///       HelpFormatter::format_help.
+        ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().
         /// @return Ok(ParseContext) on success, or Err(CliError) on parse failure.
@@ -78,6 +105,7 @@ namespace pjh::cli
     private:
         detail::EnvSnapshot m_env_snapshot;
         std::string m_version;
+        HelpFormatterFn m_help_formatter;
     };
 
 }  // namespace pjh::cli
