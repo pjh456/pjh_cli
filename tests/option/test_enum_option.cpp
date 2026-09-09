@@ -11,7 +11,20 @@ using namespace pjh::cli;
 namespace
 {
     enum class Color { red, green, blue };
+
+    enum class WideEnum : long long
+    {
+        x = 0x1'0000'0001LL
+    };
+
+    enum class Flags : unsigned
+    {
+        big = 0x80000000u
+    };
 }
+
+static_assert(detail::IntStorableEnum<Color>);
+static_assert(!detail::IntStorableEnum<WideEnum>);
 
 struct Argv
 {
@@ -94,4 +107,16 @@ TEST_CASE("EnumOption repeatable get_all_enum and get_all<int> consistency")
     REQUIRE(ints.size() == 2);
     CHECK(static_cast<int>(enums[0]) == ints[0]);
     CHECK(static_cast<int>(enums[1]) == ints[1]);
+}
+
+TEST_CASE("EnumOption preserves same-size unsigned enum values")
+{
+    App app("test", "1.0", "Enum wide");
+    app.option<fixed_string("flags")>("--flags", "Flags")
+        .enum_type<Flags>()
+        .mapping({{"big", Flags::big}});
+    Argv argv{"test", "--flags", "big"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get_enum<Flags, fixed_string("flags")>() == Flags::big);
 }

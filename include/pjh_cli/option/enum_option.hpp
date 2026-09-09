@@ -17,12 +17,27 @@
 
 namespace pjh::cli
 {
+    namespace detail
+    {
+        /// @brief Enum types whose value fits the `int`-backed option storage.
+        ///
+        /// `EnumOption<E>` stores values as `int`, so an enum whose underlying
+        /// type is wider than `int` would be silently truncated on conversion.
+        /// This concept names that constraint so the policy is testable
+        /// independently of the class template.
+        template <typename E>
+        concept IntStorableEnum = std::is_enum_v<E> && (sizeof(E) <= sizeof(int));
+    }  // namespace detail
 
     /// @brief Enum-valued option with string-to-enum mapping.
     ///
     /// Maps CLI input strings to C++ enum values.  Stores values internally
-    /// as `int` (the enum's underlying type).  Retrieval via
-    /// `ctx.get_enum<E, Key>()` provides type-safe access.
+    /// as `int`, so @p E must satisfy `detail::IntStorableEnum` (its
+    /// underlying type is at most `int`-sized); an enum wider than `int` is a
+    /// compile-time error instead of a silent truncation.  Same-size unsigned
+    /// underlying types round-trip because the conversion is modulo `2^N` and
+    /// `static_cast<E>` inverts it.  Retrieval via `ctx.get_enum<E, Key>()`
+    /// provides type-safe access.
     ///
     /// Usage:
     /// @code
@@ -43,6 +58,11 @@ namespace pjh::cli
                            WithRepeatable,
                            WithDefault>
     {
+        static_assert(
+            detail::IntStorableEnum<E>,
+            "EnumOption stores values as int; an enum wider than int would "
+            "be silently truncated. Use an int-backed enum.");
+
         using DefaultBase = WithDefault<int, EnumOption<E>>;
         struct Mapping
         {
