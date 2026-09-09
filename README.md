@@ -154,6 +154,15 @@ console.run();
 // help / --help / -h for formatted help
 ```
 
+When the input is an interactive TTY, `run()` reads keys in raw mode and Tab
+completes the token under the cursor: subcommand names, option names, and option
+**values** registered with `.completer(fn)`.  A unique candidate is appended
+(with a trailing space); zero or several candidates print the candidate list and
+a `HintBuilder` hint, then redraw the prompt.  Up/Down arrow keys are decoded but
+reserved for history navigation.  Non-TTY input (pipes, files, injected test
+streams) keeps the line-based `std::getline` path unchanged, and a custom
+`ITerminal` can be installed with `console.set_terminal(...)`.
+
 ### Fuzzy matching
 
 ```cpp
@@ -218,7 +227,7 @@ via that form.
 | `cmd.set_extra_args(p)` | `Ignore` (default) / `Error` / `Store`; explicit setting opts out of the unknown-command check |
 | `cmd.alias(name)` | Register an alias name |
 | `.required()` | Mark option/arg required |
-| `.completer(fn)` | Tab completion callback |
+| `.completer(fn)` | Option-value completion callback, honored by the REPL Tab handler |
 | `cmd.group<Keys...>().exactly_one()` | Option group: exactly one required |
 | `cmd.group<Keys...>().at_most_one()` | Option group: zero or one |
 | `cmd.group<Keys...>().at_least_one()` | Option group: at least one required |
@@ -248,9 +257,12 @@ via that form.
 | `list_subcommands(cmd)` | Visible subcommand names |
 | `complete(cmd, prefix)` | Tab completion candidates (strings) |
 | `complete_candidates(cmd, prefix)` | Tab completion candidates (struct) |
+| `complete_line(root, line, cursor)` | Completion for the token under the cursor, including `.completer` values |
+| `complete_value_candidates(opt, prefix)` | Option-value candidates from `.completer(fn)` |
 | `InteractiveConsole(root, prompt)` | REPL console |
 | `console.run()` / `console.stop()` | Start / stop REPL loop |
 | `console.set_prompt(s)` | Override prompt string |
+| `console.set_terminal(t)` | Install a custom `ITerminal` (nullptr = TTY detect / getline) |
 
 ### Key types
 
@@ -269,6 +281,7 @@ via that form.
 | `HintContext / HintInfo / HintConfig` | Interactive hint structures |
 | `SuggestionInfo / FuzzySuggestion` | Fuzzy match results |
 | `CompletionCandidate` | Completion candidate struct |
+| `KeyEvent / ITerminal / LineEditor` | Injectable raw-mode line editor (`console/line_editor.hpp`) |
 | `MatchedPath` | Matched subcommand path struct |
 | `VersionInfo` | Program version struct |
 

@@ -1,9 +1,11 @@
 #include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
+#include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <vector>
 
 using namespace pjh::cli;
 
@@ -11,8 +13,12 @@ int main(int argc, char **argv)
 {
     App app("calc", "1.0.0", "Calculator REPL example");
 
-    // add <a> <b>
+    // add <a> <b> [--mode rounding] — Tab completes the --mode values
     auto &add = app.add_leaf("add", "Add two numbers");
+    add.option<fixed_string("mode")>("--mode", 'm', "Rounding mode")
+        .str()
+        .completer(
+            []() -> std::vector<std::string> { return {"floor", "ceil", "round"}; });
     add.arg<int, 0>("a", "First number").required();
     add.arg<int, 1>("b", "Second number").required();
     add.action(
@@ -69,7 +75,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    // Interactive mode
+    // Interactive mode (Tab completes subcommands, options, and --mode values)
     InteractiveConsole console(app, "calc>");
     console.run();
     return 0;

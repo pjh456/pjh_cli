@@ -36,6 +36,21 @@ namespace
     public:
         using BaseCommand::BaseCommand;
     };
+
+    /// @brief Populate @p app with a root-level completer option, a serve leaf
+    ///        with --port, a sibling server leaf, and a hidden secret leaf.
+    void populate_completion_app(App &app)
+    {
+        app.option<fixed_string("color")>("--color", 'c', "Color")
+            .str()
+            .completer(
+                []() -> std::vector<std::string> { return {"red", "green", "blue"}; });
+        app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+        auto &serve = app.add_leaf("serve", "Serve");
+        serve.option<fixed_string("port")>("--port", 'p', "Port").integer();
+        app.add_leaf("server", "Server");
+        app.add_leaf("secret", "Secret").set_visibility(Visibility::Hidden);
+    }
 }
 
 static_assert(
@@ -481,4 +496,149 @@ TEST_CASE("list_subcommands does not include aliases")
     // Aliases should not appear as separate entries
     CHECK(std::find(names.begin(), names.end(), "ls") == names.end());
     CHECK(std::find(names.begin(), names.end(), "cfg") == names.end());
+}
+
+// ──────────────────────────────────────────
+//  Option-value completion
+// ──────────────────────────────────────────
+
+TEST_CASE("complete_value_candidates invokes completer")
+{
+    App app("test", "1.0", "Value complete");
+    populate_completion_app(app);
+    auto *opt = app.find_option_by_long("color");
+    REQUIRE(opt != nullptr);
+
+    auto red = complete_value_candidates(*opt, "r");
+    REQUIRE(red.size() == 1);
+    CHECK(red[0].display == "red");
+
+    auto green = complete_value_candidates(*opt, "g");
+    REQUIRE(green.size() == 1);
+    CHECK(green[0].display == "green");
+
+    auto all = complete_value_candidates(*opt, "");
+    REQUIRE(all.size() == 3);
+    CHECK(all[0].display == "blue");
+    CHECK(all[1].display == "green");
+    CHECK(all[2].display == "red");
+
+    LeafCommand dup("dup", "Dup");
+    dup.option<fixed_string("d")>("--d", "D")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"red", "red", "green"}; });
+    auto *dopt = dup.find_option_by_long("d");
+    REQUIRE(dopt != nullptr);
+    auto dedup = complete_value_candidates(*dopt, "");
+    REQUIRE(dedup.size() == 2);
+    CHECK(dedup[0].display == "green");
+    CHECK(dedup[1].display == "red");
+}
+
+TEST_CASE("complete_value_candidates empty without completer")
+{
+    App app("test", "1.0", "No completer");
+    populate_completion_app(app);
+    auto *opt = app.find_subcommand("serve")->find_option_by_long("port");
+    REQUIRE(opt != nullptr);
+    CHECK(complete_value_candidates(*opt, "").empty());
+}
+
+TEST_CASE("complete_line completes option value after long option")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve --color r", 15);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "red");
+}
+
+TEST_CASE("complete_line completes option value after inline equals")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "--color=g", 9);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "green");
+}
+
+TEST_CASE("complete_line completes option value after short option")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve -c r", 10);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "red");
+}
+
+TEST_CASE("complete_line completes compact short option value")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve -cred", 11);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "red");
+}
+
+TEST_CASE("complete_line completes subcommand after trailing space")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "ser", 3);
+    bool has_serve = false, has_server = false;
+    for (const auto &c : r)
+    {
+        if (c.display == "serve")
+            has_serve = true;
+        if (c.display == "server")
+            has_server = true;
+    }
+    CHECK(has_serve);
+    CHECK(has_server);
+}
+
+TEST_CASE("complete_line completes option names in subcommand context")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve --po", 10);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "--port");
+    for (const auto &c : r)
+    {
+        CHECK(c.display != "--verbose");
+        CHECK(c.display != "--color");
+    }
+}
+
+TEST_CASE("complete_line does not value-complete a flag")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve --verbose r", 17);
+    CHECK(r.empty());
+}
+
+TEST_CASE("complete_line respects visibility")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    CHECK(complete_line(app, "sec", 3, Visibility::Both).empty());
+}
+
+TEST_CASE("complete_line handles double-dash barrier")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve -- --color r", 18);
+    CHECK(r.empty());
 }

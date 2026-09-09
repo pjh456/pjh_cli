@@ -6,6 +6,7 @@
 #include <memory>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/console/history.hpp>
+#include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <string>
@@ -26,6 +27,15 @@ namespace pjh::cli
     /// All three I/O streams are configurable at construction time (defaulting
     /// to std::cin / std::cout / std::cerr), making the console embeddable in
     /// GUI, WebSocket, server, or test contexts without global stream redirection.
+    ///
+    /// When the input stream is an interactive TTY, run() reads through a raw-mode
+    /// LineEditor: Tab completes the token under the cursor via complete_line()
+    /// (subcommand names, option names, and `.completer` option values).  A unique
+    /// candidate is appended in place; zero or several candidates print the
+    /// candidate list plus a HintBuilder hint and redraw the prompt.  Non-TTY
+    /// input (pipes, files, injected test streams) keeps the line-based
+    /// std::getline path unchanged.  A custom terminal can be injected with
+    /// set_terminal(), e.g. a scripted one in tests.
     ///
     /// The console does not own the command tree; the caller must keep the
     /// root BranchCommand alive for the console's lifetime.
@@ -67,9 +77,11 @@ namespace pjh::cli
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
         ///
-        /// Each iteration:
+        /// When an interactive TTY (or a terminal installed via set_terminal())
+        /// is available, input is read through a LineEditor that handles Tab
+        /// completion and hint rendering.  Otherwise each iteration:
         ///   1. Prints @p m_prompt to m_output.
-        ///   2. Reads a line from m_input.
+        ///   2. Reads a line from m_input with std::getline.
         ///   3. Skips empty lines.
         ///   4. Exits on "quit" / "exit" / "q".
         ///   5. Calls process_line() and prints errors to m_error.
@@ -88,6 +100,14 @@ namespace pjh::cli
         /// @brief Override the prompt string.
         /// @param p  New prompt (e.g. `"$ "`).
         void set_prompt(std::string p) { m_prompt = std::move(p); }
+
+        /// @brief Install a custom terminal (e.g. a scripted one in tests).
+        ///        Pass nullptr to fall back to TTY detection / std::getline.
+        /// @param terminal  Raw-mode terminal implementation; ownership taken.
+        void set_terminal(std::unique_ptr<ITerminal> terminal)
+        {
+            m_terminal = std::move(terminal);
+        }
 
         /// @brief Parse and execute a single line of input.
         ///
@@ -144,6 +164,10 @@ namespace pjh::cli
         /// push() is called in process_line() after every non-help, non-query
         /// line has been executed (regardless of success or failure).
         std::unique_ptr<IHistory> m_history;
+
+        /// @brief Optional raw-mode terminal; when unset, run() probes the
+        ///        input stream and falls back to std::getline for non-TTYs.
+        std::unique_ptr<ITerminal> m_terminal;
 
         /// @brief Handle `?` or `?query` — list or search subcommands.
         ///

@@ -5,11 +5,13 @@
 #include <pjh_cli/console/help_navigator.hpp>
 #include <pjh_cli/console/history.hpp>
 #include <pjh_cli/console/in_memory_history.hpp>
+#include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
+#include <pjh_cli/format/hint.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <pjh_cli/parse/parser.hpp>
@@ -48,7 +50,42 @@ namespace pjh::cli
     void InteractiveConsole::run()
     {
         m_running = true;
+
+        CompletionFn complete = [this](std::string_view line, std::size_t cursor)
+        {
+            return complete_line(m_root, line, cursor);
+        };
+        HintFn hint = [this](std::string_view line, std::size_t)
+        {
+            return HintBuilder::format(m_root, line);
+        };
+
+        std::unique_ptr<ITerminal> owned;
+        ITerminal *term = m_terminal.get();
+        if (!term)
+        {
+            owned = make_tty_terminal(m_input, m_output);
+            term = owned.get();
+        }
+
         std::string line;
+        if (term)
+        {
+            LineEditor editor(*term, m_prompt);
+            while (m_running)
+            {
+                if (!editor.read_line(line, complete, hint))
+                    break;
+                if (line.empty())
+                    continue;
+                if (line == "quit" || line == "exit" || line == "q")
+                    break;
+                auto r = process_line(line);
+                if (r.is_err())
+                    m_error << r.unwrap_err().what() << "\n";
+            }
+            return;
+        }
 
         while (m_running)
         {

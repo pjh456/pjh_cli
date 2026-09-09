@@ -1,9 +1,13 @@
 #ifndef TESTS_CONSOLE_TEST_HELPERS_HPP
 #define TESTS_CONSOLE_TEST_HELPERS_HPP
 
+#include <cstddef>
+#include <deque>
 #include <iostream>
+#include <pjh_cli/console/line_editor.hpp>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 /// @brief Temporarily redirects std::cout to a stringstream for test assertions.
 ///
@@ -33,6 +37,37 @@ struct StreamFixture
     std::stringstream input;
     std::stringstream output;
     std::stringstream error;
+};
+
+/// @brief Scripted ITerminal for headless LineEditor / InteractiveConsole tests.
+///
+/// Pre-load @c keys with KeyEvents; read_key() pops them and returns Eof once
+/// empty.  @c written accumulates echoed output, and erase_last() removes the
+/// requested characters from the end so the log models the visible line.
+class ScriptedTerminal : public pjh::cli::ITerminal
+{
+public:
+    pjh::cli::KeyEvent read_key() override
+    {
+        if (keys.empty())
+            return {pjh::cli::KeyEvent::Code::Eof, 0};
+        auto event = keys.front();
+        keys.pop_front();
+        return event;
+    }
+
+    void write(std::string_view text) override { written.append(text); }
+
+    void erase_last(std::size_t count) override
+    {
+        if (count >= written.size())
+            written.clear();
+        else
+            written.resize(written.size() - count);
+    }
+
+    std::deque<pjh::cli::KeyEvent> keys;  ///< Scripted key sequence.
+    std::string written;                  ///< Accumulated echo output.
 };
 
 #endif

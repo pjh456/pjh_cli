@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_MATCHER_HPP
 #define INCLUDE_PJH_CLI_MATCHER_HPP
 
+#include <cstddef>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/format/info.hpp>
@@ -67,6 +68,46 @@ namespace pjh::cli
     std::vector<std::string> complete(
         const BaseCommand &cmd,
         std::string_view prefix,
+        Visibility mode = Visibility::Both);
+
+    /// @brief Completion candidates for an option's value.
+    ///
+    /// Invokes OptionDef::completer_fn() and returns its entries whose text
+    /// starts with @p prefix, sorted and deduplicated.  Empty when the option
+    /// has no registered completer.
+    ///
+    /// Unlike complete_candidates(), which is name-only and never invokes a
+    /// completer, this function is the entry point that makes `.completer(fn)`
+    /// functional for option values.
+    ///
+    /// @param opt     Option whose completer supplies the candidates.
+    /// @param prefix  Partial value typed so far (may be empty).
+    /// @return Sorted, deduplicated candidates (may be empty).
+    /// @throws std::bad_alloc if the candidate list cannot be allocated.
+    /// @throws Any exception thrown by the registered completer is propagated.
+    std::vector<CompletionCandidate> complete_value_candidates(
+        const OptionDef &opt, std::string_view prefix);
+
+    /// @brief Completion candidates for the token under @p cursor in @p line.
+    ///
+    /// Resolves the command reached by the tokens before the cursor and the
+    /// option (if any) whose value is being typed, then returns value
+    /// candidates (preceding option has a completer) or name candidates.
+    /// Supports `--opt value`, `--opt=value`, `-o value`, and `-ovalue`.
+    /// Option resolution walks the ancestor chain (matching the parser), while
+    /// name completion stays node-local.
+    ///
+    /// @param root    Root of the command tree.
+    /// @param line    Full input line.
+    /// @param cursor  Byte offset of the cursor (0..line.size()).
+    /// @param mode    Visibility filter for name candidates (default Both).
+    /// @return Sorted, deduplicated candidates (may be empty).
+    /// @throws std::bad_alloc if the candidate list cannot be allocated.
+    /// @throws Any exception thrown by a registered completer is propagated.
+    std::vector<CompletionCandidate> complete_line(
+        const BaseCommand &root,
+        std::string_view line,
+        std::size_t cursor,
         Visibility mode = Visibility::Both);
 
 }  // namespace pjh::cli

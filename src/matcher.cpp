@@ -4,11 +4,209 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/detail/command_utils.hpp>
+#include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
+
+namespace
+{
+    /// @brief Context resolved for the token under the cursor.
+    struct CompletionScan
+    {
+        const pjh::cli::BaseCommand *command = nullptr;
+        const pjh::cli::OptionDef *value_option = nullptr;  ///< null: name completion.
+        std::string_view prefix;                            ///< token under cursor.
+    };
+
+    /// @brief Split @p text into whitespace-separated tokens.
+    ///
+    /// Double-quoted spans are kept as one token and the quotes are stripped.
+    /// Empty tokens are dropped; this scan only needs the complete tokens that
+    /// precede the token under the cursor.
+    ///
+    /// @param text  Input slice.
+    /// @return Non-empty tokens in order.
+    std::vector<std::string_view> split_tokens(std::string_view text)
+    {
+        std::vector<std::string_view> out;
+        std::size_t i = 0;
+        while (i < text.size())
+        {
+            while (i < text.size() && text[i] == ' ') ++i;
+            if (i >= text.size())
+                break;
+            std::size_t start = i;
+            if (text[i] == '"')
+            {
+                start = ++i;
+                while (i < text.size() && text[i] != '"') ++i;
+                out.push_back(text.substr(start, i - start));
+                if (i < text.size())
+                    ++i;
+            }
+            else
+            {
+                while (i < text.size() && text[i] != ' ') ++i;
+                out.push_back(text.substr(start, i - start));
+            }
+        }
+        return out;
+    }
+
+    /// @brief Resolve a long option on @p cmd or its nearest ancestor.
+    /// @param cmd   Command to start from.
+    /// @param name  Long option name without the `--` prefix.
+    /// @return Matching option, or nullptr.
+    const pjh::cli::OptionDef *find_option_by_long_in_chain(
+        const pjh::cli::BaseCommand &cmd, std::string_view name)
+    {
+        for (const auto *cur = &cmd; cur != nullptr; cur = cur->parent())
+            if (const auto *opt = cur->find_option_by_long(name))
+                return opt;
+        return nullptr;
+    }
+
+    /// @brief Resolve a short option on @p cmd or its nearest ancestor.
+    /// @param cmd  Command to start from.
+    /// @param c    Short option character.
+    /// @return Matching option, or nullptr.
+    const pjh::cli::OptionDef *find_option_by_short_in_chain(
+        const pjh::cli::BaseCommand &cmd, char c)
+    {
+        for (const auto *cur = &cmd; cur != nullptr; cur = cur->parent())
+            if (const auto *opt = cur->find_option_by_short(c))
+                return opt;
+        return nullptr;
+    }
+
+    /// @brief Interpret one complete option token, setting @p pending when the
+    ///        option expects its value in the following token.
+    /// @param command  Command in scope for option lookup.
+    /// @param token    Complete token starting with '-'.
+    /// @param pending  Out-parameter: option awaiting a separate value token.
+    void scan_option_token(
+        const pjh::cli::BaseCommand &command,
+        std::string_view token,
+        const pjh::cli::OptionDef *&pending)
+    {
+        if (token.size() >= 2 && token[0] == '-' && token[1] == '-')
+        {
+            auto lo = pjh::cli::detail::Tokenizer::parse_long_option(token);
+            const auto *opt = find_option_by_long_in_chain(command, lo.name);
+            if (!opt && lo.is_negation)
+                opt = find_option_by_long_in_chain(command, lo.negated_name);
+            if (opt && !lo.has_equals && opt->has_value())
+                pending = opt;
+            return;
+        }
+
+        // Short token: grouped flags and compact values, mirroring consume_short.
+        for (std::size_t i = 1; i < token.size(); ++i)
+        {
+            const auto *opt = find_option_by_short_in_chain(command, token[i]);
+            if (!opt)
+                return;
+            if (opt->has_value())
+            {
+                if (i + 1 == token.size())
+                    pending = opt;  // value arrives as the next token.
+                return;             // otherwise the remainder is a compact value.
+            }
+        }
+    }
+
+    /// @brief Walk the tokens before @p cursor to find the command in scope and
+    ///        the option whose value is being typed.
+    ///
+    /// Skips option values, handles `--opt=value`, grouped short flags and
+    /// compact `-pVALUE`, honours the `--` barrier, and descends subcommands.
+    ///
+    /// @param root    Root of the command tree.
+    /// @param line    Full input line.
+    /// @param cursor  Byte offset of the cursor (clamped to line.size()).
+    /// @return Resolved command, optional value option, and the prefix token.
+    CompletionScan scan_completion_context(
+        const pjh::cli::BaseCommand &root, std::string_view line, std::size_t cursor)
+    {
+        if (cursor > line.size())
+            cursor = line.size();
+
+        std::size_t start = cursor;
+        while (start > 0 && line[start - 1] != ' ') --start;
+        const std::string_view token = line.substr(start, cursor - start);
+        const std::string_view head = line.substr(0, start);
+
+        CompletionScan scan;
+        scan.command = &root;
+
+        for (const auto &t : split_tokens(head))
+        {
+            if (t == "--")
+                break;
+            if (scan.value_option)
+            {
+                scan.value_option = nullptr;  // this token is the pending value.
+                continue;
+            }
+            if (t.size() >= 2 && t[0] == '-')
+            {
+                scan_option_token(*scan.command, t, scan.value_option);
+                continue;
+            }
+            if (const auto *branch = scan.command->as_branch())
+                if (const auto *sub = branch->find_subcommand(t))
+                    scan.command = sub;
+        }
+
+        // Interpret the token under the cursor.
+        if (token.size() >= 2 && token[0] == '-' && token[1] == '-')
+        {
+            auto lo = pjh::cli::detail::Tokenizer::parse_long_option(token);
+            const auto *opt = find_option_by_long_in_chain(*scan.command, lo.name);
+            if (!opt && lo.is_negation)
+                opt = find_option_by_long_in_chain(*scan.command, lo.negated_name);
+            if (opt && lo.has_equals && opt->has_value())
+            {
+                scan.value_option = opt;
+                scan.prefix = lo.value;
+                return scan;
+            }
+            scan.value_option = nullptr;
+            scan.prefix = token;
+            return scan;
+        }
+
+        if (token.size() >= 3 && token[0] == '-' && token[1] != '-')
+        {
+            for (std::size_t i = 1; i < token.size(); ++i)
+            {
+                const auto *opt = find_option_by_short_in_chain(*scan.command, token[i]);
+                if (!opt)
+                    break;
+                if (opt->has_value())
+                {
+                    if (i + 1 < token.size())
+                    {
+                        scan.value_option = opt;
+                        scan.prefix = token.substr(i + 1);
+                        return scan;
+                    }
+                    break;  // valued option without an attached value.
+                }
+            }
+            scan.value_option = nullptr;
+            scan.prefix = token;
+            return scan;
+        }
+
+        // Word token (or bare '-' / empty): the pending option may take it.
+        scan.prefix = token;
+        return scan;
+    }
+}  // namespace
 
 namespace pjh::cli
 {
@@ -135,6 +333,36 @@ namespace pjh::cli
         for (auto &cc : ccs)
             out.push_back(std::move(cc.display));
         return out;
+    }
+
+    std::vector<CompletionCandidate> complete_value_candidates(
+        const OptionDef &opt, std::string_view prefix)
+    {
+        std::vector<CompletionCandidate> out;
+        const auto &fn = opt.completer_fn();
+        if (!fn)
+            return out;
+
+        for (const auto &c : fn())
+            if (c.starts_with(prefix))
+                out.push_back({c});
+
+        std::ranges::stable_sort(out, {}, &CompletionCandidate::display);
+        auto [first, last] = std::ranges::unique(out, {}, &CompletionCandidate::display);
+        out.erase(first, last);
+        return out;
+    }
+
+    std::vector<CompletionCandidate> complete_line(
+        const BaseCommand &root,
+        std::string_view line,
+        std::size_t cursor,
+        Visibility mode)
+    {
+        auto scan = scan_completion_context(root, line, cursor);
+        if (scan.value_option)
+            return complete_value_candidates(*scan.value_option, scan.prefix);
+        return complete_candidates(*scan.command, scan.prefix, mode);
     }
 
 }  // namespace pjh::cli
