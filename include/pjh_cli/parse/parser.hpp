@@ -95,16 +95,24 @@ namespace pjh::cli
 
         /// @brief Handle an unrecognised token per ExtraArgsPolicy.
         ///
-        /// If the policy is Error, returns a parse_error.  If Store, appends
-        /// to extra_args().  If Ignore, no-op.
+        /// On a branch that has subcommands, the implicit `Ignore` default is
+        /// overridden to an unknown-command error with fuzzy suggestions,
+        /// unless the policy was set explicitly or a `--` barrier is active.
+        /// Otherwise: Error returns a parse_error, Store appends to
+        /// extra_args(), Ignore is a no-op.
         ///
-        /// @param cmd  Current command whose policy is read.
-        /// @param ctx  Parse context (extra args may be appended).
-        /// @param a    Unrecognised token.
-        /// @param pos  Argument position (for error messages).
-        /// @return Ok or Err if policy is Error.
+        /// @param cmd          Current command whose policy is read.
+        /// @param ctx          Parse context (extra args may be appended).
+        /// @param a            Unrecognised token.
+        /// @param pos          Argument position (for error messages).
+        /// @param double_dash  Whether we have already seen '--'.
+        /// @return Ok or Err if policy is Error or an unknown command.
         static CliResult<void> handle_extra_arg(
-            const BaseCommand *cmd, ParseContext &ctx, std::string_view a, size_t pos);
+            BaseCommand *cmd,
+            ParseContext &ctx,
+            std::string_view a,
+            size_t pos,
+            bool double_dash);
     };
 }  // namespace pjh::cli
 

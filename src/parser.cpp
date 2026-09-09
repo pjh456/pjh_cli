@@ -50,11 +50,26 @@ namespace pjh::cli
 
     /// @brief Handle an unrecognised token per ExtraArgsPolicy.
     ///
-    /// If the policy is Error, returns a parse_error.  If Store, appends
-    /// to extra_args().  If Ignore, no-op.
+    /// On a branch that has subcommands, the implicit `Ignore` default is
+    /// overridden to an unknown-command error (with fuzzy suggestions) unless
+    /// the policy was set explicitly or a `--` barrier is active.  Otherwise:
+    /// Error returns a parse_error, Store appends to extra_args(), Ignore
+    /// is a no-op.
     CliResult<void> Parser::handle_extra_arg(
-        const BaseCommand *cmd, ParseContext &ctx, std::string_view a, size_t pos)
+        BaseCommand *cmd,
+        ParseContext &ctx,
+        std::string_view a,
+        size_t pos,
+        bool double_dash)
     {
+        if (!double_dash && cmd->is_branch() && !cmd->extra_args_explicit() &&
+            cmd->extra_args_policy() == ExtraArgsPolicy::Ignore &&
+            !cmd->as_branch()->subcommands().empty())
+        {
+            return CliFailure{
+                SubcommandResolver::unknown_subcommand(*cmd->as_branch(), a)};
+        }
+
         switch (cmd->extra_args_policy())
         {
         case ExtraArgsPolicy::Error:
@@ -149,7 +164,7 @@ namespace pjh::cli
             }
             else
             {
-                auto r = handle_extra_arg(cmd, ctx, a, i);
+                auto r = handle_extra_arg(cmd, ctx, a, i, double_dash);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
             }

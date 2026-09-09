@@ -171,3 +171,100 @@ TEST_CASE("Parser error message disabled command")
         r.unwrap_err().what() ==
         std::string_view("Parse Error: command 'oldcmd' is not available"));
 }
+
+TEST_CASE("Parser unmatched subcommand errors")
+{
+    App app("test", "1.0", "Unmatched subcommand");
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "instal"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser unknown command message")
+{
+    App app("test", "1.0", "Unknown command message");
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "zzzz"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown command: 'zzzz'"));
+}
+
+TEST_CASE("Parser unmatched subcommand suggests close name")
+{
+    App app("test", "1.0", "Unknown command suggestion");
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "instal"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("Parse Error: unknown command: 'instal'") != std::string_view::npos);
+    CHECK(msg.find("install") != std::string_view::npos);
+}
+
+TEST_CASE("Parser unmatched subcommand explicit ignore succeeds")
+{
+    App app("test", "1.0", "Explicit ignore");
+    app.set_extra_args(ExtraArgsPolicy::Ignore);
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "instal"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+}
+
+TEST_CASE("Parser unmatched subcommand store policy stores")
+{
+    App app("test", "1.0", "Explicit store");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "instal"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 1);
+    CHECK(extra[0] == "instal");
+}
+
+TEST_CASE("Parser branch without subcommands ignores extra token")
+{
+    App app("test", "1.0", "Root action");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    Argv argv{"test", "somearg"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.matched_command()->execute(ctx).is_ok());
+    CHECK(called == 1);
+}
+
+TEST_CASE("Parser unmatched nested subcommand errors")
+{
+    App app("test", "1.0", "Nested unmatched");
+    auto &db = app.add_branch("db", "Database commands");
+    db.add_leaf("migrate", "Run migrations");
+    Argv argv{"test", "db", "migrat"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+}
+
+TEST_CASE("Parser unmatched subcommand after double dash honors store")
+{
+    App app("test", "1.0", "Double dash store");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    app.add_leaf("install", "Install");
+    Argv argv{"test", "--", "instal"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 1);
+    CHECK(extra[0] == "instal");
+}

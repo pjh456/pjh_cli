@@ -38,6 +38,16 @@ namespace pjh::cli
         return nullptr;
     }
 
+    /// @brief Build an unknown-command error with fuzzy suggestions.
+    CliError SubcommandResolver::unknown_subcommand(
+        BranchCommand &cmd, std::string_view input)
+    {
+        std::vector<std::string> suggestions;
+        for (const auto &match : fuzzy_find_subcommands(cmd, input, 3, Visibility::Both))
+            suggestions.push_back(match.command->name());
+        return ErrorFactory::unknown_command(input, suggestions);
+    }
+
     /// @brief If the token matches a (possibly fuzzy) subcommand, descend.
     ///
     /// Guards against descent when @p double_dash is true or the current

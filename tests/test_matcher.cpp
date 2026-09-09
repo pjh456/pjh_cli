@@ -233,7 +233,10 @@ TEST_CASE("parse_fuzzy ambiguous")
 
     Argv argv{"test", "st"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
+    CHECK(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("unknown command: 'st'") !=
+        std::string_view::npos);
 }
 
 TEST_CASE("parse_fuzzy no match")
@@ -243,10 +246,13 @@ TEST_CASE("parse_fuzzy no match")
 
     Argv argv{"test", "zzzzz"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
+    CHECK(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("unknown command: 'zzzzz'") !=
+        std::string_view::npos);
 }
 
-TEST_CASE("parse_fuzzy multi-candidate ambiguous falls through")
+TEST_CASE("parse_fuzzy multi-candidate ambiguous reports unknown command")
 {
     App app("test", "1.0", "Multi fuzzy");
     app.add_leaf("start", "Start server");
@@ -254,11 +260,14 @@ TEST_CASE("parse_fuzzy multi-candidate ambiguous falls through")
 
     Argv argv{"test", "st"};
     auto r = app.parse_fuzzy(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
-    // Both "start" and "stop" are within edit distance 3 from "st",
-    // so fuzzy matching is ambiguous and neither is matched.
-    // The matched command stays at root.
-    CHECK(r.unwrap().matched_command()->name() == "test");
+    CHECK(r.is_err());
+    // Both "start" and "stop" are within edit distance 3 from "st", so fuzzy
+    // matching is ambiguous and neither is matched.  The parser reports an
+    // unknown command listing the candidates.
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("unknown command: 'st'") != std::string_view::npos);
+    CHECK(msg.find("start") != std::string_view::npos);
+    CHECK(msg.find("stop") != std::string_view::npos);
 }
 
 TEST_CASE("collect_help respects visibility filter")

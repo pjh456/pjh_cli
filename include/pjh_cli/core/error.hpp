@@ -67,6 +67,13 @@ namespace pjh::cli
         std::vector<std::string> candidates;
     };
 
+    /// @brief A word token did not match any subcommand of a dispatcher branch.
+    struct UnknownCommandError
+    {
+        std::string input;
+        std::vector<std::string> suggestions;  ///< Fuzzy candidates, closest first.
+    };
+
     /// @brief Value is outside the allowed range [min, max].
     struct ValueOutOfRangeError
     {
@@ -125,6 +132,7 @@ namespace pjh::cli
         MissingRequiredArgError,
         TypeConversionError,
         AmbiguousCommandError,
+        UnknownCommandError,
         ValueOutOfRangeError,
         EnumValueError,
         CommandDisabledError,
@@ -197,6 +205,14 @@ namespace pjh::cli
                     for (const auto &c : e.candidates)
                         msg = std::format("{} {}", std::move(msg), c);
                     return msg;
+                }
+                else if constexpr (std::same_as<T, UnknownCommandError>)
+                {
+                    if (e.suggestions.empty())
+                        return std::format("unknown command: '{}'", e.input);
+                    return std::format(
+                        "unknown command: '{}'; did you mean: {}", e.input,
+                        detail::join(e.suggestions, ", "));
                 }
                 else if constexpr (std::same_as<T, ValueOutOfRangeError>)
                 {
@@ -338,6 +354,12 @@ namespace pjh::cli
             std::string_view input, const std::vector<std::string> &candidates)
         {
             return CliError(AmbiguousCommandError{std::string(input), candidates});
+        }
+
+        static CliError unknown_command(
+            std::string_view input, const std::vector<std::string> &suggestions)
+        {
+            return CliError(UnknownCommandError{std::string(input), suggestions});
         }
 
         static CliError value_out_of_range(

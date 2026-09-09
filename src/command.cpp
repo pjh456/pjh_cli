@@ -84,6 +84,7 @@ namespace pjh::cli
     BaseCommand &BaseCommand::set_extra_args(ExtraArgsPolicy p)
     {
         m_extra_args_policy = p;
+        m_extra_args_explicit = true;
         return *this;
     }
 
@@ -100,7 +101,8 @@ namespace pjh::cli
         auto child =
             std::make_unique<BranchCommand>(std::move(name), std::move(description));
         child->set_parent(this);
-        child->set_extra_args(extra_args_policy());
+        if (extra_args_explicit())
+            child->set_extra_args(extra_args_policy());
         child->set_visibility(visibility());
         child->enabled(m_enabled);
         auto &ref = *child;
@@ -114,7 +116,8 @@ namespace pjh::cli
         auto child =
             std::make_unique<LeafCommand>(std::move(name), std::move(description));
         child->set_parent(this);
-        child->set_extra_args(extra_args_policy());
+        if (extra_args_explicit())
+            child->set_extra_args(extra_args_policy());
         child->set_visibility(visibility());
         child->enabled(m_enabled);
         auto &ref = *child;

@@ -137,6 +137,28 @@ TEST_CASE("ambiguous_command single candidate")
     CHECK(msg.find("server") != std::string_view::npos);
 }
 
+TEST_CASE("unknown_command format")
+{
+    auto e = ErrorFactory::unknown_command("instal", {"install"});
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: unknown command: 'instal'; did you mean: install");
+}
+
+TEST_CASE("unknown_command with suggestions")
+{
+    auto e = ErrorFactory::unknown_command("st", {"start", "stop"});
+    auto msg = std::string_view(e.what());
+    CHECK(msg.find("Parse Error: unknown command: 'st'") != std::string_view::npos);
+    CHECK(msg.find("did you mean: start, stop") != std::string_view::npos);
+}
+
+TEST_CASE("unknown_command empty suggestions")
+{
+    auto e = ErrorFactory::unknown_command("zzzz", {});
+    CHECK(std::string_view(e.what()) == "Parse Error: unknown command: 'zzzz'");
+}
+
 TEST_CASE("command_disabled format")
 {
     auto e = ErrorFactory::command_disabled("oldcmd");

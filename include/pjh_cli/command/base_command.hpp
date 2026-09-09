@@ -144,6 +144,14 @@ namespace pjh::cli
         /// @brief Current extra args policy (default Ignore).
         ExtraArgsPolicy extra_args_policy() const noexcept { return m_extra_args_policy; }
 
+        /// @brief Whether set_extra_args() was called explicitly.
+        ///
+        /// Lets the parser distinguish the implicit `Ignore` default from an
+        /// explicit opt-out: on a branch that has subcommands, only the
+        /// implicit default is overridden to an unknown-command error.
+        /// @return true if the policy was set explicitly.
+        bool extra_args_explicit() const noexcept { return m_extra_args_explicit; }
+
         /// @brief All registered options (pointer-based, polymorphic).
         /// @return Deque of unique_ptr<OptionDef> in registration order.
         const std::deque<std::unique_ptr<OptionDef>> &options() const noexcept
@@ -266,6 +274,11 @@ namespace pjh::cli
         BaseCommand &action(std::function<CliResult<void>(ParseContext &)> fn);
 
         /// @brief Set extra positional args handling policy.
+        ///
+        /// The policy is inherited by subcommands added afterwards.  Calling
+        /// this method (even with Ignore) overrides the parser's default: on a
+        /// branch that has subcommands, an unmatched word token is reported as
+        /// an unknown command unless a policy was set explicitly.
         /// @param p One of Ignore / Error / Store.
         /// @return *this for chaining.
         BaseCommand &set_extra_args(ExtraArgsPolicy p);
@@ -352,6 +365,7 @@ namespace pjh::cli
 
         std::deque<std::unique_ptr<OptionDef>> m_options;
         ExtraArgsPolicy m_extra_args_policy = ExtraArgsPolicy::Ignore;
+        bool m_extra_args_explicit = false;
 
         std::unordered_map<
             std::string,

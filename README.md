@@ -125,6 +125,16 @@ app.add_leaf("list", "List items").alias("ls").alias("show");
 // "ls" and "show" also match the list command
 ```
 
+### Unmatched subcommands and extra arguments
+
+`ExtraArgsPolicy::Ignore` is the default and applies to leaves and branches
+without subcommands (POSIX-style trailing operands are silently discarded).
+A branch that has subcommands reports an unmatched word as an unknown command
+(`Parse Error: unknown command: 'instal'; did you mean: install`) instead of
+silently succeeding.  Call `set_extra_args(...)` on the branch — including
+`Ignore` — to opt out explicitly.  Explicit policies are inherited by
+subcommands.
+
 ## API Quick Reference
 
 `#include <pjh_cli.hpp>`
@@ -149,7 +159,7 @@ app.add_leaf("list", "List items").alias("ls").alias("show");
 | `cmd.action(fn)` | Execute callback on match |
 | `cmd.enabled(pred)` | Runtime enable/disable |
 | `cmd.set_visibility(v)` | `Cli` / `Repl` / `Both` / `Hidden` |
-| `cmd.set_extra_args(p)` | `Ignore` / `Error` / `Store` |
+| `cmd.set_extra_args(p)` | `Ignore` (default) / `Error` / `Store`; explicit setting opts out of the unknown-command check |
 | `cmd.alias(name)` | Register an alias name |
 | `.required()` | Mark option/arg required |
 | `.completer(fn)` | Tab completion callback |
@@ -194,7 +204,7 @@ app.add_leaf("list", "List items").alias("ls").alias("show");
 | `LogicError` | Programming error (`std::logic_error`) |
 | `fixed_string("...")` | Compile-time string for NTTP keys |
 | `Visibility::Cli / Repl / Both / Hidden` | Visibility flags |
-| `ExtraArgsPolicy::Ignore / Error / Store` | Extra positional arg handling |
+| `ExtraArgsPolicy::Ignore / Error / Store` | Extra positional arg handling; on a branch with subcommands the implicit `Ignore` default reports an unknown command |
 | `GroupMode::ExactlyOne / AtMostOne / AtLeastOne` | Option group constraints |
 | `HelpInfo / OptionInfo / ArgInfo / SubcommandInfo` | Structured help metadata |
 | `UsageInfo / HelpDocument` | Pre-built help document |

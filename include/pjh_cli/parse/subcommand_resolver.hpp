@@ -55,6 +55,18 @@ namespace pjh::cli
             int max_fuzzy_distance,
             bool &out_disabled);
 
+        /// @brief Build an unknown-command error with fuzzy suggestions.
+        ///
+        /// Scans @p cmd's visible + enabled children for names and aliases
+        /// within a fixed edit distance of @p input, closest first, and wraps
+        /// them in a structured UnknownCommandError.  Read-only: does not
+        /// affect fuzzy match acceptance or command descent.
+        ///
+        /// @param cmd    Branch whose children are searched for suggestions.
+        /// @param input  Unmatched user token.
+        /// @return CliError carrying the input and the closest suggestions.
+        static CliError unknown_subcommand(BranchCommand &cmd, std::string_view input);
+
         /// @brief If the token matches a (possibly fuzzy) subcommand, descend.
         ///
         /// Guards against descent when @p double_dash is true or the current
