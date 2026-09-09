@@ -374,9 +374,11 @@ when `find_package(pjh_cli)` runs.
 
 `cmake/check_layering.cmake` mechanically enforces the layer DAG documented in
 `codebase/ARCHITECTURE.md`: every `#include <pjh_cli/...>` in `include/pjh_cli/**`
-and `src/**` must be a same-layer or downward edge. It scans include directives
-only (no compiler, network, or extra tool), fails closed on unclassified files,
-and runs in well under a second:
+and `src/**` must be a same-layer or downward edge. It checks direct `#include`
+edges **and** their transitive closure, so a file that reaches a forbidden
+subsystem through a chain of headers also fails. It scans include directives
+only (no compiler, network, or extra tool), fails closed on unclassified files
+and unresolved targets, and runs in well under a second:
 
 ```sh
 cmake -DPJH_CLI_SOURCE_DIR="$PWD" -P cmake/check_layering.cmake
@@ -390,7 +392,10 @@ ctest --test-dir build -R layering_guard --output-on-failure
 ```
 
 The only cross-layer exceptions are the four value-storage carve-outs
-`command|option -> parse/parse_context(_writer)` listed in the script. A new
-source file must be classified in the script's `_src_map`; a new intentional
+`command|option -> parse/parse_context(_writer)` listed in `_allowed`. Those two
+headers are also the only entries in `_transitive_ok`, so reaching any other
+forbidden header through the include graph fails. A new source file must be
+classified in the script's `_src_map`; a new subsystem needs a `_known_layers`
+entry, a `_forbid_<layer>` row, and classifier coverage; a new intentional
 exception is a single `layer|target` line in `_allowed` and must be documented
 in the same change.

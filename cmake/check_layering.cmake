@@ -9,9 +9,16 @@
 # documented layer DAG (codebase/ARCHITECTURE.md "Layer model") unless the exact
 # `layer|target` pair is allow-listed below.
 #
-# Fail-closed policy: a file whose layer cannot be resolved and an include
-# target whose subsystem cannot be resolved are both reported as violations, so
-# a new source file or subsystem directory must be classified here explicitly.
+# It also computes the transitive closure of the file-level include graph and
+# fails if any file reaches a header in a forbidden subsystem, except the
+# documented value-storage carve-out headers in _transitive_ok.  The graph has a
+# command<->option umbrella cycle, so the closure is a fixed point, not a
+# topological sort.
+#
+# Fail-closed policy: a file whose layer cannot be resolved, an include target
+# whose subsystem cannot be resolved, and a reachable target that is not part of
+# the scanned file set are all reported as violations, so a new source file or
+# subsystem directory must be classified here explicitly.
 #
 # This file encodes the post-task-20 tree. The only cross-layer exceptions are
 # the four command/option -> parse/parse_context(_writer) value-storage edges.
@@ -44,6 +51,14 @@ set(_allowed
     "command|parse/parse_context_writer.hpp"
     "option|parse/parse_context.hpp"
     "option|parse/parse_context_writer.hpp")
+
+# ── Headers permitted to be reached transitively because they are the targets
+#    of the documented value-storage carve-outs above.  Every OTHER forbidden
+#    header reached through the include graph is a transitive violation.
+#    Delete an entry when its direct carve-out is removed (roadmap task 55). ──
+set(_transitive_ok
+    "parse/parse_context.hpp"
+    "parse/parse_context_writer.hpp")
 
 # ── Explicit src/ layer map (new source files must be added here) ───────────
 set(_src_map
@@ -127,6 +142,7 @@ file(GLOB_RECURSE _files RELATIVE "${_root}"
 list(SORT _files)  # deterministic violation order
 
 set(_violations "")
+set(_edges "")  # file|target edges for the transitive closure below
 foreach(_file IN LISTS _files)
     _layer_of("${_file}" _layer)
     if(_layer STREQUAL "unknown")
@@ -134,6 +150,9 @@ foreach(_file IN LISTS _files)
              "${_file}: unmapped file — classify it in cmake/check_layering.cmake")
         continue()
     endif()
+
+    string(MAKE_C_IDENTIFIER "${_file}" _key)
+    set("_direct_${_key}" "")
 
     file(STRINGS "${_root}/${_file}" _lines
          REGEX "^[ \t]*#[ \t]*include[ \t]*<pjh_cli")
@@ -159,6 +178,76 @@ foreach(_file IN LISTS _files)
         if(_forbidden GREATER -1 AND _ok EQUAL -1)
             list(APPEND _violations "${_file}: ${_layer} -> <pjh_cli/${_target}>")
         endif()
+
+        # Record the edge (and the direct target) for the closure pass.
+        if(_target STREQUAL "pjh_cli.hpp")
+            set(_tgt "include/pjh_cli.hpp")
+        else()
+            set(_tgt "include/pjh_cli/${_target}")
+        endif()
+        list(APPEND _edges "${_file}|${_tgt}")
+        list(APPEND "_direct_${_key}" "${_tgt}")
+    endforeach()
+endforeach()
+
+# ── Transitive closure of the include graph (fixed point; the graph has a
+#    command<->option umbrella cycle, so no topological order exists). ───────
+foreach(_file IN LISTS _files)
+    string(MAKE_C_IDENTIFIER "${_file}" _key)
+    set("_reach_${_key}" "${_direct_${_key}}")
+endforeach()
+set(_changed TRUE)
+while(_changed)
+    set(_changed FALSE)
+    foreach(_edge IN LISTS _edges)
+        string(REPLACE "|" ";" _parts "${_edge}")
+        list(GET _parts 0 _f)
+        list(GET _parts 1 _t)
+        string(MAKE_C_IDENTIFIER "${_f}" _fk)
+        string(MAKE_C_IDENTIFIER "${_t}" _tk)
+        foreach(_tt IN LISTS "_reach_${_tk}")
+            list(FIND "_reach_${_fk}" "${_tt}" _seen)
+            if(_seen EQUAL -1)
+                list(APPEND "_reach_${_fk}" "${_tt}")
+                set(_changed TRUE)
+            endif()
+        endforeach()
+    endforeach()
+endwhile()
+
+# ── Transitive check: reject any reachable forbidden header that is not a
+#    direct edge (direct edges are reported above) and not a carve-out target. ─
+foreach(_file IN LISTS _files)
+    _layer_of("${_file}" _layer)
+    if(_layer STREQUAL "unknown")
+        continue()  # already reported by the direct pass
+    endif()
+    string(MAKE_C_IDENTIFIER "${_file}" _key)
+    foreach(_tgt IN LISTS "_reach_${_key}")
+        list(FIND "_direct_${_key}" "${_tgt}" _is_direct)
+        if(_is_direct GREATER -1)
+            continue()  # direct edges are reported above
+        endif()
+        if(NOT "${_tgt}" IN_LIST _files)
+            list(APPEND _violations
+                 "${_file}: unresolved include target ${_tgt}")
+            continue()
+        endif()
+        if(_tgt STREQUAL "include/pjh_cli.hpp")
+            set(_target "pjh_cli.hpp")
+        else()
+            string(REGEX REPLACE "^include/pjh_cli/" "" _target "${_tgt}")
+        endif()
+        _subsystem_of("${_target}" _sub)
+        list(FIND _forbid_${_layer} "${_sub}" _forbidden)
+        if(_forbidden EQUAL -1)
+            continue()
+        endif()
+        list(FIND _transitive_ok "${_target}" _ok)
+        if(_ok EQUAL -1)
+            list(APPEND _violations
+                 "${_file}: ${_layer} transitively -> <pjh_cli/${_target}>")
+        endif()
     endforeach()
 endforeach()
 
@@ -169,7 +258,8 @@ if(_violations)
         message("layering guard: ${_v}")
     endforeach()
     message(FATAL_ERROR
-            "layering guard failed: ${_count} violation(s) across ${_file_count} file(s); "
+            "layering guard failed: ${_count} direct or transitive violation(s) "
+            "across ${_file_count} file(s); "
             "see codebase/ARCHITECTURE.md 'Layer model'")
 endif()
-message(STATUS "layering guard: OK (${_file_count} files scanned)")
+message(STATUS "layering guard: OK (${_file_count} files scanned, direct + transitive)")
