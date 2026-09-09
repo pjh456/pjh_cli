@@ -20,6 +20,37 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+    /// @brief RAII guard restoring cooked terminal mode around an action.
+    ///
+    /// Calls suspend() on construction and resume() on destruction, so the
+    /// terminal is re-entered even when the action throws.  A null terminal
+    /// (piped input / scripted console) makes both calls no-ops.
+    class TerminalActionGuard
+    {
+    public:
+        /// @param terminal  Terminal to suspend; may be nullptr.
+        explicit TerminalActionGuard(pjh::cli::ITerminal *terminal) : m_terminal(terminal)
+        {
+            if (m_terminal)
+                m_terminal->suspend();
+        }
+
+        ~TerminalActionGuard()
+        {
+            if (m_terminal)
+                m_terminal->resume();
+        }
+
+        TerminalActionGuard(const TerminalActionGuard &) = delete;
+        TerminalActionGuard &operator=(const TerminalActionGuard &) = delete;
+
+    private:
+        pjh::cli::ITerminal *m_terminal;
+    };
+}  // namespace
+
 namespace pjh::cli
 {
 
@@ -60,12 +91,11 @@ namespace pjh::cli
             return HintBuilder::format(m_root, line);
         };
 
-        std::unique_ptr<ITerminal> owned;
         ITerminal *term = m_terminal.get();
         if (!term)
         {
-            owned = make_tty_terminal(m_input, m_output);
-            term = owned.get();
+            m_terminal = make_tty_terminal(m_input, m_output);
+            term = m_terminal.get();
         }
 
         std::string line;
@@ -157,7 +187,11 @@ namespace pjh::cli
         if (!cmd)
             return CliFailure{ErrorFactory::no_command_matched()};
 
-        auto exec = cmd->execute(ctx);
+        CliResult<void> exec = CliResult<void>::Ok();
+        {
+            TerminalActionGuard guard(m_terminal.get());
+            exec = cmd->execute(ctx);
+        }
         if (m_history)
             m_history->push(line);
         return exec;

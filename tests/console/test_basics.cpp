@@ -5,6 +5,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/in_memory_history.hpp>
+#include <stdexcept>
 #include <string>
 
 #include "test_helpers.hpp"
@@ -102,4 +103,52 @@ TEST_CASE("InteractiveConsole Up recalls and executes history")
 
     CHECK(called == 1);
     CHECK(raw->size() == 1);
+}
+
+TEST_CASE("process_line suspends terminal around action")
+{
+    App app("test", "1.0", "Raw guard");
+    int called = 0;
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+
+    StreamFixture streams;
+    InteractiveConsole console(app, "> ", streams.input, streams.output, streams.error);
+    auto term = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *term_ptr = term.get();
+    console.set_terminal(std::move(term));
+
+    auto r = console.process_line("serve");
+    CHECK(r.is_ok());
+    CHECK(called == 1);
+    CHECK(term_ptr->suspend_calls == 1);
+    CHECK(term_ptr->resume_calls == 1);
+}
+
+TEST_CASE("process_line resumes terminal when action throws")
+{
+    App app("test", "1.0", "Raw guard throw");
+    auto &boom = app.add_leaf("boom", "Boom");
+    boom.action(
+        [](ParseContext &) -> CliResult<void> { throw std::runtime_error("boom"); });
+
+    StreamFixture streams;
+    InteractiveConsole console(app, "> ", streams.input, streams.output, streams.error);
+    auto term = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *term_ptr = term.get();
+    console.set_terminal(std::move(term));
+
+    CHECK_THROWS_AS(
+        [&console]
+        {
+            (void)console.process_line("boom");
+        }(),
+        std::runtime_error);
+    CHECK(term_ptr->suspend_calls == 1);
+    CHECK(term_ptr->resume_calls == 1);
 }

@@ -66,8 +66,14 @@ public:
             written.resize(written.size() - count);
     }
 
+    void suspend() override { ++suspend_calls; }
+
+    void resume() override { ++resume_calls; }
+
     std::deque<pjh::cli::KeyEvent> keys;  ///< Scripted key sequence.
     std::string written;                  ///< Accumulated echo output.
+    std::size_t suspend_calls = 0;        ///< Times suspend() was invoked.
+    std::size_t resume_calls = 0;         ///< Times resume() was invoked.
 };
 
 #endif

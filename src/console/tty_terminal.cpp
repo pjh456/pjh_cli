@@ -6,8 +6,11 @@
 #include <string_view>
 
 #if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <conio.h>
 #include <io.h>
+#include <windows.h>
 
 #include <cstdio>
 #else
@@ -21,11 +24,43 @@ namespace
 #if defined(_WIN32)
 
     /// @brief Windows console backend built on _getch().
+    ///
+    /// Saves the console input mode on construction, switches it to raw
+    /// (echo + line input disabled) and restores it in the destructor.
     class WindowsTerminal final : public pjh::cli::ITerminal
     {
     public:
         /// @param output  Stream used for echo.
-        explicit WindowsTerminal(std::ostream &output) : m_output(output) {}
+        explicit WindowsTerminal(std::ostream &output) : m_output(output)
+        {
+            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
+            if (input == INVALID_HANDLE_VALUE || input == nullptr)
+                return;
+            if (!::GetConsoleMode(input, &m_saved))
+                return;
+            m_saved_valid = true;
+            apply_raw();
+        }
+
+        ~WindowsTerminal() override { suspend(); }
+
+        void suspend() override
+        {
+            if (!m_active)
+                return;
+            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
+            if (input == INVALID_HANDLE_VALUE || input == nullptr)
+                return;
+            if (::SetConsoleMode(input, m_saved))
+                m_active = false;
+        }
+
+        void resume() override
+        {
+            if (m_active || !m_saved_valid)
+                return;
+            apply_raw();
+        }
 
         pjh::cli::KeyEvent read_key() override
         {
@@ -61,7 +96,21 @@ namespace
         }
 
     private:
+        /// @brief Disable echo and line input so _getch() sees every key.
+        void apply_raw()
+        {
+            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
+            if (input == INVALID_HANDLE_VALUE || input == nullptr)
+                return;
+            DWORD raw = m_saved & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT);
+            if (::SetConsoleMode(input, raw))
+                m_active = true;
+        }
+
         std::ostream &m_output;
+        DWORD m_saved = 0;
+        bool m_saved_valid = false;
+        bool m_active = false;
     };
 
 #else
@@ -70,8 +119,10 @@ namespace
     ///
     /// Saves the terminal attributes on construction and restores them in the
     /// destructor, so every exit path (EOF, quit, exception) leaves the shell
-    /// in a usable state.  Restoration only happens when the terminal was
-    /// actually switched to raw mode.
+    /// in a usable state.  suspend() / resume() temporarily hand the terminal
+    /// back to cooked mode for human-in-the-loop actions and re-enter raw mode
+    /// afterwards.  Restoration only happens when the terminal was actually
+    /// switched to raw mode.
     class PosixTerminal final : public pjh::cli::ITerminal
     {
     public:
@@ -80,18 +131,25 @@ namespace
         {
             if (::tcgetattr(STDIN_FILENO, &m_saved) != 0)
                 return;
-            termios raw = m_saved;
-            raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
-            raw.c_cc[VMIN] = 1;
-            raw.c_cc[VTIME] = 0;
-            if (::tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)
-                m_active = true;
+            m_saved_valid = true;
+            apply_raw();
         }
 
-        ~PosixTerminal() override
+        ~PosixTerminal() override { suspend(); }
+
+        void suspend() override
         {
-            if (m_active)
-                ::tcsetattr(STDIN_FILENO, TCSANOW, &m_saved);
+            if (!m_active)
+                return;
+            if (::tcsetattr(STDIN_FILENO, TCSANOW, &m_saved) == 0)
+                m_active = false;
+        }
+
+        void resume() override
+        {
+            if (m_active || !m_saved_valid)
+                return;
+            apply_raw();
         }
 
         PosixTerminal(const PosixTerminal &) = delete;
@@ -166,8 +224,20 @@ namespace
             return ::read(STDIN_FILENO, &out, 1) == 1;
         }
 
+        /// @brief Disable canonical mode and echo so read() sees every key.
+        void apply_raw()
+        {
+            termios raw = m_saved;
+            raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
+            raw.c_cc[VMIN] = 1;
+            raw.c_cc[VTIME] = 0;
+            if (::tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)
+                m_active = true;
+        }
+
         std::ostream &m_output;
         termios m_saved{};
+        bool m_saved_valid = false;
         bool m_active = false;
     };
 

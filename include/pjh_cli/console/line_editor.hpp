@@ -53,6 +53,18 @@ namespace pjh::cli
         /// @brief Remove @p count characters already written on the current line.
         /// @param count  Number of characters to erase.
         virtual void erase_last(std::size_t count) = 0;
+
+        /// @brief Restore cooked terminal mode (line discipline + echo).
+        ///
+        /// Called before running a human-in-the-loop action that reads stdin,
+        /// so input is visible and backspace works.  No-op for non-TTY
+        /// terminals; idempotent when the terminal is not in raw mode.
+        virtual void suspend() {}
+
+        /// @brief Re-enter raw single-key mode after suspend().
+        ///
+        /// No-op for non-TTY terminals; idempotent when already raw.
+        virtual void resume() {}
     };
 
     /// @brief (line, cursor) -> completion candidates and the matched prefix
