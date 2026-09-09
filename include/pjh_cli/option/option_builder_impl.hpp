@@ -18,7 +18,7 @@ namespace pjh::cli
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
-    template <typename Opt, ValueTag Tag>
+    template <typename Opt>
     Opt &OptionBuilder<Key>::make_option(bool has_val)
     {
         auto name = m_long_name;
@@ -30,7 +30,7 @@ namespace pjh::cli
         ptr->set_short_name(m_short_name);
         ptr->set_description(std::move(m_description));
         ptr->set_has_value(has_val);
-        ptr->set_value_tag(Tag);
+        ptr->set_value_tag(detail::value_tag_v<typename Opt::ValueType>);
         ptr->set_key_hash(key_hash(Key));
 
         auto &ref = *ptr;
@@ -42,42 +42,42 @@ namespace pjh::cli
         requires detail::OptionKey<decltype(Key)>
     IntOption &OptionBuilder<Key>::integer()
     {
-        return make_option<IntOption, ValueTag::Int>(true);
+        return make_option<IntOption>(true);
     }
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     CountOption &OptionBuilder<Key>::count()
     {
-        return make_option<CountOption, ValueTag::Int>(false);
+        return make_option<CountOption>(false);
     }
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     BoolOption &OptionBuilder<Key>::boolean()
     {
-        return make_option<BoolOption, ValueTag::Bool>(false);
+        return make_option<BoolOption>(false);
     }
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     StrOption &OptionBuilder<Key>::str()
     {
-        return make_option<StrOption, ValueTag::String>(true);
+        return make_option<StrOption>(true);
     }
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     FloatOption &OptionBuilder<Key>::floating()
     {
-        return make_option<FloatOption, ValueTag::Double>(true);
+        return make_option<FloatOption>(true);
     }
 
     template <auto Key>
         requires detail::OptionKey<decltype(Key)>
     PathOption &OptionBuilder<Key>::path()
     {
-        return make_option<PathOption, ValueTag::Path>(true);
+        return make_option<PathOption>(true);
     }
 
     template <auto Key>
@@ -86,7 +86,7 @@ namespace pjh::cli
         requires std::is_enum_v<E>
     EnumOption<E> &OptionBuilder<Key>::enum_type()
     {
-        return make_option<EnumOption<E>, ValueTag::Int>(true);
+        return make_option<EnumOption<E>>(true);
     }
 
 }  // namespace pjh::cli

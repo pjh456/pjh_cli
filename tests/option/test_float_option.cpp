@@ -89,6 +89,15 @@ TEST_CASE("FloatOption min inclusive at boundary")
     CHECK(app.parse(a1.argc(), a1.argv()).is_ok());
 }
 
+TEST_CASE("FloatOption default_value_str renders via BuiltinTraits")
+{
+    App app("test", "1.0", "Float default str");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().default_value(2.5);
+    auto *def = app.find_option_by_long("rate");
+    REQUIRE(def != nullptr);
+    CHECK(def->default_value_str() == "2.500000");
+}
+
 TEST_CASE("FloatOption conversion error message names option and type")
 {
     App app("test", "1.0", "Float err");

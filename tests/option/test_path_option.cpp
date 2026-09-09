@@ -49,6 +49,17 @@ TEST_CASE("PathOption default_value applied when absent")
         std::filesystem::path("./out.txt"));
 }
 
+TEST_CASE("PathOption default_value_str renders via BuiltinTraits")
+{
+    App app("test", "1.0", "Path default str");
+    app.option<fixed_string("output")>("--output", "Output file")
+        .path()
+        .default_value(std::filesystem::path("./out.txt"));
+    auto *def = app.find_option_by_long("output");
+    REQUIRE(def != nullptr);
+    CHECK(def->default_value_str() == "./out.txt");
+}
+
 TEST_CASE("PathOption has_default reflects default_value")
 {
     App app("test", "1.0", "Path has_default");

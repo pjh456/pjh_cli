@@ -93,6 +93,17 @@ TEST_CASE("BoolOption default_value overridden by CLI flag")
     CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == true);
 }
 
+TEST_CASE("BoolOption default_value_str renders via BuiltinTraits")
+{
+    App app("test", "1.0", "Bool default str");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .default_value(true);
+    auto *def = app.find_option_by_long("verbose");
+    REQUIRE(def != nullptr);
+    CHECK(def->default_value_str() == "true");
+}
+
 TEST_CASE("BoolOption has_default reflects default_value")
 {
     App app("test", "1.0", "Bool has_default");

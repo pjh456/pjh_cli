@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <concepts>
+#include <filesystem>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
@@ -79,6 +80,7 @@ namespace pjh::cli
     ///   - int / long / unsigned / … via std::from_chars
     ///   - float / double via std::from_chars
     ///   - std::string (identity copy)
+    ///   - std::filesystem::path (trivial construction)
     ///   - bool (recognises true/false/yes/no/1/0, case-insensitive)
     ///
     /// @tparam T Target type.
@@ -123,10 +125,31 @@ namespace pjh::cli
     {
         /// @brief Return a copy of @p s.
         /// @param s Raw input string.
+        /// @param display Option display or arg name; ignored (kept for a
+        ///        uniform call shape with the other converters).
         /// @return Ok(s) — always succeeds.
-        static auto from_string(std::string_view s) -> CliResult<std::string>
+        static auto from_string(std::string_view s, std::string_view display = {})
+            -> CliResult<std::string>
         {
+            (void)display;
             return CliResult<std::string>::Ok(std::string(s));
+        }
+    };
+
+    /// @brief Trivially constructs a path from the input string.
+    template <>
+    struct Converter<std::filesystem::path>
+    {
+        /// @brief Construct a path from @p s.
+        /// @param s Raw input string.
+        /// @param display Option display or arg name; ignored (kept for a
+        ///        uniform call shape with the other converters).
+        /// @return Ok(std::filesystem::path(s)) — always succeeds.
+        static auto from_string(std::string_view s, std::string_view display = {})
+            -> CliResult<std::filesystem::path>
+        {
+            (void)display;
+            return CliResult<std::filesystem::path>::Ok(std::filesystem::path(s));
         }
     };
 

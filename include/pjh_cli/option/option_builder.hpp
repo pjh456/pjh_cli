@@ -77,7 +77,12 @@ namespace pjh::cli
         EnumOption<E> &enum_type();
 
     private:
-        template <typename Opt, ValueTag Tag>
+        /// @brief Instantiate Opt, derive its ValueTag from Opt::ValueType and
+        ///        register it on the command.
+        /// @tparam Opt Concrete option type (must expose ValueType).
+        /// @param has_val Whether the option consumes a CLI value token.
+        /// @return Reference to the newly created option.
+        template <typename Opt>
         Opt &make_option(bool has_val);
     };
 

@@ -54,6 +54,15 @@ TEST_CASE("IntOption default_value overridden by CLI")
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
 }
 
+TEST_CASE("IntOption default_value_str renders via BuiltinTraits")
+{
+    App app("test", "1.0", "Int default str");
+    app.option<fixed_string("port")>("--port", "Port").integer().default_value(3000);
+    auto *def = app.find_option_by_long("port");
+    REQUIRE(def != nullptr);
+    CHECK(def->default_value_str() == "3000");
+}
+
 TEST_CASE("IntOption has_default reflects default_value")
 {
     App app("test", "1.0", "Int has_default");

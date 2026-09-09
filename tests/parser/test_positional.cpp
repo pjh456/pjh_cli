@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
 #include <iostream>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
@@ -131,6 +132,28 @@ TEST_CASE("Parser extra positional args store no extra")
     auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().extra_args().empty());
+}
+
+TEST_CASE("Parser path positional round-trip")
+{
+    LeafCommand root("test", "Path positional");
+    root.arg<std::filesystem::path, 0>("out", "Out");
+    Argv argv{"test", "/tmp/out.txt"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(
+        r.unwrap().get<std::filesystem::path, 0>() ==
+        std::filesystem::path("/tmp/out.txt"));
+}
+
+TEST_CASE("Parser bool positional round-trip")
+{
+    LeafCommand root("test", "Bool positional");
+    root.arg<bool, 0>("flag", "Flag");
+    Argv argv{"test", "yes"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<bool, 0>() == true);
 }
 
 TEST_CASE("Parser positional conversion error names the argument")

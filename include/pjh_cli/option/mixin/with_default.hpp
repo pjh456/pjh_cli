@@ -2,50 +2,12 @@
 #define INCLUDE_PJH_CLI_OPTION_MIXIN_WITH_DEFAULT_HPP
 
 #include <concepts>
-#include <filesystem>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_result.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
-
-namespace pjh::cli::detail
-{
-    template <typename T>
-    std::string format_for_help(const T &v);
-
-    template <>
-    inline std::string format_for_help<int>(const int &v)
-    {
-        return std::to_string(v);
-    }
-
-    template <>
-    inline std::string format_for_help<double>(const double &v)
-    {
-        return std::to_string(v);
-    }
-
-    template <>
-    inline std::string format_for_help<bool>(const bool &v)
-    {
-        return v ? "true" : "false";
-    }
-
-    template <>
-    inline std::string format_for_help<std::string>(const std::string &v)
-    {
-        return v;
-    }
-
-    template <>
-    inline std::string format_for_help<std::filesystem::path>(
-        const std::filesystem::path &v)
-    {
-        return v.string();
-    }
-}  // namespace pjh::cli::detail
 
 namespace pjh::cli
 {
@@ -66,12 +28,20 @@ namespace pjh::cli
         pjh::result::Option<T> m_default = pjh::result::Option<T>::None();
 
     public:
+        /// @brief Storage type of this option (used by OptionBuilder to derive
+        ///        the runtime ValueTag from detail::BuiltinTraits).
+        using ValueType = T;
+
         bool has_default() const noexcept override { return m_default.is_some(); }
 
+        /// @brief Render the default value for help.
+        ///
+        /// Delegates to detail::BuiltinTraits<T>::default_string so the
+        /// display format has a single source of truth.
         std::string default_value_str() const override
         {
             if (m_default.is_some())
-                return detail::format_for_help<T>(m_default.unwrap());
+                return detail::BuiltinTraits<T>::default_string(m_default.unwrap());
             return "";
         }
 

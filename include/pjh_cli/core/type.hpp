@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_TYPE_HPP
 #define INCLUDE_PJH_CLI_TYPE_HPP
 
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -8,6 +9,9 @@
 #include <pjh_cli/core/error.hpp>
 #include <pjh_result.hpp>
 #include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
 
 namespace pjh::cli
 {
@@ -28,8 +32,10 @@ namespace pjh::cli
 
     /// @brief Runtime type tag for the five builtin option types.
     ///
-    /// Used for runtime dispatch in apply_arg_value() and type_name().
-    /// Maps 1:1 with the types satisfying the BuiltinType concept.
+    /// Used for runtime dispatch in ValueWriter::apply_arg_value() and
+    /// HintBuilder's type_name().  Each enumerator corresponds to one
+    /// detail::BuiltinTraits row; its ordinal must equal the storage index in
+    /// detail::BuiltinTypes, which the static_asserts below enforce.
     enum class ValueTag : uint8_t
     {
         Bool,    ///< bool flag / negatable option
@@ -41,11 +47,98 @@ namespace pjh::cli
 
     namespace detail
     {
-        /// @brief Concept: one of the five types supported by the option system.
+        /// @brief Metadata row for one builtin storage type.
+        ///
+        /// The primary template is the "not a builtin" case.  The builtin
+        /// types are specialized with the runtime ValueTag, the hint label and
+        /// the default-value display used by help.  Conversion is deliberately
+        /// not part of this row: it stays in Converter<T> (converter.hpp),
+        /// which depends on this header.
+        ///
+        /// Specializing this template without also adding a BuiltinTypes entry
+        /// is a bug: the ParseContext storage maps are generated from
+        /// BuiltinTypes, not from this table.
+        ///
+        /// @tparam T Candidate storage type.
         template <typename T>
-        concept BuiltinType =
-            std::same_as<T, bool> || std::same_as<T, int> || std::same_as<T, double> ||
-            std::same_as<T, std::string> || std::same_as<T, std::filesystem::path>;
+        struct BuiltinTraits
+        {
+            static constexpr bool is_builtin = false;
+        };
+
+        /// @brief Traits row for bool.
+        template <>
+        struct BuiltinTraits<bool>
+        {
+            static constexpr bool is_builtin = true;
+            static constexpr ValueTag tag = ValueTag::Bool;
+            static constexpr std::string_view hint_name = "BOOL";
+            static std::string default_string(const bool &v)
+            {
+                return v ? "true" : "false";
+            }
+        };
+
+        /// @brief Traits row for int.
+        template <>
+        struct BuiltinTraits<int>
+        {
+            static constexpr bool is_builtin = true;
+            static constexpr ValueTag tag = ValueTag::Int;
+            static constexpr std::string_view hint_name = "INT";
+            static std::string default_string(const int &v) { return std::to_string(v); }
+        };
+
+        /// @brief Traits row for double.
+        template <>
+        struct BuiltinTraits<double>
+        {
+            static constexpr bool is_builtin = true;
+            static constexpr ValueTag tag = ValueTag::Double;
+            static constexpr std::string_view hint_name = "FLOAT";
+            static std::string default_string(const double &v)
+            {
+                return std::to_string(v);
+            }
+        };
+
+        /// @brief Traits row for std::string.
+        template <>
+        struct BuiltinTraits<std::string>
+        {
+            static constexpr bool is_builtin = true;
+            static constexpr ValueTag tag = ValueTag::String;
+            static constexpr std::string_view hint_name = "STR";
+            static std::string default_string(const std::string &v) { return v; }
+        };
+
+        /// @brief Traits row for std::filesystem::path.
+        template <>
+        struct BuiltinTraits<std::filesystem::path>
+        {
+            static constexpr bool is_builtin = true;
+            static constexpr ValueTag tag = ValueTag::Path;
+            static constexpr std::string_view hint_name = "PATH";
+            static std::string default_string(const std::filesystem::path &v)
+            {
+                return v.string();
+            }
+        };
+
+        /// @brief Canonical ordered list of builtin storage types.
+        ///
+        /// Position in this tuple is the ParseContext storage index and must
+        /// equal the ValueTag ordinal; the static_asserts below enforce that.
+        /// Adding a storage type means adding one row here, one ValueTag
+        /// enumerator and one BuiltinTraits specialization.
+        using BuiltinTypes =
+            std::tuple<bool, int, double, std::string, std::filesystem::path>;
+
+        /// @brief Concept: one of the storage types supported by the option
+        ///        system.
+        /// @tparam T Candidate storage type.
+        template <typename T>
+        concept BuiltinType = BuiltinTraits<T>::is_builtin;
 
         /// @brief Compile-time mapping from C++ type to ValueTag.
         ///
@@ -53,25 +146,78 @@ namespace pjh::cli
         /// type tag based on the template type argument.
         /// @tparam T A type satisfying BuiltinType.
         template <BuiltinType T>
-        inline constexpr ValueTag value_tag_v =
-            std::same_as<T, bool>                    ? ValueTag::Bool
-            : std::same_as<T, int>                   ? ValueTag::Int
-            : std::same_as<T, double>                ? ValueTag::Double
-            : std::same_as<T, std::string>           ? ValueTag::String
-            : std::same_as<T, std::filesystem::path> ? ValueTag::Path
-                                                     : ValueTag::Bool;
+        inline constexpr ValueTag value_tag_v = BuiltinTraits<T>::tag;
 
-        /// @brief Compile-time 0..4 index for each BuiltinType, used with
+        /// @brief Index of T in a tuple of types (0..N-1).
+        ///
+        /// The primary template is intentionally undefined; the recursion below
+        /// always terminates because type_index_v is gated by BuiltinType.
+        /// @tparam T Type to locate.
+        /// @tparam Tuple Tuple to search.
+        template <typename T, typename Tuple>
+        struct tuple_index;
+
+        /// @brief Base case: T is the head of the tuple.
+        template <typename T, typename... Ts>
+        struct tuple_index<T, std::tuple<T, Ts...>> : std::integral_constant<size_t, 0>
+        {
+        };
+
+        /// @brief Recursive case: T appears later in the tuple.
+        template <typename T, typename U, typename... Ts>
+        struct tuple_index<T, std::tuple<U, Ts...>>
+            : std::integral_constant<size_t, 1 + tuple_index<T, std::tuple<Ts...>>::value>
+        {
+        };
+
+        /// @brief Compile-time 0..N-1 index for each BuiltinType, used with
         ///        std::get<N> on the tuple storage in ParseContext.
         /// @tparam T A type satisfying BuiltinType.
         template <BuiltinType T>
-        inline constexpr size_t type_index_v =
-            std::same_as<T, bool>                    ? 0
-            : std::same_as<T, int>                   ? 1
-            : std::same_as<T, double>                ? 2
-            : std::same_as<T, std::string>           ? 3
-            : std::same_as<T, std::filesystem::path> ? 4
-                                                     : 0;
+        inline constexpr size_t type_index_v = tuple_index<T, BuiltinTypes>::value;
+
+        /// @brief True when every BuiltinTypes row's tag ordinal equals its
+        ///        storage index.
+        /// @tparam Ts BuiltinTypes elements.
+        /// @return Whether the order of ValueTag matches BuiltinTypes.
+        template <typename... Ts>
+        constexpr bool builtin_tags_match_order(std::tuple<Ts...> *) noexcept
+        {
+            return (
+                (static_cast<size_t>(BuiltinTraits<Ts>::tag) == type_index_v<Ts>) && ...);
+        }
+
+        /// @brief Highest tag ordinal among the BuiltinTypes rows.
+        /// @tparam Ts BuiltinTypes elements.
+        /// @return The maximum ValueTag ordinal.
+        template <typename... Ts>
+        constexpr size_t builtin_max_tag(std::tuple<Ts...> *) noexcept
+        {
+            size_t m = 0;
+            ((m = static_cast<size_t>(BuiltinTraits<Ts>::tag) > m
+                      ? static_cast<size_t>(BuiltinTraits<Ts>::tag)
+                      : m),
+             ...);
+            return m;
+        }
+
+        static_assert(
+            builtin_tags_match_order(static_cast<BuiltinTypes *>(nullptr)),
+            "ValueTag ordinal must equal the BuiltinTypes storage index");
+        static_assert(
+            builtin_max_tag(static_cast<BuiltinTypes *>(nullptr)) + 1 ==
+                std::tuple_size_v<BuiltinTypes>,
+            "ValueTag must enumerate exactly the BuiltinTypes rows");
+
+        /// @brief Hint labels for the BuiltinTypes rows, in storage order.
+        /// @tparam Ts BuiltinTypes elements.
+        /// @return Array of labels indexed by ValueTag ordinal.
+        template <typename... Ts>
+        constexpr std::array<std::string_view, sizeof...(Ts)> hint_names(
+            std::tuple<Ts...> *)
+        {
+            return {BuiltinTraits<Ts>::hint_name...};
+        }
     }
 
 }  // namespace pjh::cli

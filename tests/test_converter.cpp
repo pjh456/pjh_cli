@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
 #include <iostream>
 #include <pjh_cli/core/converter.hpp>
 #include <string>
@@ -118,6 +119,22 @@ TEST_CASE("Converter unsigned long long")
     using pjh::cli::Converter;
     auto r19 = Converter<unsigned long long>::from_string("18446744073709551615");
     CHECK(r19.is_ok());
+}
+
+TEST_CASE("Converter path returns path")
+{
+    using pjh::cli::Converter;
+    auto r = Converter<std::filesystem::path>::from_string("/tmp/x");
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap() == std::filesystem::path("/tmp/x"));
+}
+
+TEST_CASE("Converter string accepts display argument")
+{
+    using pjh::cli::Converter;
+    auto r = Converter<std::string>::from_string("hi", "--name");
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap() == "hi");
 }
 
 TEST_CASE("Converter int error carries display and structured type")

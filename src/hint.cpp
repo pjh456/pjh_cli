@@ -16,19 +16,11 @@ namespace pjh::cli
         {
             if (is_counting)
                 return "INT";
-            switch (tag)
-            {
-            case ValueTag::Int:
-                return "INT";
-            case ValueTag::Bool:
-                return "BOOL";
-            case ValueTag::String:
-                return "STR";
-            case ValueTag::Double:
-                return "FLOAT";
-            case ValueTag::Path:
-                return "PATH";
-            }
+            static constexpr auto names =
+                detail::hint_names(static_cast<detail::BuiltinTypes *>(nullptr));
+            auto idx = static_cast<size_t>(tag);
+            if (idx < names.size())
+                return std::string(names[idx]);
             return "STR";
         }
 

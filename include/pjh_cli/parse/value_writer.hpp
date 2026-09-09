@@ -1,12 +1,14 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_VALUE_WRITER_HPP
 #define INCLUDE_PJH_CLI_PARSE_VALUE_WRITER_HPP
 
+#include <array>
 #include <filesystem>
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string_view>
+#include <tuple>
 
 namespace pjh::cli
 {
@@ -29,8 +31,8 @@ namespace pjh::cli
         /// @brief Convert a raw string to the type indicated by @p tag and
         ///        store it in @p ctx under @p hash.
         ///
-        /// Acts as a switch (ValueTag → concrete C++ type), then delegates
-        /// to convert_and_set<T>().
+        /// Indexes the generated per-tag converter table (ValueTag →
+        /// convert_and_set<T>), then delegates to the selected entry.
         ///
         /// @param ctx   Parse context to write into.
         /// @param hash  Key hash identifying the value slot.
@@ -47,11 +49,27 @@ namespace pjh::cli
             std::string_view display = {});
 
     private:
+        /// @brief Signature of one tag→converter dispatch entry.
+        using ConvertFn = CliResult<void> (*)(
+            ParseContext &, size_t, std::string_view, std::string_view);
+
+        /// @brief Build the tag→converter table from a tuple of builtin types.
+        ///
+        /// Entry i is convert_and_set<Ts_i>(), so the table is ordered exactly
+        /// like detail::BuiltinTypes (and therefore like ValueTag).
+        /// @tparam Ts BuiltinTypes elements.
+        /// @return Array of converter function pointers, in storage order.
+        template <typename... Ts>
+        static constexpr std::array<ConvertFn, sizeof...(Ts)> make_table(
+            std::tuple<Ts...> *)
+        {
+            return {&convert_and_set<Ts>...};
+        }
+
         /// @brief Convert @p s to type T and store it in @p ctx.
         ///
-        /// For std::string and std::filesystem::path the value is constructed
-        /// directly.  For bool, int, and double the conversion goes through
-        /// Converter<T>::from_string() which uses std::from_chars.
+        /// Conversion goes through Converter<T>::from_string() for every
+        /// builtin type, so the call shape is uniform.
         ///
         /// @tparam T Target type (must satisfy BuiltinType).
         /// @param ctx   Parse context to write into.
@@ -66,21 +84,10 @@ namespace pjh::cli
             std::string_view s,
             std::string_view display = {})
         {
-            if constexpr (std::same_as<T, std::string>)
-            {
-                ParseContextWriter::set_value<std::string>(ctx, hash, std::string(s));
-            }
-            else if constexpr (std::same_as<T, std::filesystem::path>)
-            {
-                ParseContextWriter::set_value<std::filesystem::path>(ctx, hash, std::filesystem::path(s));
-            }
-            else
-            {
-                auto r = Converter<T>::from_string(s, display);
-                if (r.is_err())
-                    return CliResult<void>::Err(std::move(r).unwrap_err());
-                ParseContextWriter::set_value<T>(ctx, hash, r.unwrap());
-            }
+            auto r = Converter<T>::from_string(s, display);
+            if (r.is_err())
+                return CliResult<void>::Err(std::move(r).unwrap_err());
+            ParseContextWriter::set_value<T>(ctx, hash, std::move(r).unwrap());
             return CliResult<void>::Ok();
         }
     };

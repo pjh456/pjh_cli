@@ -52,6 +52,15 @@ TEST_CASE("StrOption default_value overridden by CLI")
     CHECK(r.unwrap().get<std::string, fixed_string("name")>() == "hello");
 }
 
+TEST_CASE("StrOption default_value_str renders via BuiltinTraits")
+{
+    App app("test", "1.0", "Str default str");
+    app.option<fixed_string("name")>("--name", "Name").str().default_value("world");
+    auto *def = app.find_option_by_long("name");
+    REQUIRE(def != nullptr);
+    CHECK(def->default_value_str() == "world");
+}
+
 TEST_CASE("StrOption has_default reflects default_value")
 {
     App app("test", "1.0", "Str has_default");

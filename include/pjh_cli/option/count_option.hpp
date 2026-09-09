@@ -20,6 +20,9 @@ namespace pjh::cli
     class CountOption : public detail::option_chain<void, CountOption, WithRequired>
     {
     public:
+        /// @brief Storage type used for the derived ValueTag (int).
+        using ValueType = int;
+
         bool has_value() const noexcept override { return false; }
 
         bool has_default() const noexcept override { return false; }

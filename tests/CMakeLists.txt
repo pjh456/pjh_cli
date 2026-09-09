@@ -10,6 +10,7 @@ set(PJH_CLI_TEST_SOURCES
     test_main.cpp
     test_fixed_string.cpp
     test_converter.cpp
+    test_builtin_traits.cpp
     test_command.cpp
     test_matcher.cpp
     test_parse_context.cpp

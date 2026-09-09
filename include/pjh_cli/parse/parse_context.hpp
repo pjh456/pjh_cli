@@ -24,8 +24,9 @@ namespace pjh::cli
     /// @brief Container for parsed option and argument values.
     ///
     /// Values are indexed by compile-time key and retrieved via typed accessors.
-    /// Storage uses per-type unordered_map inside a tuple — one map for each of
-    /// the five builtin types (bool, int, double, string, path).
+    /// Storage uses per-type unordered_map inside a tuple generated from
+    /// detail::BuiltinTypes — one map for each builtin type (bool, int, double,
+    /// string, path), in that order.
     ///
     /// Lookup follows the parent chain (for subcommand scoping): if a value is
     /// not found in the current context, the parent context is queried
@@ -207,19 +208,26 @@ namespace pjh::cli
         }
 
     private:
-        using ScalarMaps = std::tuple<
-            IdMap<bool>,
-            IdMap<int>,
-            IdMap<double>,
-            IdMap<std::string>,
-            IdMap<std::filesystem::path>>;
+        /// @brief Project a type tuple to a tuple of scalar id maps.
+        template <typename Tuple>
+        struct scalar_maps_of;
+        template <typename... Ts>
+        struct scalar_maps_of<std::tuple<Ts...>>
+        {
+            using type = std::tuple<IdMap<Ts>...>;
+        };
 
-        using VecMaps = std::tuple<
-            IdVecMap<bool>,
-            IdVecMap<int>,
-            IdVecMap<double>,
-            IdVecMap<std::string>,
-            IdVecMap<std::filesystem::path>>;
+        /// @brief Project a type tuple to a tuple of vector id maps.
+        template <typename Tuple>
+        struct vector_maps_of;
+        template <typename... Ts>
+        struct vector_maps_of<std::tuple<Ts...>>
+        {
+            using type = std::tuple<IdVecMap<Ts>...>;
+        };
+
+        using ScalarMaps = typename scalar_maps_of<detail::BuiltinTypes>::type;
+        using VecMaps = typename vector_maps_of<detail::BuiltinTypes>::type;
 
         template <detail::BuiltinType T>
         auto &scalar_map() noexcept

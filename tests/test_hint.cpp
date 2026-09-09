@@ -152,3 +152,24 @@ TEST_CASE("format_hint multi-level subcommand")
     auto hint = HintBuilder::format(app, "mid leaf");
     CHECK(hint == "<file>");
 }
+
+TEST_CASE("format_hint shows FLOAT STR PATH labels")
+{
+    LeafCommand root("copy", "Copy");
+    root.option<fixed_string("rate")>("--rate", 'r', "Rate").floating();
+    root.option<fixed_string("name")>("--name", 'n', "Name").str();
+    root.option<fixed_string("out")>("--out", 'o', "Out").path();
+
+    auto hint = HintBuilder::format(root, "");
+    CHECK(hint.find("FLOAT:rate") != std::string_view::npos);
+    CHECK(hint.find("STR:name") != std::string_view::npos);
+    CHECK(hint.find("PATH:out") != std::string_view::npos);
+}
+
+TEST_CASE("format_hint counting option stays INT")
+{
+    LeafCommand root("copy", "Copy");
+    root.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+
+    CHECK(HintBuilder::format(root, "") == "[INT:verbose]");
+}
