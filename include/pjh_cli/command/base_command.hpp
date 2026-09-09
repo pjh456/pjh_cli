@@ -8,6 +8,7 @@
 #include <memory>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/concept.hpp>
+#include <pjh_cli/detail/help_formatter.hpp>
 #include <pjh_cli/detail/meta_flags.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/option/group.hpp>
@@ -132,6 +133,20 @@ namespace pjh::cli
         virtual const std::string &version() const noexcept
         {
             static const std::string empty;
+            return empty;
+        }
+
+        /// @brief Batch --help / -h renderer for this command (empty = built-in).
+        ///
+        /// The REPL forwards this to Parser::parse_command() for `cmd --help`, so
+        /// an App-injected formatter is honoured interactively as well as in batch.
+        /// The default returns an empty function, which selects
+        /// detail::default_format_help (HelpFormatter::format_help).  Overridden by
+        /// App to return its configured formatter.
+        /// @return Current formatter; empty means the built-in renderer.
+        virtual const detail::HelpFormatterFn &help_formatter() const noexcept
+        {
+            static const detail::HelpFormatterFn empty;
             return empty;
         }
 

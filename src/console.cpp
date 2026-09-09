@@ -192,7 +192,7 @@ namespace pjh::cli
         std::vector<std::string_view> args;
         for (const auto &t : tokens) args.emplace_back(t);
 
-        auto r = Parser::parse_command(m_root, args, 3);
+        auto r = Parser::parse_command(m_root, args, 3, m_root.help_formatter());
         if (r.is_err())
             return CliResult<void>::Err(r.unwrap_err());
 

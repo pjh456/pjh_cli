@@ -24,6 +24,12 @@ namespace pjh::cli
     ///   - `help` / `--help` / `-h [cmd...]` — display help
     ///   - everything else — parsed as CLI args and executed via action callbacks
     ///
+    /// Two distinct help formatters are involved: the `help` / `--help` / `-h`
+    /// navigation path uses the injected @p help_fmt (HelpNavigationResult), while
+    /// a `cmd --help` line is parsed and rendered by the root command's
+    /// help_formatter() (App::set_help_formatter), empty selecting the built-in
+    /// renderer.
+    ///
     /// All three I/O streams are configurable at construction time (defaulting
     /// to std::cin / std::cout / std::cerr), making the console embeddable in
     /// GUI, WebSocket, server, or test contexts without global stream redirection.
@@ -62,7 +68,10 @@ namespace pjh::cli
         ///                   Replace to customise how query results are rendered.
         /// @param help_fmt   Help navigation formatter (default:
         ///                   HelpNavigationOutput::format).  Replace to customise how
-        ///                   help/unknown-subcommand messages are rendered.
+        ///                   help/unknown-subcommand messages are rendered.  This
+        ///                   formatter renders the `help` / `--help` / `-h`
+        ///                   navigation path only; a `cmd --help` line uses the root
+        ///                   command's help_formatter() (App::set_help_formatter).
         /// @param history    Command history implementation (default:
         ///                   InMemoryHistory).  Pass nullptr to disable history,
         ///                   or a NoOpHistory / custom IHistory subclass to
@@ -143,6 +152,9 @@ namespace pjh::cli
         ///   - default   → Parser::parse_command() with max_fuzzy 3,
         ///                  then execute the matched command's action callback
         ///
+        /// A `cmd --help` line is rendered by the root command's help_formatter()
+        /// (empty selects the built-in), so App::set_help_formatter governs it.
+        ///
         /// @param line  Raw input line (may be empty, in which case Ok is returned).
         /// @return Ok() on success, or Err(CliError) if parsing or the
         ///         action callback fails.
@@ -176,6 +188,8 @@ namespace pjh::cli
         /// Defaults to HelpNavigationOutput::format.  Override to change
         /// how help text, "unknown subcommand", and "has no subcommands"
         /// messages are rendered without changing the navigation logic.
+        /// This is the `help` / `--help` / `-h` navigation formatter only; the
+        /// `cmd --help` path uses the root command's help_formatter().
         std::function<std::string(const HelpNavigationResult &)> m_help_formatter;
 
         /// @brief Whether the REPL loop should continue running.

@@ -51,6 +51,10 @@ namespace pjh::cli
         /// empty function to restore the built-in HelpFormatter::format_help.
         /// The formatter must return a non-empty string: help_requested() is
         /// derived from help_text() being non-empty.
+        ///
+        /// The formatter governs parse() / parse_fuzzy() and the REPL's
+        /// `cmd --help` path; InteractiveConsole reads it through the
+        /// BranchCommand::help_formatter() override.
         /// @param formatter  Renderer, or {} for the built-in default.
         void set_help_formatter(HelpFormatterFn formatter)
         {
@@ -58,7 +62,10 @@ namespace pjh::cli
         }
 
         /// @brief The current batch help formatter (empty = built-in).
-        const HelpFormatterFn &help_formatter() const noexcept
+        ///
+        /// Also used by InteractiveConsole for the REPL `cmd --help` path via the
+        /// BranchCommand::help_formatter() override.
+        const HelpFormatterFn &help_formatter() const noexcept override
         {
             return m_help_formatter;
         }
@@ -75,7 +82,8 @@ namespace pjh::cli
         ///       because the meta-flag path skips ParseFinalizer.
         ///
         /// @note --help / -h text is rendered by help_formatter(), defaulting to
-        ///       HelpFormatter::format_help.
+        ///       HelpFormatter::format_help.  The same formatter drives the REPL
+        ///       `cmd --help` path.
         ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().
@@ -96,7 +104,8 @@ namespace pjh::cli
         ///       because the meta-flag path skips ParseFinalizer.
         ///
         /// @note --help / -h text is rendered by help_formatter(), defaulting to
-        ///       HelpFormatter::format_help.
+        ///       HelpFormatter::format_help.  The same formatter drives the REPL
+        ///       `cmd --help` path.
         ///
         /// @param argc Argument count from main().
         /// @param argv Argument vector from main().

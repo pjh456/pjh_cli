@@ -192,3 +192,87 @@ TEST_CASE("process_line disabled subcommand not listed in query")
     CHECK(sf.output.str().find("active") != std::string_view::npos);
     CHECK(sf.output.str().find("inactive") == std::string_view::npos);
 }
+
+TEST_CASE("process_line subcommand --help uses App help formatter")
+{
+    App app("test", "1.0", "Repl injected help");
+    auto &container = app.add_branch("container", "Container");
+    container.add_leaf("start", "Start");
+    std::string observed;
+    app.set_help_formatter(
+        [&observed](const BaseCommand &cmd)
+        {
+            observed = cmd.name();
+            return std::string("REPL CUSTOM");
+        });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("container start --help");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str() == "REPL CUSTOM\n");  // process_line appends "\n"
+    CHECK(observed == "start");                 // deepest command is passed
+}
+
+TEST_CASE("process_line leaf --help uses App help formatter")
+{
+    App app("test", "1.0", "Repl leaf injected help");
+    app.add_leaf("serve", "Start");
+    app.set_help_formatter([](const BaseCommand &)
+                           { return std::string("LEAF CUSTOM"); });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("serve --help");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str() == "LEAF CUSTOM\n");
+}
+
+TEST_CASE("process_line help navigation keeps console formatter")
+{
+    App app("test", "1.0", "Repl formatter separation");
+    app.add_leaf("serve", "Start");
+    app.set_help_formatter([](const BaseCommand &)
+                           { return std::string("BATCH CUSTOM"); });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("help serve");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().find("Usage:") != std::string_view::npos);
+    CHECK(sf.output.str().find("BATCH CUSTOM") == std::string_view::npos);
+}
+
+TEST_CASE("process_line clearing App formatter restores built-in help")
+{
+    App app("test", "1.0", "Repl clear formatter");
+    app.add_leaf("serve", "Start");
+    app.set_help_formatter([](const BaseCommand &) { return std::string("CUSTOM"); });
+
+    StreamFixture first;
+    InteractiveConsole console(app, "> ", first.input, first.output, first.error);
+    {
+        auto r = console.process_line("serve --help");
+        CHECK(r.is_ok());
+        CHECK(first.output.str() == "CUSTOM\n");
+    }
+
+    app.set_help_formatter({});
+    StreamFixture second;
+    InteractiveConsole console2(app, "> ", second.input, second.output, second.error);
+    auto r = console2.process_line("serve --help");
+    CHECK(r.is_ok());
+    CHECK(second.output.str().starts_with("Usage: test serve"));
+}
+
+TEST_CASE("process_line non-App branch root uses built-in help")
+{
+    BranchCommand root("test", "Plain branch");
+    root.add_leaf("serve", "Start");
+    StreamFixture sf;
+    InteractiveConsole console(root, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("serve --help");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().starts_with("Usage: test serve"));
+}
