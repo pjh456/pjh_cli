@@ -3,6 +3,8 @@
 include(CMakeFindDependencyMacro)
 find_dependency(pjh_result)
 
+# The targets file exports the imported target `pjh::cli` (the real target has
+# EXPORT_NAME cli and the export is namespaced pjh:: in CMakeLists.txt).
 include("${CMAKE_CURRENT_LIST_DIR}/pjh_cliTargets.cmake")
 
 check_required_components(pjh_cli)

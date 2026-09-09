@@ -18,6 +18,7 @@ endif()
 
 add_library(pjh_cli)
 add_library(pjh::cli ALIAS pjh_cli)
+set_target_properties(pjh_cli PROPERTIES EXPORT_NAME cli)
 target_sources(pjh_cli
     PRIVATE
     src/command.cpp
@@ -66,6 +67,7 @@ set(pjh_cli_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/pjh_cli)
 install(TARGETS pjh_cli EXPORT pjh_cliTargets)
 install(EXPORT pjh_cliTargets
     FILE pjh_cliTargets.cmake
+    NAMESPACE pjh::
     DESTINATION ${pjh_cli_INSTALL_CMAKEDIR})
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

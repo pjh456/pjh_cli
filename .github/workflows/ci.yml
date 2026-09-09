@@ -70,3 +70,13 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+      - name: Verify installed package exports pjh::cli
+        if: matrix.name == 'Linux GCC 14'
+        run: |
+          prefix="${RUNNER_TEMP}/pjh-cli-prefix"
+          cmake --install build --prefix "${prefix}"
+          cmake -S tests/consumer -B "${RUNNER_TEMP}/pjh-cli-consumer" \
+            -DCMAKE_PREFIX_PATH="${prefix}"
+          cmake --build "${RUNNER_TEMP}/pjh-cli-consumer" --parallel
+          "${RUNNER_TEMP}/pjh-cli-consumer/consumer"

@@ -328,5 +328,16 @@ Include as a submodule:
 
 ```cmake
 add_subdirectory(path/to/pjh_cli)
-target_link_libraries(myapp pjh_cli)
+target_link_libraries(myapp PRIVATE pjh::cli)
 ```
+
+Consume an installed package:
+
+```cmake
+find_package(pjh_cli CONFIG REQUIRED)
+target_link_libraries(myapp PRIVATE pjh::cli)
+```
+
+Both modes expose the same target name `pjh::cli`. The package config calls
+`find_dependency(pjh_result)`, so an installed `pjh_result` must be discoverable
+when `find_package(pjh_cli)` runs.

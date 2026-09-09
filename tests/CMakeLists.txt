@@ -46,7 +46,7 @@ set(PJH_CLI_TEST_SOURCES
 )
 
 add_executable(pjh_cli_tests ${PJH_CLI_TEST_SOURCES})
-target_link_libraries(pjh_cli_tests PRIVATE pjh_cli doctest)
+target_link_libraries(pjh_cli_tests PRIVATE pjh::cli doctest)
 find_package(Threads REQUIRED)
 target_link_libraries(pjh_cli_tests PRIVATE Threads::Threads)
 

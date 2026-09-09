@@ -3,7 +3,7 @@ option(PJH_CLI_BUILD_EXAMPLES "Build example programs" OFF)
 if(PJH_CLI_BUILD_EXAMPLES)
     function(add_cli_example name)
         add_executable(${name} ${name}.cpp)
-        target_link_libraries(${name} PRIVATE pjh_cli)
+        target_link_libraries(${name} PRIVATE pjh::cli)
     endfunction()
 
     add_cli_example(hello)
