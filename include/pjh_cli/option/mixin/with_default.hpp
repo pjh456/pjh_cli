@@ -19,7 +19,9 @@ namespace pjh::cli
     ///   - `convert_value(raw)`  — string → T conversion
     ///   - `validate_value(v, raw)` — post-conversion validation (chained)
     ///
-    /// Subclasses and downstream mixins override the hooks instead of `parse_value`.
+    /// The pipeline yields an OptionValue; the parse layer (ValueWriter)
+    /// stores it.  Subclasses and downstream mixins override the hooks
+    /// instead of `parse_value`.
     template <typename T, typename Derived, typename Base = OptionDef>
         requires detail::BuiltinType<T> && std::derived_from<Base, OptionDef>
     class WithDefault : public Base
@@ -45,29 +47,33 @@ namespace pjh::cli
             return "";
         }
 
-        /// @brief Parse pipeline:  convert → validate → store.  Not overridable.
-        CliResult<void> parse_value(
-            ParseContext &ctx, std::string_view raw) const final override
+        /// @brief Parse pipeline:  convert → validate → yield.  Not overridable.
+        CliResult<OptionValue> parse_value(std::string_view raw) const final override
         {
             auto r = convert_value(raw);
             if (r.is_err())
-                return CliResult<void>::Err(std::move(r).unwrap_err());
+                return CliResult<OptionValue>::Err(std::move(r).unwrap_err());
             auto vr = validate_value(r.unwrap(), raw);
             if (vr.is_err())
-                return vr;
-            return this->store_or_append(ctx, this->m_key_hash, std::move(r.unwrap()));
+                return CliResult<OptionValue>::Err(std::move(vr).unwrap_err());
+            return CliResult<OptionValue>::Ok(OptionValue{std::move(r.unwrap())});
         }
 
-        CliResult<void> apply_default(ParseContext &ctx) const override
+        /// @brief Yield the validated default value, if one is registered.
+        ///
+        /// Presence checks stay in the parse layer
+        /// (ParseFinalizer::apply_defaults); validation errors propagate.
+        CliResult<pjh::result::Option<OptionValue>> default_option_value() const override
         {
-            if (m_default.is_some() && !ParseContextWriter::has_value(ctx, this->m_key_hash))
-            {
-                auto vr = this->validate_value(m_default.unwrap(), "");
-                if (vr.is_err())
-                    return vr;
-                return this->store_or_append(ctx, this->m_key_hash, m_default.unwrap());
-            }
-            return CliResult<void>::Ok();
+            if (m_default.is_none())
+                return CliResult<pjh::result::Option<OptionValue>>::Ok(
+                    pjh::result::Option<OptionValue>::None());
+            auto vr = this->validate_value(m_default.unwrap(), "");
+            if (vr.is_err())
+                return CliResult<pjh::result::Option<OptionValue>>::Err(
+                    std::move(vr).unwrap_err());
+            return CliResult<pjh::result::Option<OptionValue>>::Ok(
+                pjh::result::Option<OptionValue>::Some(OptionValue{m_default.unwrap()}));
         }
 
         Derived &default_value(T v)

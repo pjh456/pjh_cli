@@ -5,20 +5,42 @@
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
+#include <pjh_cli/parse/value_writer.hpp>
+#include <utility>
 
 namespace pjh::cli
 {
+    /// @brief Apply registered defaults for @p cmd's options that are
+    ///        still unset.
+    CliResult<void> ParseFinalizer::apply_defaults(
+        const BaseCommand &cmd, ParseContext &ctx)
+    {
+        for (const auto &opt_ptr : cmd.options())
+        {
+            if (!opt_ptr->has_default() ||
+                ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
+                continue;
+            auto r = opt_ptr->default_option_value();
+            if (r.is_err())
+                return CliResult<void>::Err(std::move(r).unwrap_err());
+            auto maybe = std::move(r).unwrap();
+            if (maybe.is_some())
+                ValueWriter::apply_option_value(
+                    ctx, opt_ptr->key_hash(), opt_ptr->is_repeatable(),
+                    std::move(maybe).unwrap());
+        }
+        return CliResult<void>::Ok();
+    }
+
     /// @brief Apply default values for every option along @p chain.
     ///
-    /// Iterates each command in the chain; for each option that has
-    /// has_default() true and no user-supplied value, calls
-    /// opt->apply_default().
+    /// Iterates each command in the chain and delegates to apply_defaults().
     CliResult<void> ParseFinalizer::apply_chain_defaults(
         const std::vector<BaseCommand *> &chain, ParseContext &ctx)
     {
         for (auto *c : chain)
         {
-            auto dr = c->apply_defaults(ctx);
+            auto dr = apply_defaults(*c, ctx);
             if (dr.is_err())
                 return dr;
         }
@@ -29,7 +51,7 @@ namespace pjh::cli
     ///
     /// Reads the env snapshot from the root command.  For each option that
     /// has a non-empty env_var() and no value set, looks up the env var
-    /// and calls opt->parse_value().
+    /// and calls ValueWriter::apply_option_raw().
     CliResult<void> ParseFinalizer::apply_chain_env(
         const std::vector<BaseCommand *> &chain, ParseContext &ctx)
     {
@@ -47,7 +69,7 @@ namespace pjh::cli
                     auto *env_val = env_snap->get(opt_ptr->env_var());
                     if (env_val)
                     {
-                        auto r = opt_ptr->parse_value(ctx, *env_val);
+                        auto r = ValueWriter::apply_option_raw(ctx, *opt_ptr, *env_val);
                         if (r.is_err())
                             return r;
                     }

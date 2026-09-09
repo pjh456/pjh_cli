@@ -38,12 +38,23 @@ namespace pjh::cli
         /// @throws LogicError if @p cmd is null.
         static CliResult<ParseContext> finalize(BaseCommand *cmd, ParseContext ctx);
 
+        /// @brief Apply registered defaults for @p cmd's options that are
+        ///        still unset.
+        ///
+        /// For each option with has_default() true and no value present,
+        /// calls OptionDef::default_option_value() and stores the result.
+        /// Replaces the former BaseCommand::apply_defaults() so the command
+        /// layer no longer touches ParseContext storage.
+        /// @param cmd Command whose options to apply defaults for.
+        /// @param ctx Parse context to write into.
+        /// @return Ok, or the default-validation error verbatim.
+        static CliResult<void> apply_defaults(const BaseCommand &cmd, ParseContext &ctx);
+
     private:
         /// @brief Apply default values for every option along @p chain.
         ///
-        /// Iterates each command in the chain; for each option that has
-        /// has_default() true and no user-supplied value, calls
-        /// opt->apply_default().
+        /// Iterates each command in the chain and delegates to
+        /// apply_defaults().
         static CliResult<void> apply_chain_defaults(
             const std::vector<BaseCommand *> &chain, ParseContext &ctx);
 
@@ -51,7 +62,8 @@ namespace pjh::cli
         ///
         /// Reads the env snapshot from the root command.  For each option
         /// that has a non-empty env_var() and no value has been set, looks
-        /// up the environment variable and calls opt->parse_value().
+        /// up the environment variable and calls
+        /// ValueWriter::apply_option_raw().
         static CliResult<void> apply_chain_env(
             const std::vector<BaseCommand *> &chain, ParseContext &ctx);
 

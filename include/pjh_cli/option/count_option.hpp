@@ -6,7 +6,6 @@
 #include <pjh_cli/option/mixin/with_required.hpp>
 #include <pjh_cli/option/option_chain.hpp>
 #include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
 #include <string_view>
 
 namespace pjh::cli
@@ -28,16 +27,6 @@ namespace pjh::cli
         bool has_default() const noexcept override { return false; }
 
         bool is_counting() const noexcept override { return true; }
-
-        CliResult<void> parse_value(ParseContext &, std::string_view) const override
-        {
-            return CliFailure{ErrorFactory::option_does_not_accept_value(display_name())};
-        }
-
-        CliResult<void> apply_default(ParseContext &) const override
-        {
-            return CliResult<void>::Ok();
-        }
     };
 
 }  // namespace pjh::cli

@@ -12,6 +12,7 @@
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <variant>
 
 namespace pjh::cli
 {
@@ -138,6 +139,23 @@ namespace pjh::cli
         using BuiltinTypes =
             std::tuple<bool, int, double, std::string, std::filesystem::path>;
 
+        /// @brief Rebind a std::tuple of types to a std::variant over the
+        ///        same types.
+        ///
+        /// Lets a public alias derive its alternative set from BuiltinTypes
+        /// so the two orderings cannot drift apart.
+        /// @tparam Tuple The tuple type to rebind.
+        template <typename Tuple>
+        struct variant_from_tuple;
+
+        /// @brief Concrete binding for a tuple of element types.
+        /// @tparam Ts The tuple element types.
+        template <typename... Ts>
+        struct variant_from_tuple<std::tuple<Ts...>>
+        {
+            using type = std::variant<Ts...>;
+        };
+
         /// @brief Concept: one of the storage types supported by the option
         ///        system.
         /// @tparam T Candidate storage type.
@@ -210,6 +228,14 @@ namespace pjh::cli
             return {BuiltinTraits<Ts>::hint_name...};
         }
     }
+
+    /// @brief Type-erased validated value produced by an option's pipeline.
+    ///
+    /// Alternatives are exactly detail::BuiltinTypes, in storage order, so the
+    /// variant index matches ValueTag and ParseContext's per-type storage
+    /// maps.  The parse layer (ValueWriter) is the only consumer that turns
+    /// it back into ParseContext storage.
+    using OptionValue = detail::variant_from_tuple<detail::BuiltinTypes>::type;
 
 }  // namespace pjh::cli
 

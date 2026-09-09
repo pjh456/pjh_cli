@@ -8,6 +8,7 @@
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 using namespace pjh::cli;
@@ -227,4 +228,18 @@ TEST_CASE("BoolOption negatable in subcommand")
     auto &ctx = r.unwrap();
     CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "cmd");
     CHECK(ctx.get<bool, fixed_string("verbose")>() == false);
+}
+
+TEST_CASE("BoolOption parse_value yields OptionValue")
+{
+    App app("test", "1.0", "Bool yield");
+    app.option<fixed_string("flag")>("--flag", "Flag").boolean();
+    auto *def = app.find_option_by_long("flag");
+    REQUIRE(def != nullptr);
+    auto r = def->parse_value("true");
+    REQUIRE(r.is_ok());
+    CHECK(std::get<bool>(r.unwrap()) == true);
+    auto def_r = def->default_option_value();
+    REQUIRE(def_r.is_ok());
+    CHECK(def_r.unwrap().is_none());
 }

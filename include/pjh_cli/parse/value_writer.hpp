@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string_view>
@@ -47,6 +48,30 @@ namespace pjh::cli
             ValueTag tag,
             std::string_view s,
             std::string_view display = {});
+
+        /// @brief Store an already-converted option value, appending when
+        ///        repeatable.
+        ///
+        /// The std::visit dispatch is exhaustive by construction: the
+        /// OptionValue alternative set is derived from detail::BuiltinTypes
+        /// and every alternative moves noexcept, so valueless_by_exception()
+        /// is unreachable.
+        ///
+        /// @param ctx        Parse context to write into.
+        /// @param hash       Option key hash (OptionDef::key_hash()).
+        /// @param repeatable Whether to append (OptionDef::is_repeatable()).
+        /// @param value      Converted value from OptionDef::parse_value().
+        static void apply_option_value(
+            ParseContext &ctx, size_t hash, bool repeatable, OptionValue value);
+
+        /// @brief Run @p opt's convert+validate pipeline on @p raw and store
+        ///        the result.
+        /// @param ctx Parse context to write into.
+        /// @param opt Option whose pipeline to run.
+        /// @param raw   Raw string value.
+        /// @return Ok, or the conversion/validation error verbatim.
+        static CliResult<void> apply_option_raw(
+            ParseContext &ctx, const OptionDef &opt, std::string_view raw);
 
     private:
         /// @brief Signature of one tag→converter dispatch entry.

@@ -11,6 +11,7 @@
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
+#include <pjh_cli/parse/parse_finalizer.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -234,7 +235,7 @@ TEST_CASE("ParseContext")
     ParseContextWriter::set_matched_command(ctx, &app);
     CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "test");
 
-    auto cmd_ctx = app.create_context();
+    ParseContext cmd_ctx;
     CHECK(!cmd_ctx.has<fixed_string("port")>());
 }
 
@@ -242,8 +243,8 @@ TEST_CASE("Command apply defaults")
 {
     App app2("test2", "1.0", "Default test");
     app2.option<fixed_string("x")>("--x", "X value", 100);
-    auto ctx2 = app2.create_context();
-    auto res = app2.apply_defaults(ctx2);
+    ParseContext ctx2;
+    auto res = ParseFinalizer::apply_defaults(app2, ctx2);
     CHECK(res.is_ok());
     CHECK(ctx2.has<fixed_string("x")>());
 
@@ -266,15 +267,26 @@ TEST_CASE("Command execute")
             return CliResult<void>::Ok();
         });
 
-    auto ctx3 = app3.create_context();
+    ParseContext ctx3;
     auto res = app3.execute(ctx3);
     CHECK(res.is_ok());
     CHECK(counter == 1);
 
     auto &noact = app3.add_leaf("noact", "No action");
-    auto ctx4 = noact.create_context();
+    ParseContext ctx4;
     res = noact.execute(ctx4);
     CHECK(res.is_ok());
+}
+
+TEST_CASE("ParseFinalizer apply_defaults skips present values")
+{
+    App app("test", "1.0", "Skip present");
+    app.option<fixed_string("x")>("--x", "X", 100);
+    ParseContext ctx;
+    ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("x")), 200);
+    auto res = ParseFinalizer::apply_defaults(app, ctx);
+    CHECK(res.is_ok());
+    CHECK(ctx.get<int, fixed_string("x")>() == 200);
 }
 
 TEST_CASE("Command options count")

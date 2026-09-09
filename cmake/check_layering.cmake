@@ -10,9 +10,8 @@
 # `layer|target` pair is allow-listed below.
 #
 # It also computes the transitive closure of the file-level include graph and
-# fails if any file reaches a header in a forbidden subsystem, except the
-# documented value-storage carve-out headers in _transitive_ok.  The graph has a
-# command<->option umbrella cycle, so the closure is a fixed point, not a
+# fails if any file reaches a header in a forbidden subsystem.  The graph has
+# a command<->option umbrella cycle, so the closure is a fixed point, not a
 # topological sort.
 #
 # Fail-closed policy: a file whose layer cannot be resolved, an include target
@@ -20,8 +19,8 @@
 # the scanned file set are all reported as violations, so a new source file or
 # subsystem directory must be classified here explicitly.
 #
-# This file encodes the post-task-20 tree. The only cross-layer exceptions are
-# the four command/option -> parse/parse_context(_writer) value-storage edges.
+# This file encodes the zero-exception layer DAG: there are no cross-layer
+# exceptions.
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -44,21 +43,6 @@ set(_forbid_format  "parse;console;app;umbrella")
 set(_forbid_console "app;umbrella")
 set(_forbid_app     "console;umbrella")
 set(_forbid_umbrella "")
-
-# ── Exact allow-list: the pre-existing value-storage carve-outs ─────────────
-set(_allowed
-    "command|parse/parse_context.hpp"
-    "command|parse/parse_context_writer.hpp"
-    "option|parse/parse_context.hpp"
-    "option|parse/parse_context_writer.hpp")
-
-# ── Headers permitted to be reached transitively because they are the targets
-#    of the documented value-storage carve-outs above.  Every OTHER forbidden
-#    header reached through the include graph is a transitive violation.
-#    Delete an entry when its direct carve-out is removed (roadmap task 55). ──
-set(_transitive_ok
-    "parse/parse_context.hpp"
-    "parse/parse_context_writer.hpp")
 
 # ── Explicit src/ layer map (new source files must be added here) ───────────
 set(_src_map
@@ -175,8 +159,7 @@ foreach(_file IN LISTS _files)
         endif()
 
         list(FIND _forbid_${_layer} "${_sub}" _forbidden)
-        list(FIND _allowed "${_layer}|${_target}" _ok)
-        if(_forbidden GREATER -1 AND _ok EQUAL -1)
+        if(_forbidden GREATER -1)
             list(APPEND _violations "${_file}: ${_layer} -> <pjh_cli/${_target}>")
         endif()
 
@@ -217,7 +200,7 @@ while(_changed)
 endwhile()
 
 # ── Transitive check: reject any reachable forbidden header that is not a
-#    direct edge (direct edges are reported above) and not a carve-out target. ─
+#    direct edge (direct edges are reported above). ──────────────────────────
 foreach(_file IN LISTS _files)
     _layer_of("${_file}" _layer)
     if(_layer STREQUAL "unknown")
@@ -244,11 +227,8 @@ foreach(_file IN LISTS _files)
         if(_forbidden EQUAL -1)
             continue()
         endif()
-        list(FIND _transitive_ok "${_target}" _ok)
-        if(_ok EQUAL -1)
-            list(APPEND _violations
-                 "${_file}: ${_layer} transitively -> <pjh_cli/${_target}>")
-        endif()
+        list(APPEND _violations
+             "${_file}: ${_layer} transitively -> <pjh_cli/${_target}>")
     endforeach()
 endforeach()
 

@@ -7,8 +7,6 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -39,21 +37,6 @@ namespace pjh::cli
         if (it == m_option_by_short.end())
             return nullptr;
         return it->second;
-    }
-
-    ParseContext BaseCommand::create_context() const noexcept { return ParseContext{}; }
-
-    CliResult<void> BaseCommand::apply_defaults(ParseContext &ctx) const
-    {
-        for (const auto &opt_ptr : m_options)
-        {
-            if (!opt_ptr->has_default() || ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
-                continue;
-            auto r = opt_ptr->apply_default(ctx);
-            if (r.is_err())
-                return r;
-        }
-        return CliResult<void>::Ok();
     }
 
     CliResult<void> BaseCommand::execute(ParseContext &ctx) const

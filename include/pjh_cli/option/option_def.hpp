@@ -6,8 +6,6 @@
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/concept.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -16,7 +14,6 @@
 
 namespace pjh::cli
 {
-    class ParseContext;
     class BaseCommand;  // for OptionDef's return types
 
     // ── Forward declarations for typed subclasses ──
@@ -40,9 +37,12 @@ namespace pjh::cli
     /// @brief Base class for all option definitions.
     ///
     /// Holds common fields (name, description, key hash, required flag, etc.)
-    /// and provides virtual `parse_value()` and `apply_default()` that each
-    /// typed subclass overrides.  Options are stored polymorphically in
+    /// and provides virtual `parse_value()` and `default_option_value()` that
+    /// each typed subclass overrides.  Options are stored polymorphically in
     /// \`BaseCommand::m_options\` as \`unique_ptr<OptionDef>\`.
+    ///
+    /// The option layer only yields validated values; the parse layer
+    /// (ValueWriter) is the single writer of ParseContext storage.
     class OptionDef
     {
     public:
@@ -114,17 +114,19 @@ namespace pjh::cli
             return empty;
         }
 
-        /// @brief Parse a raw CLI token and store the typed value in @p ctx.
-        /// @param ctx Parse context to write into.
-        /// @param raw The raw string value from the command line.
-        /// @return Ok on success, or a CliError (type conversion failure).
-        virtual CliResult<void> parse_value(
-            ParseContext &ctx, std::string_view raw) const;
+        /// @brief Run the convert+validate pipeline and yield a type-erased
+        ///        value without touching ParseContext.
+        /// @param raw The raw string value from the command line / env /
+        ///        default.
+        /// @return Ok(OptionValue) on success, or a conversion/validation
+        ///         CliError.
+        virtual CliResult<OptionValue> parse_value(std::string_view raw) const;
 
-        /// @brief Apply the default value into @p ctx if no value is present.
-        /// @param ctx Parse context to write into.
-        /// @return Ok on success, or a CliError (default value parse failure).
-        virtual CliResult<void> apply_default(ParseContext &ctx) const;
+        /// @brief Yield the validated default value, if one is registered.
+        /// @return Ok(Some(value)) when a default exists and validates,
+        ///         Ok(None()) when no default is registered, or Err when it
+        ///         fails validation.
+        virtual CliResult<pjh::result::Option<OptionValue>> default_option_value() const;
 
         // ── Chainable setters ──
 
@@ -192,17 +194,6 @@ namespace pjh::cli
         }
 
     protected:
-        /// @brief Store @p value (or append if repeatable).
-        template <typename T>
-        CliResult<void> store_or_append(ParseContext &ctx, size_t hash, T value) const
-        {
-            if (is_repeatable())
-                ParseContextWriter::append_value(ctx, hash, std::move(value));
-            else
-                ParseContextWriter::set_value(ctx, hash, std::move(value));
-            return CliResult<void>::Ok();
-        }
-
         std::string m_long_name;
         char m_short_name{};
         std::string m_description;
@@ -215,15 +206,17 @@ namespace pjh::cli
     // ── Virtual method default implementations ──
 
     /// @brief Default: option does not accept a value; returns an error.
-    inline CliResult<void> OptionDef::parse_value(ParseContext &, std::string_view) const
+    inline CliResult<OptionValue> OptionDef::parse_value(std::string_view) const
     {
         return CliFailure{ErrorFactory::option_does_not_accept_value(display_name())};
     }
 
-    /// @brief Default: no-op (no default value to apply).
-    inline CliResult<void> OptionDef::apply_default(ParseContext &) const
+    /// @brief Default: no default value registered.
+    inline CliResult<pjh::result::Option<OptionValue>> OptionDef::default_option_value()
+        const
     {
-        return CliResult<void>::Ok();
+        return CliResult<pjh::result::Option<OptionValue>>::Ok(
+            pjh::result::Option<OptionValue>::None());
     }
 
 }  // namespace pjh::cli

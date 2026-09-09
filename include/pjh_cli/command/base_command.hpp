@@ -15,7 +15,6 @@
 #include <pjh_cli/option/option_builder.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/option/option_group_builder.hpp>
-#include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -30,6 +29,7 @@ namespace pjh::cli::detail
 namespace pjh::cli
 {
 
+    class ParseContext;
     class BranchCommand;
     class LeafCommand;
 
@@ -288,6 +288,10 @@ namespace pjh::cli
 
         /// @brief Register the action callback invoked when this command is
         ///        matched and parsed successfully.
+        ///
+        /// The ParseContext is produced and populated by the parse layer
+        /// (Parser / ParseFinalizer); this class only passes it through, so
+        /// an opaque forward-declared reference suffices.
         /// @param fn Callback receiving the populated ParseContext.
         /// @return *this for chaining.
         BaseCommand &action(std::function<CliResult<void>(ParseContext &)> fn);
@@ -336,20 +340,11 @@ namespace pjh::cli
 
         // ── Lifecycle ──
 
-        /// @brief Create an empty ParseContext for this command.
-        ParseContext create_context() const noexcept;
-
-        /// @brief Pre-fill context with default values from registered options.
-        ///
-        /// Iterates all options; for each option with has_default() and no
-        /// user-supplied value, calls opt->apply_default().
-        /// @param ctx Parse context to modify.
-        /// @return Ok or Err if a default value failed to parse.
-        CliResult<void> apply_defaults(ParseContext &ctx) const;
-
         /// @brief Execute the registered action callback.
-        /// @param ctx Fully populated ParseContext from the parser.
-        /// @return The result of the action callback, or Ok if none registered.
+        /// @param ctx Fully populated ParseContext produced by the parse
+        ///        layer (Parser / ParseFinalizer).
+        /// @return The result of the action callback, or Ok if none
+        ///         registered.
         CliResult<void> execute(ParseContext &ctx) const;
 
     public:

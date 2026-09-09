@@ -57,7 +57,7 @@ TEST_CASE("const execute")
             return CliResult<void>::Ok();
         });
 
-    auto ctx = app.create_context();
+    ParseContext ctx;
     const App &const_app = app;
     auto r = const_app.execute(ctx);
     CHECK(r.is_ok());

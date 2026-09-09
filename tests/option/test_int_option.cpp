@@ -190,3 +190,30 @@ TEST_CASE("IntOption repeatable validates each value with min")
     Argv argv2{"test", "-p", "200", "-p", "300"};
     CHECK(app.parse(argv2.argc(), argv2.argv()).is_ok());
 }
+
+// ── default validation through the yield/apply seam ──
+
+TEST_CASE("IntOption default outside range is rejected")
+{
+    App app("test", "1.0", "Int default range");
+    app.option<fixed_string("x")>("--x", "X").integer().min(10).default_value(5);
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view(
+            "Parse Error: value '' for '--x' is out of range [10, 2147483647]"));
+}
+
+TEST_CASE("IntOption repeatable default appends one value")
+{
+    App app("test", "1.0", "Repeat default");
+    app.option<fixed_string("x")>("--x", "X").integer().repeatable().default_value(7);
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<int, fixed_string("x")>();
+    REQUIRE(all.size() == 1);
+    CHECK(all[0] == 7);
+}

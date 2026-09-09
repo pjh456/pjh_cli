@@ -10,6 +10,7 @@
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_context_writer.hpp>
+#include <pjh_cli/parse/value_writer.hpp>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -194,7 +195,7 @@ namespace pjh::cli
                 if (parsed.value.empty())
                     return CliFailure{
                         ErrorFactory::missing_value(std::format("--{}", parsed.name))};
-                return opt->parse_value(owner, parsed.value);
+                return ValueWriter::apply_option_raw(owner, *opt, parsed.value);
             }
             if (i + 1 >= args.size())
                 return CliFailure{
@@ -205,7 +206,7 @@ namespace pjh::cli
                 return CliFailure{
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
-            auto r = opt->parse_value(owner, args[++i]);
+            auto r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
             if (r.is_err())
                 return r;
 
@@ -214,7 +215,7 @@ namespace pjh::cli
                 next = args[i + 1];
                 if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                     break;
-                r = opt->parse_value(owner, args[++i]);
+                r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
                 if (r.is_err())
                     return r;
             }
@@ -269,7 +270,7 @@ namespace pjh::cli
                                 ErrorFactory::missing_value(std::format("-{}", c))};
                     }
 
-                    auto r = opt->parse_value(owner, value);
+                    auto r = ValueWriter::apply_option_raw(owner, *opt, value);
                     if (r.is_err())
                         return r;
 
@@ -278,7 +279,7 @@ namespace pjh::cli
                         auto nxt = args[i + 1];
                         if (detail::is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
                             break;
-                        r = opt->parse_value(owner, args[++i]);
+                        r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
                         if (r.is_err())
                             return r;
                     }
@@ -292,7 +293,7 @@ namespace pjh::cli
                 if (detail::is_option_flag(next))
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
-                auto r = opt->parse_value(owner, args[++i]);
+                auto r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
                 if (r.is_err())
                     return r;
 
@@ -301,7 +302,7 @@ namespace pjh::cli
                     next = args[i + 1];
                     if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                         break;
-                    r = opt->parse_value(owner, args[++i]);
+                    r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
                     if (r.is_err())
                         return r;
                 }

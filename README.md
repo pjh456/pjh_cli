@@ -467,11 +467,8 @@ command covers it:
 ctest --test-dir build -R layering_guard --output-on-failure
 ```
 
-The only cross-layer exceptions are the four value-storage carve-outs
-`command|option -> parse/parse_context(_writer)` listed in `_allowed`. Those two
-headers are also the only entries in `_transitive_ok`, so reaching any other
-forbidden header through the include graph fails. A new source file must be
-classified in the script's `_src_map`; a new subsystem needs a `_known_layers`
-entry, a `_forbid_<layer>` row, and classifier coverage; a new intentional
-exception is a single `layer|target` line in `_allowed` and must be documented
-in the same change.
+There are no cross-layer exceptions: the option/command headers no longer
+reach the parse storage headers, so a file that names a forbidden header
+directly or reaches it through the include graph fails. A new source file
+must be classified in the script's `_src_map`; a new subsystem needs a
+`_known_layers` entry, a `_forbid_<layer>` row, and classifier coverage.
