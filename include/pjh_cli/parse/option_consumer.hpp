@@ -32,7 +32,9 @@ namespace pjh::cli
         /// If the option expects a value:
         ///   - =value form: value is taken from after the '='
         ///   - next-token form: the next argument is consumed via @p i
-        /// If the token is --no-<name> and the option is negatable, sets false.
+        /// If the token is --no-<name> and the option is negatable, sets false;
+        /// a =value on the negated form is rejected
+        /// (option_does_not_accept_value).
         /// For flag/count options, apply_flag() is called.
         /// For repeatable options, greedily consumes following non-flag tokens.
         ///

@@ -81,3 +81,17 @@ TEST_CASE("Parser valued option still accepts --opt=value")
     REQUIRE(r.is_ok());
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
 }
+
+TEST_CASE("Parser negatable flag rejects --no-opt=value")
+{
+    App app("test", "1.0", "Neg flag eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--no-verbose=false"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
+}

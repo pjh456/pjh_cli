@@ -44,7 +44,9 @@ namespace pjh::cli
     ///
     /// Parses the token via Tokenizer::parse_long_option(), looks up the
     /// option on @p cmd, extracts and converts the value when the option
-    /// expects one, and handles --no-xxx negation inline.
+    /// expects one, and handles --no-xxx negation inline.  A negated flag
+    /// (--no-xxx) takes no value: --no-xxx=v is rejected with
+    /// option_does_not_accept_value.
     CliResult<void> OptionConsumer::consume_long(
         const BaseCommand &cmd,
         ParseContext &ctx,
@@ -62,6 +64,11 @@ namespace pjh::cli
                 auto *neg = cmd.find_option_by_long(parsed.negated_name);
                 if (neg && neg->is_negatable())
                 {
+                    if (parsed.has_equals)
+                    {
+                        return CliFailure{ErrorFactory::option_does_not_accept_value(
+                            std::format("--{}", parsed.name))};
+                    }
                     ParseContextWriter::set_value<bool>(ctx, neg->key_hash(), false);
                     return CliResult<void>::Ok();
                 }

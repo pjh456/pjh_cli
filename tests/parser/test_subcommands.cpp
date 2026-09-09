@@ -1,13 +1,14 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "test_helpers.hpp"
@@ -162,6 +163,21 @@ TEST_CASE("Parent chain subcommand can read parent bool with --no-xxx negation")
     LocalArgv argv{"test", "--no-verbose", "son"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
+}
+
+TEST_CASE("Parent chain negated flag with value rejects before descent")
+{
+    App app("test", "1.0", "Parent chain negate eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    app.add_leaf("son", "Son Command");
+    LocalArgv argv{"test", "--no-verbose=0", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
 }
 
 TEST_CASE("Parent chain child has() returns false when parent option not given")

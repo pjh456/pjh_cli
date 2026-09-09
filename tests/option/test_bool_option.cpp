@@ -149,7 +149,19 @@ TEST_CASE("BoolOption negatable not negated returns error")
     CHECK(r.is_err());
 }
 
-TEST_CASE("BoolOption negatable --no-verbose with extra =value ignored")
+TEST_CASE("BoolOption non-negatable --no-verbose=0 reports unknown option")
+{
+    App app("test", "1.0", "Not negatable eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    Argv argv{"test", "--no-verbose=0"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--no-verbose'"));
+}
+
+TEST_CASE("BoolOption negatable rejects --no-verbose=value")
 {
     App app("test", "1.0", "Neg eq");
     app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
@@ -157,8 +169,38 @@ TEST_CASE("BoolOption negatable --no-verbose with extra =value ignored")
         .negatable();
     Argv argv{"test", "--no-verbose=0"};
     auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
-    CHECK(r.unwrap().get<bool, fixed_string("verbose")>() == false);
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
+}
+
+TEST_CASE("BoolOption negatable rejects --no-verbose=true")
+{
+    App app("test", "1.0", "Neg truthy eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--no-verbose=true"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
+}
+
+TEST_CASE("BoolOption negatable rejects --no-verbose=")
+{
+    App app("test", "1.0", "Neg empty eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .boolean()
+        .negatable();
+    Argv argv{"test", "--no-verbose="};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
 }
 
 TEST_CASE("BoolOption negatable in subcommand")
