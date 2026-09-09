@@ -1,15 +1,15 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <cstddef>
 #include <format>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <string>
@@ -25,6 +25,17 @@ static_assert(
     std::is_const_v<
         std::remove_reference_t<decltype(std::declval<BranchCommand &>().subcommands())>>,
     "BranchCommand::subcommands() must return a const reference");
+
+// EnvSnapshot must not appear in the public command API.
+template <typename T>
+concept HasEnvSnapshotAccessor = requires(T &t) { t.env_snapshot(); };
+static_assert(!HasEnvSnapshotAccessor<BaseCommand>);
+static_assert(!HasEnvSnapshotAccessor<App>);
+
+// The replacement const interface is present and type-free.
+static_assert(std::is_same_v<
+              decltype(std::declval<const App &>().env_value(std::string_view{})),
+              const std::string *>);
 
 TEST_CASE("Command construction")
 {
@@ -239,9 +250,10 @@ TEST_CASE("ParseContext")
     App app("test", "1.0", "Test");
 
     ParseContext ctx;
-    ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("port")), 8080);
-    ParseContextWriter::set_value<std::string>(ctx, key_hash(fixed_string("host")), std::string("localhost"));
-    ParseContextWriter::set_value<int>(ctx, key_hash(static_cast<size_t>(0)), 42);
+    detail::ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("port")), 8080);
+    detail::ParseContextWriter::set_value<std::string>(
+        ctx, key_hash(fixed_string("host")), std::string("localhost"));
+    detail::ParseContextWriter::set_value<int>(ctx, key_hash(static_cast<size_t>(0)), 42);
 
     auto port = ctx.get<int, fixed_string("port")>();
     CHECK(port == 8080);
@@ -257,10 +269,10 @@ TEST_CASE("ParseContext")
     CHECK(ctx.has<0>());
     CHECK(!ctx.has<999>());
 
-    CHECK(ParseContextWriter::has_value(ctx, key_hash(fixed_string("port"))));
-    CHECK(!ParseContextWriter::has_value(ctx, key_hash(fixed_string("missing"))));
+    CHECK(detail::ParseContextWriter::has_value(ctx, key_hash(fixed_string("port"))));
+    CHECK(!detail::ParseContextWriter::has_value(ctx, key_hash(fixed_string("missing"))));
 
-    ParseContextWriter::set_matched_command(ctx, &app);
+    detail::ParseContextWriter::set_matched_command(ctx, &app);
     CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "test");
 
     ParseContext cmd_ctx;
@@ -279,7 +291,7 @@ TEST_CASE("Command apply defaults")
     int xval = ctx2.get<int, fixed_string("x")>();
     CHECK(xval == 100);
 
-    ParseContextWriter::set_value<int>(ctx2, key_hash(fixed_string("x")), 200);
+    detail::ParseContextWriter::set_value<int>(ctx2, key_hash(fixed_string("x")), 200);
     int xval2 = ctx2.get<int, fixed_string("x")>();
     CHECK(xval2 == 200);
 }
@@ -311,7 +323,7 @@ TEST_CASE("ParseFinalizer apply_defaults skips present values")
     App app("test", "1.0", "Skip present");
     app.option<fixed_string("x")>("--x", "X", 100);
     ParseContext ctx;
-    ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("x")), 200);
+    detail::ParseContextWriter::set_value<int>(ctx, key_hash(fixed_string("x")), 200);
     auto res = ParseFinalizer::apply_defaults(app, ctx);
     CHECK(res.is_ok());
     CHECK(ctx.get<int, fixed_string("x")>() == 200);

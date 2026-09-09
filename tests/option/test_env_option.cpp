@@ -4,6 +4,8 @@
 #include <initializer_list>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_cli/parse/parser.hpp>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -221,6 +223,28 @@ TEST_CASE("ScopedEnvVar removes variable when value is nullopt")
     const char *restored_value = std::getenv("PJH_CLI_TEST_ENV_REMOVE");
     REQUIRE(restored_value != nullptr);
     CHECK(std::string(restored_value) == "x");
+}
+
+TEST_CASE("env fallback resolves through the root command's env_value")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_SEAM", "seam-value"};
+    App app("test", "1.0", "Seam");
+    app.option<fixed_string("seam")>("--seam", "Seam").str().env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("seam")>() == "seam-value");
+}
+
+TEST_CASE("bare BranchCommand root has no env fallback")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_SEAM", "seam-value"};
+    BranchCommand root("bare", "Bare root");
+    root.option<fixed_string("seam")>("--seam", "Seam").str().env(env_guard.name());
+    std::span<const std::string_view> args{};
+    auto r = Parser::parse_command(root, args, 0);
+    CHECK(r.is_ok());
+    CHECK_FALSE(r.unwrap().has<fixed_string("seam")>());
 }
 
 #ifdef _WIN32

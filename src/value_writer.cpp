@@ -38,10 +38,10 @@ namespace pjh::cli
             {
                 using T = std::decay_t<decltype(typed)>;
                 if (repeatable)
-                    ParseContextWriter::append_value<T>(
+                    detail::ParseContextWriter::append_value<T>(
                         ctx, hash, std::forward<decltype(typed)>(typed));
                 else
-                    ParseContextWriter::set_value<T>(
+                    detail::ParseContextWriter::set_value<T>(
                         ctx, hash, std::forward<decltype(typed)>(typed));
             },
             std::move(value));

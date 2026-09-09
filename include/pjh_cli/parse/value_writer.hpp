@@ -6,8 +6,8 @@
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <string_view>
 #include <tuple>
 
@@ -112,7 +112,7 @@ namespace pjh::cli
             auto r = Converter<T>::from_string(s, display);
             if (r.is_err())
                 return CliResult<void>::Err(std::move(r).unwrap_err());
-            ParseContextWriter::set_value<T>(ctx, hash, std::move(r).unwrap());
+            detail::ParseContextWriter::set_value<T>(ctx, hash, std::move(r).unwrap());
             return CliResult<void>::Ok();
         }
     };

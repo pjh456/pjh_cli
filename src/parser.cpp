@@ -1,12 +1,11 @@
 #include <format>
 #include <pjh_cli/core/error.hpp>
-#include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/detail/help_formatter.hpp>
 #include <pjh_cli/detail/meta_flags.hpp>
 #include <pjh_cli/detail/string_utils.hpp>
+#include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
@@ -30,9 +29,9 @@ namespace pjh::cli
         if (double_dash || !detail::is_meta_help_token(a))
             return pjh::result::Option<ParseContext>::None();
 
-        ParseContextWriter::set_help_text(
+        detail::ParseContextWriter::set_help_text(
             ctx, help_fmt ? help_fmt(*cmd) : detail::default_format_help(*cmd));
-        ParseContextWriter::set_matched_command(ctx, cmd);
+        detail::ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
 
@@ -47,9 +46,9 @@ namespace pjh::cli
         if (double_dash || !detail::is_meta_version_token(a))
             return pjh::result::Option<ParseContext>::None();
 
-        ParseContextWriter::set_version_text(
+        detail::ParseContextWriter::set_version_text(
             ctx, std::format("{} version {}\n", root.name(), root.version()));
-        ParseContextWriter::set_matched_command(ctx, &root);
+        detail::ParseContextWriter::set_matched_command(ctx, &root);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }
 
@@ -80,7 +79,7 @@ namespace pjh::cli
         case ExtraArgsPolicy::Error:
             return CliFailure{ErrorFactory::parse_error(a, static_cast<int>(pos))};
         case ExtraArgsPolicy::Store:
-            ParseContextWriter::add_extra_arg(ctx, std::string(a));
+            detail::ParseContextWriter::add_extra_arg(ctx, std::string(a));
             break;
         default:
             break;

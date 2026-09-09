@@ -9,6 +9,7 @@
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace pjh::cli
@@ -53,10 +54,15 @@ namespace pjh::cli
         /// @brief The version string passed at construction.
         const std::string &version() const noexcept override { return m_version; }
 
-        /// @brief Environment snapshot taken at construction.
-        const detail::EnvSnapshot *env_snapshot() const noexcept override
+        /// @brief Look up an environment value from the snapshot taken at
+        ///        construction.
+        ///
+        /// @param name Environment variable name (OptionDef::env_var()).
+        /// @return Pointer to the stored value, or nullptr if absent.
+        /// @throws std::bad_alloc if the lookup key cannot be allocated.
+        const std::string *env_value(std::string_view name) const override
         {
-            return &m_env_snapshot;
+            return m_env_snapshot.get(name);
         }
 
         /// @brief Override how batch --help / -h is rendered.

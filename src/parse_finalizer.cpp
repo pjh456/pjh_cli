@@ -2,8 +2,7 @@
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/error.hpp>
-#include <pjh_cli/detail/env_snapshot.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
+#include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/value_writer.hpp>
 #include <utility>
@@ -18,7 +17,7 @@ namespace pjh::cli
         for (const auto &opt_ptr : cmd.options())
         {
             if (!opt_ptr->has_default() ||
-                ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
+                detail::ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                 continue;
             auto r = opt_ptr->default_option_value();
             if (r.is_err())
@@ -49,24 +48,20 @@ namespace pjh::cli
 
     /// @brief Fall back to environment variables for unset options.
     ///
-    /// Reads the env snapshot from the root command.  For each option that
-    /// has a non-empty env_var() and no value set, looks up the env var
-    /// and calls ValueWriter::apply_option_raw().
+    /// Asks the parse root for each option's environment value.  For each
+    /// option that has a non-empty env_var() and no value set, applies the
+    /// returned value via ValueWriter::apply_option_raw().
     CliResult<void> ParseFinalizer::apply_chain_env(
         const std::vector<BaseCommand *> &chain, ParseContext &ctx)
     {
-        auto *env_snap = chain[0]->env_snapshot();
-        if (!env_snap)
-            return CliResult<void>::Ok();
-
         for (auto *c : chain)
         {
             for (const auto &opt_ptr : c->options())
             {
-                if (!ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) &&
+                if (!detail::ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) &&
                     !opt_ptr->env_var().empty())
                 {
-                    auto *env_val = env_snap->get(opt_ptr->env_var());
+                    auto *env_val = chain[0]->env_value(opt_ptr->env_var());
                     if (env_val)
                     {
                         auto r = ValueWriter::apply_option_raw(ctx, *opt_ptr, *env_val);
@@ -91,7 +86,7 @@ namespace pjh::cli
             for (const auto &opt_ptr : c->options())
             {
                 if (opt_ptr->is_required() &&
-                    !ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
+                    !detail::ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                     return CliFailure{
                         ErrorFactory::missing_required_option(opt_ptr->display_name())};
             }
@@ -113,7 +108,7 @@ namespace pjh::cli
             {
                 size_t count = 0;
                 for (auto h : group.key_hashes)
-                    if (ParseContextWriter::has_value(ctx, h))
+                    if (detail::ParseContextWriter::has_value(ctx, h))
                         count++;
 
                 switch (group.mode)
@@ -153,7 +148,8 @@ namespace pjh::cli
         {
             for (const auto &arg : leaf->args())
             {
-                if (arg.m_required && !ParseContextWriter::has_value(ctx, arg.m_key_hash))
+                if (arg.m_required &&
+                    !detail::ParseContextWriter::has_value(ctx, arg.m_key_hash))
                     return CliFailure{ErrorFactory::missing_required_arg(arg.m_name)};
             }
         }
@@ -171,7 +167,7 @@ namespace pjh::cli
     {
         if (!cmd)
             throw LogicError("ParseFinalizer::finalize: cmd must not be null");
-        ParseContextWriter::set_matched_command(ctx, cmd);
+        detail::ParseContextWriter::set_matched_command(ctx, cmd);
 
         std::vector<BaseCommand *> chain;
         for (auto *c = cmd; c; c = c->parent()) chain.push_back(c);

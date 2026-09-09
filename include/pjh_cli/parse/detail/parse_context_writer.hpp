@@ -1,17 +1,17 @@
-#ifndef INCLUDE_PJH_CLI_PARSE_PARSE_CONTEXT_WRITER_HPP
-#define INCLUDE_PJH_CLI_PARSE_PARSE_CONTEXT_WRITER_HPP
+#ifndef INCLUDE_PJH_CLI_PARSE_DETAIL_PARSE_CONTEXT_WRITER_HPP
+#define INCLUDE_PJH_CLI_PARSE_DETAIL_PARSE_CONTEXT_WRITER_HPP
 
 #include <memory>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
 
-namespace pjh::cli
+namespace pjh::cli::detail
 {
-    class BaseCommand;
-
     /// @brief Internal writer API for populating a ParseContext during
     ///        command-line parsing.
+    ///
+    /// @internal Parse-pipeline implementation detail; not part of the public API.
     ///
     /// Parser components (OptionConsumer, SubcommandResolver, ValueWriter,
     /// ParseFinalizer, Parser) use this class to write into a ParseContext
@@ -112,6 +112,6 @@ namespace pjh::cli
         }
     };
 
-}  // namespace pjh::cli
+}  // namespace pjh::cli::detail
 
 #endif

@@ -19,7 +19,11 @@
 namespace pjh::cli
 {
     class BaseCommand;
-    class ParseContextWriter;
+
+    namespace detail
+    {
+        class ParseContextWriter;
+    }  // namespace detail
 
     /// @brief Container for parsed option and argument values.
     ///
@@ -51,7 +55,7 @@ namespace pjh::cli
         using IdVecMap = IdMap<std::vector<T>>;
 
     public:
-        friend class ParseContextWriter;
+        friend class detail::ParseContextWriter;
 
         /// @brief Retrieve a typed value by compile-time key.
         /// @tparam T Target type (must satisfy BuiltinType).

@@ -7,9 +7,9 @@
 #include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/option/option_def.hpp>
+#include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
-#include <pjh_cli/parse/parse_context_writer.hpp>
 #include <pjh_cli/parse/value_writer.hpp>
 #include <unordered_set>
 #include <utility>
@@ -121,7 +121,7 @@ namespace
         auto *c = &ctx;
         while (depth > 0 && c != nullptr)
         {
-            c = pjh::cli::ParseContextWriter::parent_of(*c);
+            c = pjh::cli::detail::ParseContextWriter::parent_of(*c);
             --depth;
         }
         return c != nullptr ? *c : ctx;
@@ -138,12 +138,12 @@ namespace pjh::cli
     {
         if (opt->is_counting())
         {
-            int cur = ParseContextWriter::get_value<int>(ctx, opt->key_hash(), 0);
-            ParseContextWriter::set_value<int>(ctx, opt->key_hash(), cur + 1);
+            int cur = detail::ParseContextWriter::get_value<int>(ctx, opt->key_hash(), 0);
+            detail::ParseContextWriter::set_value<int>(ctx, opt->key_hash(), cur + 1);
         }
         else
         {
-            ParseContextWriter::set_value<bool>(ctx, opt->key_hash(), true);
+            detail::ParseContextWriter::set_value<bool>(ctx, opt->key_hash(), true);
         }
     }
 
@@ -177,7 +177,7 @@ namespace pjh::cli
                         return CliFailure{ErrorFactory::option_does_not_accept_value(
                             std::format("--{}", parsed.name))};
                     }
-                    ParseContextWriter::set_value<bool>(
+                    detail::ParseContextWriter::set_value<bool>(
                         owner_context(ctx, neg.depth), neg.opt->key_hash(), false);
                     return CliResult<void>::Ok();
                 }
