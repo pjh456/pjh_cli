@@ -75,14 +75,16 @@ TEST_CASE("CountOption mixed with bool flags")
     CHECK(ctx.get<bool, fixed_string("f")>() == true);
 }
 
-TEST_CASE("CountOption ignores --opt=value")
+TEST_CASE("CountOption rejects --opt=value")
 {
     App app("test", "1.0", "Count eq");
     app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count();
     Argv argv{"test", "--verbose=x"};
     auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_ok());
-    CHECK(r.unwrap().get<int, fixed_string("v")>() == 1);
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '--verbose' does not accept a value"));
 }
 
 TEST_CASE("CountOption no default_value")

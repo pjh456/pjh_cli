@@ -112,6 +112,12 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        if (parsed.has_equals)
+        {
+            return CliFailure{ErrorFactory::option_does_not_accept_value(
+                std::format("--{}", parsed.name))};
+        }
+
         apply_flag(opt, ctx);
         return CliResult<void>::Ok();
     }
