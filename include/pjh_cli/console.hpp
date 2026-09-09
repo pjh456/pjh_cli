@@ -56,6 +56,8 @@ namespace pjh::cli
     /// candidate list plus a HintBuilder hint and redraw the prompt.  Up/Down
     /// recall the previous/next line from the injected IHistory, restoring the
     /// draft typed before the first Up when Down passes the newest entry.
+    /// Recall covers every submitted non-empty line, including `help` / `?query`
+    /// meta lines and lines that fail to parse.
     /// Non-TTY input (pipes, files, injected test streams) keeps the line-based
     /// std::getline path unchanged and cannot observe arrow keys.  A custom
     /// terminal can be injected with set_terminal(), e.g. a scripted one in tests.
@@ -192,6 +194,11 @@ namespace pjh::cli
         /// A `cmd --help` line is rendered by the root command's help_formatter()
         /// (empty selects the built-in), so App::set_help_formatter governs it.
         ///
+        /// The line is appended to the injected IHistory before dispatch, so a
+        /// parse failure or a meta (`help` / `?query` / `cmd --help`) line is
+        /// still recallable; empty and consecutive-duplicate filtering is the
+        /// backend's contract.  Recording never changes the return value.
+        ///
         /// @param line  Raw input line (may be empty, in which case Ok is returned).
         /// @return Ok() on success, or Err(CliError) if parsing or the
         ///         action callback fails.
@@ -247,8 +254,10 @@ namespace pjh::cli
         /// Defaults to InMemoryHistory.  Use NoOpHistory or nullptr to
         /// disable history injection, or inject a custom IHistory subclass
         /// to override storage backend.
-        /// push() is called in process_line() after every non-help, non-query
-        /// line has been executed (regardless of success or failure).
+        /// push() is called once at the top of process_line() for every non-empty
+        /// line before dispatch, so `?`/`help` meta lines, `cmd --help`, parse
+        /// failures and execution failures are all recorded.  Empty lines and the
+        /// `quit`/`exit`/`q` loop terminators (consumed by run()) are not.
         std::unique_ptr<IHistory> m_history;
 
         /// @brief Optional raw-mode terminal.  Shared ownership keeps a

@@ -189,6 +189,11 @@ namespace pjh::cli
         if (line.empty())
             return CliResult<void>::Ok();
 
+        // Record every dispatched non-empty line before any branch runs, so
+        // parse-failed and meta (`help` / `?query`) lines are recallable.
+        if (m_history)
+            m_history->push(line);
+
         if (line[0] == '?')
             return handle_query(line.substr(1));
 
@@ -224,8 +229,6 @@ namespace pjh::cli
             TerminalActionGuard guard(term.get());
             exec = cmd->execute(ctx);
         }
-        if (m_history)
-            m_history->push(line);
         return exec;
     }
 

@@ -213,6 +213,8 @@ a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the previous/next
 line from the injected `IHistory` (`InMemoryHistory` by default,
 `RingBufferHistory` for bounded storage, `NoOpHistory`/`nullptr` to disable) and
 restore the draft typed before the first Up when Down passes the newest entry.
+Every submitted non-empty line is recorded — including `help`/`?` meta lines and
+lines that fail to parse — so Up can recall a typo and fix it.
 Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
 navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.

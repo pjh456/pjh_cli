@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <iostream>
+#include <memory>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/console.hpp>
 #include <pjh_cli/console/history.hpp>
@@ -11,6 +12,8 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+
+#include "test_helpers.hpp"
 
 using namespace pjh::cli;
 using Option = pjh::result::Option<std::string>;
@@ -154,7 +157,7 @@ TEST_CASE("InteractiveConsole history pushed after execution")
     CHECK(raw->size() == 1);
 }
 
-TEST_CASE("InteractiveConsole history not pushed for help")
+TEST_CASE("InteractiveConsole history pushed for help")
 {
     App app("test", "1.0", "History help");
     app.add_leaf("serve", "Server");
@@ -166,10 +169,11 @@ TEST_CASE("InteractiveConsole history not pushed for help")
 
     auto r = console.process_line("help");
     CHECK(r.is_ok());
-    CHECK(raw->size() == 0);
+    CHECK(raw->size() == 1);
+    CHECK(raw->prev().unwrap() == "help");
 }
 
-TEST_CASE("InteractiveConsole history not pushed for query")
+TEST_CASE("InteractiveConsole history pushed for query")
 {
     App app("test", "1.0", "History query");
     app.add_leaf("serve", "Server");
@@ -181,12 +185,13 @@ TEST_CASE("InteractiveConsole history not pushed for query")
 
     auto r = console.process_line("?");
     CHECK(r.is_ok());
-    CHECK(raw->size() == 0);
+    CHECK(raw->size() == 1);
+    CHECK(raw->prev().unwrap() == "?");
 }
 
-TEST_CASE("InteractiveConsole history pushed even on parse error")
+TEST_CASE("InteractiveConsole history pushed even on execution error")
 {
-    App app("test", "1.0", "History parse err");
+    App app("test", "1.0", "History exec err");
     app.action(
         [](ParseContext &) -> CliResult<void>
         { return CliResult<void>::Err(CliError("fail")); });
@@ -199,6 +204,102 @@ TEST_CASE("InteractiveConsole history pushed even on parse error")
     auto r = console.process_line("some-command");
     CHECK(r.is_err());
     CHECK(raw->size() == 1);
+}
+
+TEST_CASE("InteractiveConsole history pushed on parse error")
+{
+    App app("test", "1.0", "History parse error");
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
+
+    auto r = console.process_line("--bogus");
+    CHECK(r.is_err());
+    CHECK(raw->size() == 1);
+    CHECK(raw->prev().unwrap() == "--bogus");
+}
+
+TEST_CASE("InteractiveConsole history pushed for cmd --help")
+{
+    App app("test", "1.0", "History help_requested");
+    app.add_leaf("serve", "Server");
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
+
+    auto r = console.process_line("serve --help");
+    CHECK(r.is_ok());
+    CHECK(raw->size() == 1);
+    CHECK(raw->prev().unwrap() == "serve --help");
+}
+
+TEST_CASE("InteractiveConsole history records whitespace-only line")
+{
+    App app("test", "1.0", "History whitespace");
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
+
+    CHECK(console.process_line("   ").is_ok());
+    CHECK(raw->size() == 1);
+    CHECK(raw->prev().unwrap() == "   ");
+}
+
+TEST_CASE("InteractiveConsole history ignores empty line")
+{
+    App app("test", "1.0", "History empty");
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
+
+    CHECK(console.process_line("").is_ok());
+    CHECK(raw->size() == 0);
+}
+
+TEST_CASE("InteractiveConsole history dedups consecutive process_line duplicates")
+{
+    App app("test", "1.0", "History dedup");
+    app.add_leaf("serve", "Server");
+    std::stringstream input, output, error;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
+
+    CHECK(console.process_line("help").is_ok());
+    CHECK(console.process_line("help").is_ok());
+    CHECK(raw->size() == 1);
+}
+
+TEST_CASE("InteractiveConsole Up recalls a parse-failed line")
+{
+    App app("test", "1.0", "History recall parse");
+    StreamFixture streams;
+    auto hist = std::make_unique<InMemoryHistory>();
+    auto *raw = hist.get();
+    InteractiveConsole console(
+        app, "> ", streams.input, streams.output, streams.error, {}, {}, std::move(hist));
+
+    auto term = std::make_unique<ScriptedTerminal>();
+    for (char c : std::string("--bogus"))
+        term->keys.push_back({KeyEvent::Code::Character, c});
+    term->keys.push_back({KeyEvent::Code::Enter, 0});
+    term->keys.push_back({KeyEvent::Code::Up, 0});
+    term->keys.push_back({KeyEvent::Code::Enter, 0});
+    term->keys.push_back({KeyEvent::Code::Eof, 0});
+    console.set_terminal(std::move(term));
+
+    console.run();
+
+    CHECK(raw->size() == 1);
+    const std::string errors = streams.error.str();
+    const auto first = errors.find("unknown option");
+    REQUIRE(first != std::string::npos);
+    // Second submission is the Up-recalled failed line -> the error appears twice.
+    CHECK(errors.find("unknown option", first + 1) != std::string::npos);
 }
 
 TEST_CASE("InteractiveConsole with nullptr history disables push")
