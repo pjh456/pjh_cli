@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <format>
+#include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/matcher.hpp>
@@ -56,68 +57,6 @@ namespace
         return out;
     }
 
-    /// @brief Resolve a long option on @p cmd or its nearest ancestor.
-    /// @param cmd   Command to start from.
-    /// @param name  Long option name without the `--` prefix.
-    /// @return Matching option, or nullptr.
-    const pjh::cli::OptionDef *find_option_by_long_in_chain(
-        const pjh::cli::BaseCommand &cmd, std::string_view name)
-    {
-        for (const auto *cur = &cmd; cur != nullptr; cur = cur->parent())
-            if (const auto *opt = cur->find_option_by_long(name))
-                return opt;
-        return nullptr;
-    }
-
-    /// @brief Resolve a short option on @p cmd or its nearest ancestor.
-    /// @param cmd  Command to start from.
-    /// @param c    Short option character.
-    /// @return Matching option, or nullptr.
-    const pjh::cli::OptionDef *find_option_by_short_in_chain(
-        const pjh::cli::BaseCommand &cmd, char c)
-    {
-        for (const auto *cur = &cmd; cur != nullptr; cur = cur->parent())
-            if (const auto *opt = cur->find_option_by_short(c))
-                return opt;
-        return nullptr;
-    }
-
-    /// @brief Interpret one complete option token, setting @p pending when the
-    ///        option expects its value in the following token.
-    /// @param command  Command in scope for option lookup.
-    /// @param token    Complete token starting with '-'.
-    /// @param pending  Out-parameter: option awaiting a separate value token.
-    void scan_option_token(
-        const pjh::cli::BaseCommand &command,
-        std::string_view token,
-        const pjh::cli::OptionDef *&pending)
-    {
-        if (token.size() >= 2 && token[0] == '-' && token[1] == '-')
-        {
-            auto lo = pjh::cli::detail::Tokenizer::parse_long_option(token);
-            const auto *opt = find_option_by_long_in_chain(command, lo.name);
-            if (!opt && lo.is_negation)
-                opt = find_option_by_long_in_chain(command, lo.negated_name);
-            if (opt && !lo.has_equals && opt->has_value())
-                pending = opt;
-            return;
-        }
-
-        // Short token: grouped flags and compact values, mirroring consume_short.
-        for (std::size_t i = 1; i < token.size(); ++i)
-        {
-            const auto *opt = find_option_by_short_in_chain(command, token[i]);
-            if (!opt)
-                return;
-            if (opt->has_value())
-            {
-                if (i + 1 == token.size())
-                    pending = opt;  // value arrives as the next token.
-                return;             // otherwise the remainder is a compact value.
-            }
-        }
-    }
-
     /// @brief Walk the tokens before @p cursor to find the command in scope and
     ///        the option whose value is being typed.
     ///
@@ -153,7 +92,9 @@ namespace
             }
             if (t.size() >= 2 && t[0] == '-')
             {
-                scan_option_token(*scan.command, t, scan.value_option);
+                auto info = pjh::cli::detail::scan_option_token(*scan.command, t);
+                if (info.needs_next_token)
+                    scan.value_option = info.option;
                 continue;
             }
             if (const auto *branch = scan.command->as_branch())
@@ -165,9 +106,11 @@ namespace
         if (token.size() >= 2 && token[0] == '-' && token[1] == '-')
         {
             auto lo = pjh::cli::detail::Tokenizer::parse_long_option(token);
-            const auto *opt = find_option_by_long_in_chain(*scan.command, lo.name);
+            const auto *opt =
+                pjh::cli::detail::find_option_by_long_in_chain(*scan.command, lo.name);
             if (!opt && lo.is_negation)
-                opt = find_option_by_long_in_chain(*scan.command, lo.negated_name);
+                opt = pjh::cli::detail::find_option_by_long_in_chain(
+                    *scan.command, lo.negated_name);
             if (opt && lo.has_equals && opt->has_value())
             {
                 scan.value_option = opt;
@@ -183,7 +126,8 @@ namespace
         {
             for (std::size_t i = 1; i < token.size(); ++i)
             {
-                const auto *opt = find_option_by_short_in_chain(*scan.command, token[i]);
+                const auto *opt = pjh::cli::detail::find_option_by_short_in_chain(
+                    *scan.command, token[i]);
                 if (!opt)
                     break;
                 if (opt->has_value())

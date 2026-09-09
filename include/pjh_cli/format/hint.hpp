@@ -37,6 +37,13 @@ namespace pjh::cli
 
         /// @brief Walk a partial input string to determine the current command position.
         ///
+        /// The scan is option-value-aware and best-effort on partial or invalid
+        /// input: it skips separate (`--opt v`, `-p v`), compact (`-pVALUE`) and
+        /// inline (`--opt=v`) option values, greedily consumes following values
+        /// for repeatable options until a flag or a subcommand name, honours the
+        /// `--` barrier, and treats negative numbers as positionals/values.  It
+        /// never converts or validates values.
+        ///
         /// The returned context's options are those on the reached command plus
         /// inherited ancestor options, nearest declaration first.
         static HintContext build_context(const BaseCommand &root, std::string_view input);

@@ -1,6 +1,8 @@
+#include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/command/matcher.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/hint.hpp>
 #include <pjh_cli/format/info.hpp>
@@ -35,6 +37,13 @@ namespace pjh::cli
                 label += short_name;
             return label;
         }
+
+        /// @brief True when @p tok exactly names/aliases a direct subcommand.
+        bool is_subcommand_of(const BaseCommand &cmd, std::string_view tok) noexcept
+        {
+            const auto *branch = cmd.as_branch();
+            return branch != nullptr && branch->find_subcommand(tok) != nullptr;
+        }
     }
 
     std::string HintBuilder::option_type_name(const OptionDef &opt)
@@ -51,10 +60,41 @@ namespace pjh::cli
         const BaseCommand *cmd = &root;
         size_t arg_pos = 0;
 
-        for (const auto &tok : tokens)
+        bool after_double_dash = false;
+
+        for (size_t i = 0; i < tokens.size(); ++i)
         {
-            if (tok.size() > 1 && tok[0] == '-')
+            std::string_view tok = tokens[i];
+
+            if (after_double_dash)
+            {
+                arg_pos++;
                 continue;
+            }
+            if (tok == "--")
+            {
+                after_double_dash = true;
+                continue;
+            }
+            if (detail::is_option_flag(tok))
+            {
+                auto scan = detail::scan_option_token(*cmd, tok);
+                if (scan.option && (scan.needs_next_token || scan.compact_value))
+                {
+                    if (scan.needs_next_token && i + 1 < tokens.size() &&
+                        !detail::is_option_flag(tokens[i + 1]))
+                        ++i;  // the option's separate value token
+
+                    if (scan.option->is_repeatable())
+                    {
+                        while (i + 1 < tokens.size() &&
+                               !detail::is_option_flag(tokens[i + 1]) &&
+                               !is_subcommand_of(*cmd, tokens[i + 1]))
+                            ++i;
+                    }
+                }
+                continue;
+            }
 
             if (cmd->is_branch())
             {
