@@ -353,16 +353,30 @@ namespace pjh::cli
         return out;
     }
 
-    std::vector<CompletionCandidate> complete_line(
+    CompletionResult complete_line_result(
         const BaseCommand &root,
         std::string_view line,
         std::size_t cursor,
         Visibility mode)
     {
         auto scan = scan_completion_context(root, line, cursor);
+        CompletionResult result;
+        result.prefix_len = scan.prefix.size();
         if (scan.value_option)
-            return complete_value_candidates(*scan.value_option, scan.prefix);
-        return complete_candidates(*scan.command, scan.prefix, mode);
+            result.candidates =
+                complete_value_candidates(*scan.value_option, scan.prefix);
+        else
+            result.candidates = complete_candidates(*scan.command, scan.prefix, mode);
+        return result;
+    }
+
+    std::vector<CompletionCandidate> complete_line(
+        const BaseCommand &root,
+        std::string_view line,
+        std::size_t cursor,
+        Visibility mode)
+    {
+        return complete_line_result(root, line, cursor, mode).candidates;
     }
 
 }  // namespace pjh::cli

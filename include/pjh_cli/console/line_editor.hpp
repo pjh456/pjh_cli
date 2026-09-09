@@ -55,9 +55,12 @@ namespace pjh::cli
         virtual void erase_last(std::size_t count) = 0;
     };
 
-    /// @brief (line, cursor) -> completion candidates.
-    using CompletionFn = std::function<std::vector<CompletionCandidate>(
-        std::string_view line, std::size_t cursor)>;
+    /// @brief (line, cursor) -> completion candidates and the matched prefix
+    ///        length.  The editor appends `candidate.substr(prefix_len)` when a
+    ///        unique candidate is inserted, so inline `--opt=value` and compact
+    ///        `-pVALUE` forms complete correctly.
+    using CompletionFn =
+        std::function<CompletionResult(std::string_view line, std::size_t cursor)>;
 
     /// @brief (line, cursor) -> hint text (empty for none).
     using HintFn = std::function<std::string(std::string_view line, std::size_t cursor)>;

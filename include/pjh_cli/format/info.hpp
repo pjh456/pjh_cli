@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_INFO_HPP
 #define INCLUDE_PJH_CLI_INFO_HPP
 
+#include <cstddef>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/arg_def.hpp>
@@ -163,6 +164,19 @@ namespace pjh::cli
     struct CompletionCandidate
     {
         std::string display;  ///< "--verbose" or "serve"
+    };
+
+    /// @brief Completion candidates plus the prefix length they matched against.
+    ///
+    /// @c prefix_len is the byte length of the partial name/value the candidates
+    /// were filtered by.  For the inline `--opt=value` and compact `-pVALUE`
+    /// forms it is a suffix of the token under the cursor, so a caller inserting
+    /// a unique candidate appends @c candidate.display.substr(prefix_len) to the
+    /// line rather than assuming the whole trailing token is the prefix.
+    struct CompletionResult
+    {
+        std::vector<CompletionCandidate> candidates;  ///< Sorted, deduplicated.
+        std::size_t prefix_len = 0;                   ///< Matched prefix byte length.
     };
 
     /// @brief A single fuzzy match suggestion with distance score.

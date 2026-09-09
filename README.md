@@ -261,6 +261,7 @@ via that form.
 | `complete(cmd, prefix)` | Tab completion candidates (strings) |
 | `complete_candidates(cmd, prefix)` | Tab completion candidates (struct) |
 | `complete_line(root, line, cursor)` | Completion for the token under the cursor, including `.completer` values |
+| `complete_line_result(root, line, cursor)` | Same, plus the matched prefix length for inline/compact value insertion |
 | `complete_value_candidates(opt, prefix)` | Option-value candidates from `.completer(fn)` |
 | `InteractiveConsole(root, prompt)` | REPL console |
 | `console.run()` / `console.stop()` | Start / stop REPL loop |

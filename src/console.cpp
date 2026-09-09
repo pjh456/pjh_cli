@@ -53,7 +53,7 @@ namespace pjh::cli
 
         CompletionFn complete = [this](std::string_view line, std::size_t cursor)
         {
-            return complete_line(m_root, line, cursor);
+            return complete_line_result(m_root, line, cursor);
         };
         HintFn hint = [this](std::string_view line, std::size_t)
         {

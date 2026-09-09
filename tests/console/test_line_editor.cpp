@@ -31,10 +31,7 @@ namespace
     }
 
     /// @brief Completion callback that always returns an empty candidate list.
-    std::vector<CompletionCandidate> no_candidates(std::string_view, std::size_t)
-    {
-        return {};
-    }
+    CompletionResult no_candidates(std::string_view, std::size_t) { return {}; }
 
     /// @brief Hint callback that always returns an empty hint.
     std::string no_hint(std::string_view, std::size_t) { return {}; }
@@ -75,9 +72,10 @@ TEST_CASE("LineEditor Tab completes unique candidate")
 
     CompletionFn complete = [](std::string_view line, std::size_t)
     {
-        std::vector<CompletionCandidate> out;
+        CompletionResult out;
         if (line == "ser")
-            out.push_back({"serve"});
+            out.candidates.push_back({"serve"});
+        out.prefix_len = line.size();
         return out;
     };
 
@@ -86,6 +84,72 @@ TEST_CASE("LineEditor Tab completes unique candidate")
     CHECK(editor.read_line(line, complete, no_hint));
     CHECK(line == "serve ");
     CHECK(term.written.find("ve ") != std::string::npos);
+}
+
+TEST_CASE("LineEditor Tab completes inline long option value")
+{
+    ScriptedTerminal term;
+    chars(term, "--color=g");
+    term.keys.push_back({KeyEvent::Code::Tab, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    CompletionFn complete = [](std::string_view line, std::size_t)
+    {
+        CompletionResult out;
+        if (line == "--color=g")
+            out.candidates.push_back({"green"});
+        out.prefix_len = 1;  // value suffix after '='.
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "--color=green ");
+}
+
+TEST_CASE("LineEditor Tab completes compact short option value")
+{
+    ScriptedTerminal term;
+    chars(term, "-cgr");
+    term.keys.push_back({KeyEvent::Code::Tab, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    CompletionFn complete = [](std::string_view line, std::size_t)
+    {
+        CompletionResult out;
+        if (line == "-cgr")
+            out.candidates.push_back({"green"});
+        out.prefix_len = 2;  // "gr" after the option char.
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "-cgreen ");
+}
+
+TEST_CASE("LineEditor Tab completes inline long option value from empty prefix")
+{
+    ScriptedTerminal term;
+    chars(term, "--color=");
+    term.keys.push_back({KeyEvent::Code::Tab, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    CompletionFn complete = [](std::string_view line, std::size_t)
+    {
+        CompletionResult out;
+        if (line == "--color=")
+            out.candidates.push_back({"green"});
+        out.prefix_len = 0;
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "--color=green ");
 }
 
 TEST_CASE("LineEditor Tab lists multiple candidates and hint")
@@ -97,7 +161,10 @@ TEST_CASE("LineEditor Tab lists multiple candidates and hint")
 
     CompletionFn complete = [](std::string_view, std::size_t)
     {
-        return std::vector<CompletionCandidate>{{"serve"}, {"server"}};
+        CompletionResult out;
+        out.candidates = {{"serve"}, {"server"}};
+        out.prefix_len = 3;
+        return out;
     };
     HintFn hint = [](std::string_view, std::size_t)
     {

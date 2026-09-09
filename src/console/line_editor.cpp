@@ -11,14 +11,6 @@ namespace pjh::cli
 {
     namespace
     {
-        /// @brief Length of the trailing non-space run of @p buffer.
-        std::size_t trailing_token_length(std::string_view buffer)
-        {
-            std::size_t len = 0;
-            for (std::size_t i = buffer.size(); i > 0 && buffer[i - 1] != ' '; --i) ++len;
-            return len;
-        }
-
         /// @brief Join candidate displays with two spaces.
         std::string join_candidates(const std::vector<CompletionCandidate> &candidates)
         {
@@ -93,14 +85,14 @@ namespace pjh::cli
     void LineEditor::handle_tab(
         std::string &buffer, const CompletionFn &complete, const HintFn &hint)
     {
-        const auto candidates = complete(buffer, buffer.size());
+        const CompletionResult result = complete(buffer, buffer.size());
+        const auto &candidates = result.candidates;
         if (candidates.size() == 1)
         {
-            const std::size_t prefix_len = trailing_token_length(buffer);
             const std::string &candidate = candidates.front().display;
-            if (candidate.size() > prefix_len)
+            if (candidate.size() > result.prefix_len)
             {
-                std::string remainder = candidate.substr(prefix_len);
+                std::string remainder = candidate.substr(result.prefix_len);
                 buffer += remainder;
                 m_terminal.write(remainder);
             }

@@ -29,7 +29,8 @@ namespace pjh::cli
     /// GUI, WebSocket, server, or test contexts without global stream redirection.
     ///
     /// When the input stream is an interactive TTY, run() reads through a raw-mode
-    /// LineEditor: Tab completes the token under the cursor via complete_line()
+    /// LineEditor: Tab completes the token under the cursor via
+    /// complete_line_result()
     /// (subcommand names, option names, and `.completer` option values).  A unique
     /// candidate is appended in place; zero or several candidates print the
     /// candidate list plus a HintBuilder hint and redraw the prompt.  Up/Down

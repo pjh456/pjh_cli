@@ -584,6 +584,35 @@ TEST_CASE("complete_line completes compact short option value")
     CHECK(r[0].display == "red");
 }
 
+TEST_CASE("complete_line_result reports the matched prefix length")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto name = complete_line_result(app, "ser", 3);
+    CHECK(name.prefix_len == 3);
+    REQUIRE(name.candidates.size() == 2);
+
+    auto separate = complete_line_result(app, "serve --color g", 15);
+    CHECK(separate.prefix_len == 1);
+    REQUIRE(separate.candidates.size() == 1);
+    CHECK(separate.candidates[0].display == "green");
+
+    auto inline_eq = complete_line_result(app, "--color=gr", 10);
+    CHECK(inline_eq.prefix_len == 2);
+    REQUIRE(inline_eq.candidates.size() == 1);
+    CHECK(inline_eq.candidates[0].display == "green");
+
+    auto inline_empty = complete_line_result(app, "--color=", 8);
+    CHECK(inline_empty.prefix_len == 0);
+    REQUIRE(inline_empty.candidates.size() == 3);
+
+    auto compact = complete_line_result(app, "serve -cgr", 10);
+    CHECK(compact.prefix_len == 2);
+    REQUIRE(compact.candidates.size() == 1);
+    CHECK(compact.candidates[0].display == "green");
+}
+
 TEST_CASE("complete_line completes subcommand after trailing space")
 {
     App app("test", "1.0", "Complete line");

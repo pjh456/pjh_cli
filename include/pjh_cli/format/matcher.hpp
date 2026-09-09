@@ -110,6 +110,29 @@ namespace pjh::cli
         std::size_t cursor,
         Visibility mode = Visibility::Both);
 
+    /// @brief Completion candidates for the token under @p cursor, with the
+    ///        matched prefix length.
+    ///
+    /// Resolves the same context as complete_line(), but also reports the byte
+    /// length of the partial name/value that the candidates were matched
+    /// against.  For `--opt=value` and `-pVALUE` that prefix is only a suffix of
+    /// the token under the cursor, so an editor completing a unique candidate
+    /// appends `candidate.display.substr(result.prefix_len)` instead of assuming
+    /// the whole trailing token is the prefix.
+    ///
+    /// @param root    Root of the command tree.
+    /// @param line    Full input line.
+    /// @param cursor  Byte offset of the cursor (0..line.size()).
+    /// @param mode    Visibility filter for name candidates (default Both).
+    /// @return Candidates plus the matched prefix byte length.
+    /// @throws std::bad_alloc if the candidate list cannot be allocated.
+    /// @throws Any exception thrown by a registered completer is propagated.
+    CompletionResult complete_line_result(
+        const BaseCommand &root,
+        std::string_view line,
+        std::size_t cursor,
+        Visibility mode = Visibility::Both);
+
 }  // namespace pjh::cli
 
 #endif
