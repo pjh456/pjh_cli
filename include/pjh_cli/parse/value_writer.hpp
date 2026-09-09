@@ -38,10 +38,15 @@ namespace pjh::cli
         /// @param ctx   Parse context to write into.
         /// @param hash  Key hash identifying the value slot.
         /// @param tag   Runtime type tag (Bool / Int / Double / String / Path).
+        ///              Must be a real tag; ValueTag::Count and any cast from an
+        ///              out-of-range integer are rejected.
         /// @param s     Raw input string from the command line.
         /// @param display Positional arg name used in conversion errors
         ///        (e.g. "file"); empty renders `for ''`.
         /// @return Ok on success, or Err with a type-conversion error.
+        /// @throws LogicError if @p tag is not a real ValueTag (enum/table
+        ///         mismatch or an invalid cast) — an internal invariant
+        ///         violation, not a user parse error.
         static CliResult<void> apply_arg_value(
             ParseContext &ctx,
             size_t hash,

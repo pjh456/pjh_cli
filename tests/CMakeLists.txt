@@ -17,6 +17,7 @@ set(PJH_CLI_TEST_SOURCES
     test_app_run.cpp
     test_matcher.cpp
     test_parse_context.cpp
+    test_value_writer.cpp
     option/test_bool_option.cpp
     option/test_count_option.cpp
     option/test_env_option.cpp

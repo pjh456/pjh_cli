@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <pjh_cli/core/converter.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/value_writer.hpp>
@@ -24,7 +25,7 @@ namespace pjh::cli
             make_table(static_cast<detail::BuiltinTypes *>(nullptr));
         auto idx = static_cast<size_t>(tag);
         if (idx >= table.size())
-            return CliResult<void>::Ok();
+            throw LogicError("ValueWriter::apply_arg_value: unknown ValueTag");
         return table[idx](ctx, hash, s, display);
     }
 
