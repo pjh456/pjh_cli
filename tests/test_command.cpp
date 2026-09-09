@@ -459,3 +459,16 @@ TEST_CASE("reserved names are rejected on non-root commands")
     CHECK(sub.options().empty());
     CHECK(app.options().empty());
 }
+
+TEST_CASE("reserved-name rejection leaves indexes and ownership untouched")
+{
+    App app("test", "1.0", "Atomic");
+    app.option<fixed_string("ok")>("--ok", 'o', "OK").boolean();
+
+    CHECK_THROWS_AS(
+        app.option<fixed_string("host")>("--host", 'h', "Host").str(), LogicError);
+    CHECK(app.options().size() == 1);
+    CHECK(app.find_option_by_long("host") == nullptr);
+    CHECK(app.find_option_by_short('h') == nullptr);
+    CHECK(app.find_option_by_short('o') != nullptr);
+}

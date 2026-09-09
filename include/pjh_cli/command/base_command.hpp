@@ -355,6 +355,9 @@ namespace pjh::cli
         ///         or the short name is 'h' — those tokens are reserved for the
         ///         built-in --help/-h/--version meta-flags and cannot be
         ///         registered on any command.
+        /// @note Strong exception guarantee: if indexing throws, the option is
+        ///       removed and the command is unchanged (no dangling lookup
+        ///       entry).
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             if (detail::is_reserved_long_name(opt->long_name()))
@@ -373,10 +376,43 @@ namespace pjh::cli
                     "'" +
                     m_name + "'");
 
-            m_option_by_long[opt->long_name()] = opt.get();
-            if (opt->short_name() != 0)
-                m_option_by_short[opt->short_name()] = opt.get();
-            m_options.push_back(std::move(opt));
+            OptionDef *raw = opt.get();
+            m_options.push_back(std::move(opt));  // 1) own first
+
+            auto long_it = m_option_by_long.find(raw->long_name());
+            OptionDef *prev_long =
+                (long_it == m_option_by_long.end()) ? nullptr : long_it->second;
+            OptionDef *prev_short = nullptr;
+            if (raw->short_name() != 0)
+            {
+                auto short_it = m_option_by_short.find(raw->short_name());
+                if (short_it != m_option_by_short.end())
+                    prev_short = short_it->second;
+            }
+
+            try
+            {
+                m_option_by_long[raw->long_name()] = raw;  // 2) index the owned object
+                if (raw->short_name() != 0)
+                    m_option_by_short[raw->short_name()] = raw;
+            }
+            catch (...)
+            {
+                // 3) roll back: restore/erase the entries for raw, then release it.
+                if (prev_long != nullptr)
+                    m_option_by_long[raw->long_name()] = prev_long;
+                else
+                    m_option_by_long.erase(raw->long_name());
+                if (raw->short_name() != 0)
+                {
+                    if (prev_short != nullptr)
+                        m_option_by_short[raw->short_name()] = prev_short;
+                    else
+                        m_option_by_short.erase(raw->short_name());
+                }
+                m_options.pop_back();
+                throw;
+            }
         }
 
         /// @brief Look up an option by its key hash.

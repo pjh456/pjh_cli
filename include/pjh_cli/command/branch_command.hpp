@@ -25,10 +25,14 @@ namespace pjh::cli
         const BranchCommand *as_branch() const noexcept override { return this; }
 
         /// @brief Add a child branch subcommand (can itself contain subcommands).
+        /// @note Strong exception guarantee: if indexing throws, the child is
+        ///       removed and the branch is unchanged (no dangling lookup entry).
         /// @return Reference to the newly created BranchCommand.
         BranchCommand &add_branch(std::string name, std::string description);
 
         /// @brief Add a child leaf subcommand (can have positional args).
+        /// @note Strong exception guarantee: if indexing throws, the child is
+        ///       removed and the branch is unchanged (no dangling lookup entry).
         /// @return Reference to the newly created LeafCommand.
         LeafCommand &add_leaf(std::string name, std::string description);
 

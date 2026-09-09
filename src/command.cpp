@@ -89,8 +89,17 @@ namespace pjh::cli
         child->set_visibility(visibility());
         child->enabled(m_enabled);
         auto &ref = *child;
-        m_subcommand_by_name[ref.name()] = &ref;
-        m_subcommands.push_back(std::move(child));
+        m_subcommands.push_back(std::move(child));  // 1) own first
+        try
+        {
+            m_subcommand_by_name[ref.name()] = &ref;  // 2) index the owned child
+        }
+        catch (...)
+        {
+            // 3) roll back: release the child before rethrowing.
+            m_subcommands.pop_back();
+            throw;
+        }
         return ref;
     }
 
@@ -104,8 +113,17 @@ namespace pjh::cli
         child->set_visibility(visibility());
         child->enabled(m_enabled);
         auto &ref = *child;
-        m_subcommand_by_name[ref.name()] = &ref;
-        m_subcommands.push_back(std::move(child));
+        m_subcommands.push_back(std::move(child));  // 1) own first
+        try
+        {
+            m_subcommand_by_name[ref.name()] = &ref;  // 2) index the owned child
+        }
+        catch (...)
+        {
+            // 3) roll back: release the child before rethrowing.
+            m_subcommands.pop_back();
+            throw;
+        }
         return ref;
     }
 
