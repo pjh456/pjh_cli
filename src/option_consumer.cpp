@@ -1,7 +1,7 @@
-#include <cctype>
 #include <format>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/error.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
@@ -10,14 +10,6 @@
 
 namespace
 {
-    /// @brief Check if a raw token looks like an option flag (--opt or -v).
-    ///        Negative numbers like -5 or -3.14 are NOT detected as flags.
-    bool is_option_flag(std::string_view s) noexcept
-    {
-        return s.size() > 1 && s[0] == '-' &&
-               !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
-    }
-
     /// @brief True when @p tok exactly names/aliases a direct subcommand of
     ///        @p cmd.  Used to stop greedy repeatable consumption at a command
     ///        boundary so a following subcommand name is not swallowed.
@@ -92,7 +84,7 @@ namespace pjh::cli
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
             auto next = args[i + 1];
-            if (is_option_flag(next))
+            if (detail::is_option_flag(next))
                 return CliFailure{
                     ErrorFactory::missing_value(std::format("--{}", parsed.name))};
 
@@ -103,7 +95,7 @@ namespace pjh::cli
             while (opt->is_repeatable() && i + 1 < args.size())
             {
                 next = args[i + 1];
-                if (is_option_flag(next) || is_subcommand_token(cmd, next))
+                if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                     break;
                 r = opt->parse_value(ctx, args[++i]);
                 if (r.is_err())
@@ -152,7 +144,7 @@ namespace pjh::cli
                     while (opt->is_repeatable() && i + 1 < args.size())
                     {
                         auto nxt = args[i + 1];
-                        if (is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
+                        if (detail::is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
                             break;
                         r = opt->parse_value(ctx, args[++i]);
                         if (r.is_err())
@@ -165,7 +157,7 @@ namespace pjh::cli
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
                 auto next = args[i + 1];
-                if (is_option_flag(next))
+                if (detail::is_option_flag(next))
                     return CliFailure{ErrorFactory::missing_value(std::format("-{}", c))};
 
                 auto r = opt->parse_value(ctx, args[++i]);
@@ -175,7 +167,7 @@ namespace pjh::cli
                 while (opt->is_repeatable() && i + 1 < args.size())
                 {
                     next = args[i + 1];
-                    if (is_option_flag(next) || is_subcommand_token(cmd, next))
+                    if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
                         break;
                     r = opt->parse_value(ctx, args[++i]);
                     if (r.is_err())

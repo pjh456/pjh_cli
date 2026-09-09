@@ -423,6 +423,19 @@ TEST_CASE("Repeatable greedily consumes negative numbers")
     CHECK(all[3] == 7);
 }
 
+TEST_CASE("Compact short repeatable greedily consumes negative numbers")
+{
+    App app("test", "1.0", "Neg compact repeat");
+    app.option<fixed_string("nums")>("--nums", 'n', "Nums").integer().repeatable();
+    Argv argv{"test", "-n5", "-3"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto all = r.unwrap().get_all<int, fixed_string("nums")>();
+    REQUIRE(all.size() == 2);
+    CHECK(all[0] == 5);
+    CHECK(all[1] == -3);
+}
+
 // ── enum option ──
 
 enum class Color

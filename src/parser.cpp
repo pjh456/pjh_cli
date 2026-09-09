@@ -1,6 +1,7 @@
 #include <format>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/parse/option_consumer.hpp>
@@ -89,7 +90,9 @@ namespace pjh::cli
     ///   1. `--`               → double-dash terminator
     ///   2. `--help` / `-h`    → return help-only context immediately
     ///   3. `--version`        → return version-only context immediately
-    ///   4. `--opt` / `-x`     → delegate to OptionConsumer
+    ///   4. `--opt` / `-x`     → delegate to OptionConsumer; a `-<digit>` /
+    ///                           `-.` token is a value, not an option, and
+    ///                           falls through to steps 5/6
     ///   5. word token         → try SubcommandResolver descent,
     ///                           then positional arg via ValueWriter,
     ///                           then ExtraArgsPolicy dispatch
@@ -126,7 +129,7 @@ namespace pjh::cli
                     return CliResult<ParseContext>::Ok(std::move(ver).unwrap());
             }
 
-            if (!double_dash && a.size() > 1 && a[0] == '-')
+            if (!double_dash && detail::is_option_flag(a))
             {
                 CliResult<void> r = (a[1] == '-')
                                         ? OptionConsumer::consume_long(

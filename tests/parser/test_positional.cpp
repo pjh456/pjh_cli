@@ -161,3 +161,83 @@ TEST_CASE("Parser argc one parses root without throwing")
     REQUIRE(r.is_ok());
     CHECK(r.unwrap().matched_command() == &app);
 }
+
+TEST_CASE("Parser negative integer positional")
+{
+    LeafCommand root("test", "Negative positional");
+    root.arg<int, 0>("count", "Count");
+    Argv argv{"test", "-5"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, 0>() == -5);
+}
+
+TEST_CASE("Parser negative float positional")
+{
+    LeafCommand root("test", "Negative float positional");
+    root.arg<double, 0>("ratio", "Ratio");
+    Argv argv{"test", "-3.14"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<double, 0>() == doctest::Approx(-3.14));
+}
+
+TEST_CASE("Parser negative float with leading dot positional")
+{
+    LeafCommand root("test", "Leading dot positional");
+    root.arg<double, 0>("ratio", "Ratio");
+    Argv argv{"test", "-.5"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<double, 0>() == doctest::Approx(-0.5));
+}
+
+TEST_CASE("Parser negative-looking string positional")
+{
+    LeafCommand root("test", "Negative string positional");
+    root.arg<std::string, 0>("name", "Name");
+    Argv argv{"test", "-5"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, 0>() == "-5");
+}
+
+TEST_CASE("Parser negative positional after subcommand descent")
+{
+    App app("test", "1.0", "Negative after descent");
+    auto &run = app.add_leaf("run", "Run");
+    run.arg<int, 0>("count", "Count");
+    Argv argv{"test", "run", "-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, 0>() == -5);
+}
+
+TEST_CASE("Parser negative token stored as extra arg")
+{
+    App app("test", "1.0", "Negative extra arg");
+    app.set_extra_args(ExtraArgsPolicy::Store);
+    Argv argv{"test", "-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto extra = r.unwrap().extra_args();
+    REQUIRE(extra.size() == 1);
+    CHECK(extra[0] == "-5");
+}
+
+TEST_CASE("Parser fuzzy does not descend on a negative-number token")
+{
+    App app("test", "1.0", "Negative fuzzy");
+    auto &run = app.add_leaf("run", "Run");
+    int called = 0;
+    run.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    Argv argv{"test", "-5"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(called == 0);
+}

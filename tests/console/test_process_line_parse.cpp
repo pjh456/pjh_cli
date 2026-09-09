@@ -89,3 +89,14 @@ TEST_CASE("process_line -- after subcommand")
     auto r = console.process_line("fmt -- --filename=bar");
     CHECK(r.is_ok());
 }
+
+TEST_CASE("process_line negative number positional after subcommand")
+{
+    App app("test", "1.0", "Neg sub");
+    auto &run = app.add_leaf("run", "Run");
+    run.arg<int, 0>("count", "Count");
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line("run -5");
+    CHECK(r.is_ok());
+}

@@ -17,7 +17,9 @@ namespace pjh::cli
     ///
     /// Both consume_long() and consume_short() accept a mutable index @p i
     /// that is advanced when a separate value token is consumed, so the
-    /// caller's main loop can skip past it naturally.
+    /// caller's main loop can skip past it naturally.  The value/greedy guards
+    /// use the shared detail::is_option_flag predicate, so negative numbers
+    /// such as -5 and -3.14 are accepted as values, never as flags.
     class OptionConsumer
     {
     public:

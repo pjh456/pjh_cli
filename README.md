@@ -171,6 +171,11 @@ silently succeeding.  Call `set_extra_args(...)` on the branch — including
 `Ignore` — to opt out explicitly.  Explicit policies are inherited by
 subcommands.
 
+A token whose first character after `-` is a digit or `.` (e.g. `-5`, `-3.14`)
+is a positional/value token, not a short option; it never triggers subcommand
+descent.  A registered short option for a digit or `.` is therefore unreachable
+via that form.
+
 ## API Quick Reference
 
 `#include <pjh_cli.hpp>`

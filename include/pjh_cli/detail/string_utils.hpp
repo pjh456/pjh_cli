@@ -28,6 +28,21 @@ namespace pjh::cli::detail
         }
     };
 
+    /// @brief True when @p s is a dash-prefixed option token (--opt, -x,
+    ///        --opt=val) rather than a value.
+    ///
+    /// Negative numbers such as -5, -3.14 and -.5 are NOT option tokens,
+    /// nor is a bare "-".  Shared by Parser dispatch and OptionConsumer's
+    /// value/greedy guards so the negative-number rule has one definition.
+    ///
+    /// @param s  Token to classify.
+    /// @return true if @p s looks like an option, false otherwise.
+    inline bool is_option_flag(std::string_view s) noexcept
+    {
+        return s.size() > 1 && s[0] == '-' &&
+               !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
+    }
+
     /// @brief General-purpose string manipulation utilities.
     ///
     /// Pure functions, no mutable state.  All methods operate on

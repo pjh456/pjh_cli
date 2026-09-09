@@ -41,3 +41,13 @@ TEST_CASE("Parser double dash with ExtraArgsPolicy::Error")
     auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_err());
 }
+
+TEST_CASE("Parser double dash negative number positional")
+{
+    LeafCommand root("test", "DD negative");
+    root.arg<int, 0>("count", "Count");
+    Argv argv{"test", "--", "-5"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, 0>() == -5);
+}

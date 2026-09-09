@@ -50,9 +50,10 @@ namespace pjh::cli
 
     /// @brief If the token matches a (possibly fuzzy) subcommand, descend.
     ///
-    /// Guards against descent when @p double_dash is true or the current
-    /// command is not a branch.  On success, creates a child ParseContext
-    /// with parent linking and returns the matched command.
+    /// Guards against descent when @p double_dash is true, the token is
+    /// dash-prefixed, or the current command is not a branch.  On success,
+    /// creates a child ParseContext with parent linking and returns the
+    /// matched command.
     CliResult<SubcommandResolver::SubcommandResult>
     SubcommandResolver::try_descend_subcommand(
         BaseCommand *cmd,
@@ -61,7 +62,7 @@ namespace pjh::cli
         int max_fuzzy_distance,
         bool double_dash)
     {
-        if (double_dash || !cmd->is_branch())
+        if (double_dash || a.starts_with('-') || !cmd->is_branch())
             return CliResult<SubcommandResult>::Ok(SubcommandResult{});
 
         auto *branch = cmd->as_branch();

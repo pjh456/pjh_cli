@@ -37,7 +37,9 @@ namespace pjh::cli
         ///   1. `--`               → double-dash terminator
         ///   2. `--help` / `-h`    → return help-only context immediately
         ///   3. `--version`        → return version-only context immediately
-        ///   4. `--opt` / `-x`     → delegate to OptionConsumer
+        ///   4. `--opt` / `-x`     → delegate to OptionConsumer; a `-<digit>` /
+        ///                           `-.` token is a value, not an option, and
+        ///                           falls through to steps 5/6
         ///   5. word token         → try SubcommandResolver::try_descend,
         ///                           then positional arg via ValueWriter,
         ///                           then ExtraArgsPolicy dispatch

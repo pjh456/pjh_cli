@@ -69,8 +69,10 @@ namespace pjh::cli
 
         /// @brief If the token matches a (possibly fuzzy) subcommand, descend.
         ///
-        /// Guards against descent when @p double_dash is true or the current
-        /// command is not a branch.  On success the returned SubcommandResult
+        /// Guards against descent when @p double_dash is true, the token is
+        /// dash-prefixed, or the current command is not a branch; a
+        /// dash-prefixed token can never name an invocable subcommand, so such
+        /// tokens return unmatched.  On success the returned SubcommandResult
         /// contains the matched command and a fresh child ParseContext whose
         /// parent points to the old context (via shared_ptr).  The caller
         /// must replace its own cmd / ctx with these values.

@@ -133,3 +133,17 @@ TEST_CASE("split_name_value just equals")
     CHECK(r.value == "");
     CHECK(r.has_eq == true);
 }
+
+TEST_CASE("is_option_flag distinguishes option tokens from values")
+{
+    CHECK(is_option_flag("-x"));
+    CHECK(is_option_flag("--verbose"));
+    CHECK(is_option_flag("--port=8080"));
+    CHECK(is_option_flag("--"));
+    CHECK_FALSE(is_option_flag("-5"));
+    CHECK_FALSE(is_option_flag("-3.14"));
+    CHECK_FALSE(is_option_flag("-.5"));
+    CHECK_FALSE(is_option_flag("-"));
+    CHECK_FALSE(is_option_flag("word"));
+    CHECK_FALSE(is_option_flag(""));
+}
