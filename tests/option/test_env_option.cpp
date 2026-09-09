@@ -212,3 +212,15 @@ TEST_CASE("EnvVar option on subcommand reads environment")
     CHECK(r.unwrap().get<std::string, fixed_string("host")>() == "sub.example.com");
     unsetenv("TEST_HOST");
 }
+
+#ifdef _WIN32
+TEST_CASE("EnvSnapshot reads Windows environment")
+{
+    _putenv_s("PJH_CLI_TEST_ENV", "42");
+    detail::EnvSnapshot snap;
+    auto *v = snap.get("PJH_CLI_TEST_ENV");
+    REQUIRE(v != nullptr);
+    CHECK(*v == "42");
+    _putenv_s("PJH_CLI_TEST_ENV", "");
+}
+#endif

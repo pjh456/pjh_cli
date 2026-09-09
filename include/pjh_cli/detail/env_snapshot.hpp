@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_DETAIL_ENV_SNAPSHOT_HPP
 #define INCLUDE_PJH_CLI_DETAIL_ENV_SNAPSHOT_HPP
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -25,10 +26,11 @@ namespace pjh::cli::detail
         EnvSnapshot()
         {
 #ifdef _WIN32
-            auto *block = GetEnvironmentStringsW();
+            std::unique_ptr<wchar_t, decltype(&FreeEnvironmentStringsW)> block{
+                GetEnvironmentStringsW(), &FreeEnvironmentStringsW};
             if (!block)
                 return;
-            for (auto *env = block; *env; env += std::wcslen(env) + 1)
+            for (auto *env = block.get(); *env; env += std::wcslen(env) + 1)
             {
                 std::wstring_view entry(env);
                 auto eq = entry.find(L'=');
@@ -36,7 +38,6 @@ namespace pjh::cli::detail
                     m_env.emplace(
                         to_utf8(entry.substr(0, eq)), to_utf8(entry.substr(eq + 1)));
             }
-            FreeEnvironmentStringsW(block);
 #else
             if (!environ)
                 return;
