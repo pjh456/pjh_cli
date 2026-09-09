@@ -36,9 +36,15 @@ namespace pjh::cli
         /// @param hash  Key hash identifying the value slot.
         /// @param tag   Runtime type tag (Bool / Int / Double / String / Path).
         /// @param s     Raw input string from the command line.
+        /// @param display Positional arg name used in conversion errors
+        ///        (e.g. "file"); empty renders `for ''`.
         /// @return Ok on success, or Err with a type-conversion error.
         static CliResult<void> apply_arg_value(
-            ParseContext &ctx, size_t hash, ValueTag tag, std::string_view s);
+            ParseContext &ctx,
+            size_t hash,
+            ValueTag tag,
+            std::string_view s,
+            std::string_view display = {});
 
     private:
         /// @brief Convert @p s to type T and store it in @p ctx.
@@ -51,10 +57,14 @@ namespace pjh::cli
         /// @param ctx   Parse context to write into.
         /// @param hash  Key hash identifying the value slot.
         /// @param s     Raw input string.
+        /// @param display Positional arg name used in conversion errors.
         /// @return Ok on success, or Err with a type-conversion error.
         template <detail::BuiltinType T>
         static CliResult<void> convert_and_set(
-            ParseContext &ctx, size_t hash, std::string_view s)
+            ParseContext &ctx,
+            size_t hash,
+            std::string_view s,
+            std::string_view display = {})
         {
             if constexpr (std::same_as<T, std::string>)
             {
@@ -66,7 +76,7 @@ namespace pjh::cli
             }
             else
             {
-                auto r = Converter<T>::from_string(s);
+                auto r = Converter<T>::from_string(s, display);
                 if (r.is_err())
                     return CliResult<void>::Err(std::move(r).unwrap_err());
                 ParseContextWriter::set_value<T>(ctx, hash, r.unwrap());

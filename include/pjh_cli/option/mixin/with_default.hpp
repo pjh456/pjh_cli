@@ -111,7 +111,7 @@ namespace pjh::cli
         virtual CliResult<T> convert_value(std::string_view) const
         {
             return CliFailure{
-                ErrorFactory::option_does_not_accept_value(this->long_name())};
+                ErrorFactory::option_does_not_accept_value(this->display_name())};
         }
 
         /// @brief Validate a parsed typed value. Chain by calling Base::validate_value.

@@ -71,7 +71,7 @@ namespace pjh::cli
                 if (opt_ptr->is_required() &&
                     !ParseContextWriter::has_value(ctx, opt_ptr->key_hash()))
                     return CliFailure{
-                        ErrorFactory::missing_required_option(opt_ptr->long_name())};
+                        ErrorFactory::missing_required_option(opt_ptr->display_name())};
             }
         }
         return CliResult<void>::Ok();

@@ -23,7 +23,7 @@ namespace pjh::cli
     protected:
         CliResult<bool> convert_value(std::string_view raw) const override
         {
-            return Converter<bool>::from_string(raw);
+            return Converter<bool>::from_string(raw, this->display_name());
         }
     };
 

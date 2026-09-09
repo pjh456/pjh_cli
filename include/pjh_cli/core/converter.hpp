@@ -9,41 +9,63 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 
 namespace pjh::cli
 {
 
     namespace detail
     {
+        /// @brief Human-readable expected type name for TypeConversionError.
+        /// @tparam T Target type.
+        /// @return "bool (true/false/yes/no/1/0)" for bool, "float" for
+        ///         floating-point types, "integer" otherwise.
+        template <typename T>
+        constexpr std::string_view expected_type_name() noexcept
+        {
+            if constexpr (std::is_same_v<T, bool>)  // must precede integral
+                return "bool (true/false/yes/no/1/0)";
+            else if constexpr (std::floating_point<T>)
+                return "float";
+            else
+                return "integer";
+        }
+
         /// @brief Parse an integer from a string using std::from_chars.
         /// @tparam T Integer type (int, long, unsigned, etc.).
         /// @param s Input string.
+        /// @param display Option display or arg name used in the error message
+        ///        (e.g. "--port" or "file"); empty renders `for ''`.
         /// @return Ok(T) on success, Err(CliError) if parsing fails or trailing
         ///         characters remain.
         template <std::integral T>
-        auto from_chars_int(std::string_view s) -> CliResult<T>
+        auto from_chars_int(std::string_view s, std::string_view display = {})
+            -> CliResult<T>
         {
             T v{};
             auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (ec == std::errc() && ptr == s.data() + s.size())
                 return CliResult<T>::Ok(v);
             return CliResult<T>::Err(
-                CliError("invalid integer: '" + std::string(s) + "'"));
+                ErrorFactory::type_conversion_error(display, s, expected_type_name<T>()));
         }
 
         /// @brief Parse a floating-point number from a string using std::from_chars.
         /// @tparam T Float type (float, double).
         /// @param s Input string.
+        /// @param display Option display or arg name used in the error message
+        ///        (e.g. "--rate" or "ratio"); empty renders `for ''`.
         /// @return Ok(T) on success, Err(CliError) if parsing fails.
         template <std::floating_point T>
-        auto from_chars_float(std::string_view s) -> CliResult<T>
+        auto from_chars_float(std::string_view s, std::string_view display = {})
+            -> CliResult<T>
         {
             T v{};
             auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (ec == std::errc() && ptr == s.data() + s.size())
                 return CliResult<T>::Ok(v);
             return CliResult<T>::Err(
-                CliError("invalid number: '" + std::string(s) + "'"));
+                ErrorFactory::type_conversion_error(display, s, expected_type_name<T>()));
         }
 
     }  // namespace detail
@@ -69,10 +91,13 @@ namespace pjh::cli
     {
         /// @brief Parse @p s as an integer.
         /// @param s Raw input string.
+        /// @param display Option display or arg name used in the error message;
+        ///        empty renders `for ''` (direct callers only).
         /// @return Ok(T) or Err(CliError) on invalid input.
-        static auto from_string(std::string_view s) -> CliResult<T>
+        static auto from_string(std::string_view s, std::string_view display = {})
+            -> CliResult<T>
         {
-            return detail::from_chars_int<T>(s);
+            return detail::from_chars_int<T>(s, display);
         }
     };
 
@@ -82,10 +107,13 @@ namespace pjh::cli
     {
         /// @brief Parse @p s as a floating-point number.
         /// @param s Raw input string.
+        /// @param display Option display or arg name used in the error message;
+        ///        empty renders `for ''` (direct callers only).
         /// @return Ok(T) or Err(CliError) on invalid input.
-        static auto from_string(std::string_view s) -> CliResult<T>
+        static auto from_string(std::string_view s, std::string_view display = {})
+            -> CliResult<T>
         {
-            return detail::from_chars_float<T>(s);
+            return detail::from_chars_float<T>(s, display);
         }
     };
 
@@ -111,8 +139,11 @@ namespace pjh::cli
     {
         /// @brief Parse @p s as a boolean.
         /// @param s Raw input string.
+        /// @param display Option display or arg name used in the error message;
+        ///        empty renders `for ''` (direct callers only).
         /// @return Ok(true/false) or Err(CliError) if input is not recognised.
-        static auto from_string(std::string_view s) -> CliResult<bool>
+        static auto from_string(std::string_view s, std::string_view display = {})
+            -> CliResult<bool>
         {
             if (detail::StringUtils::case_insensitive_equal(s, "true") ||
                 detail::StringUtils::case_insensitive_equal(s, "1") ||
@@ -125,9 +156,8 @@ namespace pjh::cli
                 detail::StringUtils::case_insensitive_equal(s, "n"))
                 return CliResult<bool>::Ok(false);
             return CliResult<bool>::Err(
-                CliError{
-                    "invalid bool: '" + std::string(s) +
-                    "', expected true/false/yes/no/1/0"});
+                ErrorFactory::type_conversion_error(
+                    display, s, detail::expected_type_name<bool>()));
         }
     };
 

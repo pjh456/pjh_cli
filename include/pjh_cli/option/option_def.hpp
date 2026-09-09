@@ -59,6 +59,10 @@ namespace pjh::cli
         /// @brief Long option name (e.g. "verbose").
         const std::string &long_name() const noexcept { return m_long_name; }
 
+        /// @brief Canonical long-option display used in error messages.
+        /// @return "--" + long_name() (e.g. "--verbose").
+        std::string display_name() const { return "--" + m_long_name; }
+
         /// @brief Short option character (0 if none).
         char short_name() const noexcept { return m_short_name; }
 
@@ -213,7 +217,7 @@ namespace pjh::cli
     /// @brief Default: option does not accept a value; returns an error.
     inline CliResult<void> OptionDef::parse_value(ParseContext &, std::string_view) const
     {
-        return CliFailure{ErrorFactory::option_does_not_accept_value(long_name())};
+        return CliFailure{ErrorFactory::option_does_not_accept_value(display_name())};
     }
 
     /// @brief Default: no-op (no default value to apply).

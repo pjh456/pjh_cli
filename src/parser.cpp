@@ -158,7 +158,7 @@ namespace pjh::cli
             {
                 auto &arg = leaf->args()[arg_pos];
                 auto r = ValueWriter::apply_arg_value(
-                    ctx, arg.m_key_hash, arg.m_value_tag, a);
+                    ctx, arg.m_key_hash, arg.m_value_tag, a, arg.m_name);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
             }

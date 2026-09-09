@@ -40,6 +40,14 @@ TEST_CASE("Option bool flag no short no default")
     CHECK(opt.key_hash() != 0);
 }
 
+TEST_CASE("Option display_name returns canonical long form")
+{
+    App app("test", "1.0", "Test");
+    auto &opt = app.option<fixed_string("verbose")>("--verbose", "Enable verbose output")
+                    .boolean();
+    CHECK(opt.display_name() == "--verbose");
+}
+
 TEST_CASE("Option int with short no default")
 {
     App app("test", "1.0", "Test");

@@ -112,6 +112,14 @@ TEST_CASE("type_conversion_error empty parts")
         std::string_view(e.what()) == "Parse Error: invalid value '' for '': expected ");
 }
 
+TEST_CASE("enum_value_error format")
+{
+    auto e = ErrorFactory::enum_value_error("--color", "yellow", {"red", "green"});
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: invalid value 'yellow' for '--color': expected one of: red, green");
+}
+
 TEST_CASE("ambiguous_command format")
 {
     auto e = ErrorFactory::ambiguous_command("st", {"start", "stop"});

@@ -5,6 +5,7 @@
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parser.hpp>
+#include <string_view>
 
 #include "test_helpers.hpp"
 
@@ -130,4 +131,16 @@ TEST_CASE("Parser extra positional args store no extra")
     auto r = Parser::parse_command(root, argv.argc(), argv.argv());
     CHECK(r.is_ok());
     CHECK(r.unwrap().extra_args().empty());
+}
+
+TEST_CASE("Parser positional conversion error names the argument")
+{
+    LeafCommand root("test", "Positional conversion");
+    root.arg<int, 0>("count", "Count");
+    Argv argv{"test", "abc"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("for 'count': expected integer") !=
+        std::string_view::npos);
 }

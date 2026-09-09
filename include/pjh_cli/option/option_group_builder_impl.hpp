@@ -24,7 +24,7 @@ namespace pjh::cli
         for (auto h : g.key_hashes)
         {
             auto *opt = m_cmd.find_option_by_hash(h);
-            g.option_names.push_back(opt ? "--" + opt->long_name() : "?");
+            g.option_names.push_back(opt ? opt->display_name() : "?");
         }
         m_cmd.register_group(std::move(g));
     }

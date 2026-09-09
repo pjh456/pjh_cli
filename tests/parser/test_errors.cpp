@@ -133,7 +133,7 @@ TEST_CASE("Parser error message required option missing")
     CHECK(r.is_err());
     CHECK(
         r.unwrap_err().what() ==
-        std::string_view("Parse Error: missing required option: 'port'"));
+        std::string_view("Parse Error: missing required option: '--port'"));
 }
 
 TEST_CASE("Parser error message required arg missing")
@@ -157,7 +157,31 @@ TEST_CASE("Parser error message type conversion failure")
     CHECK(r.is_err());
     CHECK(
         r.unwrap_err().what() ==
-        std::string_view("Parse Error: invalid integer: 'notanumber'"));
+        std::string_view(
+            "Parse Error: invalid value 'notanumber' for '--port': expected integer"));
+}
+
+namespace
+{
+    enum class ErrorColor
+    {
+        red,
+        green
+    };
+}
+
+TEST_CASE("Parser error message enum invalid value")
+{
+    App app("test", "1.0", "Err msg");
+    app.option<fixed_string("color")>("--color", 'c', "Color")
+        .enum_type<ErrorColor>()
+        .mapping({{"red", ErrorColor::red}, {"green", ErrorColor::green}});
+    Argv argv{"test", "--color", "yellow"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(
+        msg.find("for '--color': expected one of: red, green") != std::string_view::npos);
 }
 
 TEST_CASE("Parser error message disabled command")

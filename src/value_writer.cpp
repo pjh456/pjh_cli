@@ -11,20 +11,24 @@ namespace pjh::cli
     ///
     /// Dispatches by ValueTag to the correct convert_and_set<T>() instantiation.
     CliResult<void> ValueWriter::apply_arg_value(
-        ParseContext &ctx, size_t hash, ValueTag tag, std::string_view s)
+        ParseContext &ctx,
+        size_t hash,
+        ValueTag tag,
+        std::string_view s,
+        std::string_view display)
     {
         switch (tag)
         {
         case ValueTag::Bool:
-            return convert_and_set<bool>(ctx, hash, s);
+            return convert_and_set<bool>(ctx, hash, s, display);
         case ValueTag::Int:
-            return convert_and_set<int>(ctx, hash, s);
+            return convert_and_set<int>(ctx, hash, s, display);
         case ValueTag::Double:
-            return convert_and_set<double>(ctx, hash, s);
+            return convert_and_set<double>(ctx, hash, s, display);
         case ValueTag::String:
-            return convert_and_set<std::string>(ctx, hash, s);
+            return convert_and_set<std::string>(ctx, hash, s, display);
         case ValueTag::Path:
-            return convert_and_set<std::filesystem::path>(ctx, hash, s);
+            return convert_and_set<std::filesystem::path>(ctx, hash, s, display);
         }
         return CliResult<void>::Ok();
     }

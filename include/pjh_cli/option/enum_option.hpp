@@ -60,7 +60,8 @@ namespace pjh::cli
             std::vector<std::string> names;
             names.reserve(m_mappings.size());
             for (auto &m : m_mappings) names.push_back(m.name);
-            return CliFailure{ErrorFactory::enum_value_error(raw, names)};
+            return CliFailure{
+                ErrorFactory::enum_value_error(this->display_name(), raw, names)};
         }
 
         std::string default_value_str() const override

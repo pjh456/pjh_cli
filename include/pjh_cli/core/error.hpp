@@ -43,7 +43,7 @@ namespace pjh::cli
     /// @brief Required option was not present on the command line.
     struct MissingRequiredOptionError
     {
-        std::string option_name;  // "port" (without dashes)
+        std::string option_name;  // "--port"
     };
 
     /// @brief Required positional argument was not provided.
@@ -55,9 +55,9 @@ namespace pjh::cli
     /// @brief String value could not be converted to the expected type.
     struct TypeConversionError
     {
-        std::string option_display;  // "--port" or arg name
+        std::string option_display;  // "--port" or positional arg name ("file")
         std::string raw_value;
-        std::string expected_type;  // "integer", "float", "bool"
+        std::string expected_type;  // "integer", "float", "bool (…)"
     };
 
     /// @brief Multiple commands matched the input (fuzzy match ambiguity).
@@ -77,7 +77,7 @@ namespace pjh::cli
     /// @brief Value is outside the allowed range [min, max].
     struct ValueOutOfRangeError
     {
-        std::string option_display;
+        std::string option_display;  // "--port"
         std::string raw_value;
         std::string min;
         std::string max;
@@ -86,6 +86,7 @@ namespace pjh::cli
     /// @brief String value did not match any valid enum mapping.
     struct EnumValueError
     {
+        std::string option_display;  // "--color"
         std::string raw_value;
         std::vector<std::string> valid_choices;
     };
@@ -223,8 +224,8 @@ namespace pjh::cli
                 else if constexpr (std::same_as<T, EnumValueError>)
                 {
                     return std::format(
-                        "invalid value '{}': expected one of: {}", e.raw_value,
-                        detail::join(e.valid_choices, ", "));
+                        "invalid value '{}' for '{}': expected one of: {}", e.raw_value,
+                        e.option_display, detail::join(e.valid_choices, ", "));
                 }
                 else if constexpr (std::same_as<T, CommandDisabledError>)
                 {
@@ -381,9 +382,12 @@ namespace pjh::cli
         }
 
         static CliError enum_value_error(
-            std::string_view raw, const std::vector<std::string> &valid)
+            std::string_view display,
+            std::string_view raw,
+            const std::vector<std::string> &valid)
         {
-            return CliError(EnumValueError{std::string(raw), valid});
+            return CliError(
+                EnumValueError{std::string(display), std::string(raw), valid});
         }
 
         static CliError command_disabled(std::string_view name)

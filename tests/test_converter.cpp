@@ -4,6 +4,7 @@
 #include <pjh_cli/core/converter.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 
 TEST_CASE("Converter int")
 {
@@ -117,4 +118,21 @@ TEST_CASE("Converter unsigned long long")
     using pjh::cli::Converter;
     auto r19 = Converter<unsigned long long>::from_string("18446744073709551615");
     CHECK(r19.is_ok());
+}
+
+TEST_CASE("Converter int error carries display and structured type")
+{
+    using pjh::cli::Converter;
+    using pjh::cli::TypeConversionError;
+    auto r = Converter<int>::from_string("abc", "--port");
+    REQUIRE(r.is_err());
+    auto err = r.unwrap_err();
+    const auto *info = std::get_if<TypeConversionError>(&err.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->option_display == "--port");
+    CHECK(info->raw_value == "abc");
+    CHECK(info->expected_type == "integer");
+    CHECK(
+        std::string_view(err.what()) ==
+        "Parse Error: invalid value 'abc' for '--port': expected integer");
 }

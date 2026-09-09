@@ -145,7 +145,8 @@ TEST_CASE("IntOption min-max error message format")
     CHECK(r.is_err());
     CHECK(
         r.unwrap_err().what() ==
-        std::string_view("Parse Error: value '0' for 'port' is out of range [1, 65535]"));
+        std::string_view(
+            "Parse Error: value '0' for '--port' is out of range [1, 65535]"));
 }
 
 // ── repeatable ──

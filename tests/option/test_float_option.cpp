@@ -88,3 +88,15 @@ TEST_CASE("FloatOption min inclusive at boundary")
     Argv a1{"test", "--rate", "1.0"};
     CHECK(app.parse(a1.argc(), a1.argv()).is_ok());
 }
+
+TEST_CASE("FloatOption conversion error message names option and type")
+{
+    App app("test", "1.0", "Float err");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating();
+    Argv argv{"test", "--rate", "x"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: invalid value 'x' for '--rate': expected float"));
+}

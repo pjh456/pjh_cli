@@ -187,9 +187,9 @@ TEST_CASE("EnvVar bool invalid value errors")
     Argv argv{"test"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
-    CHECK(
-        std::string_view(r.unwrap_err().what()).find("invalid bool") !=
-        std::string_view::npos);
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("invalid value 'maybe' for '--verbose'") != std::string_view::npos);
+    CHECK(msg.find("expected bool") != std::string_view::npos);
     unsetenv("TEST_VERBOSE");
 }
 
