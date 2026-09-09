@@ -1,5 +1,6 @@
 #include <cctype>
 #include <format>
+#include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/option/option_def.hpp>
@@ -15,6 +16,16 @@ namespace
     {
         return s.size() > 1 && s[0] == '-' &&
                !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
+    }
+
+    /// @brief True when @p tok exactly names/aliases a direct subcommand of
+    ///        @p cmd.  Used to stop greedy repeatable consumption at a command
+    ///        boundary so a following subcommand name is not swallowed.
+    bool is_subcommand_token(const pjh::cli::BaseCommand &cmd,
+                             std::string_view tok) noexcept
+    {
+        const auto *branch = cmd.as_branch();
+        return branch != nullptr && branch->find_subcommand(tok) != nullptr;
     }
 }
 
@@ -92,7 +103,7 @@ namespace pjh::cli
             while (opt->is_repeatable() && i + 1 < args.size())
             {
                 next = args[i + 1];
-                if (is_option_flag(next))
+                if (is_option_flag(next) || is_subcommand_token(cmd, next))
                     break;
                 r = opt->parse_value(ctx, args[++i]);
                 if (r.is_err())
@@ -135,7 +146,7 @@ namespace pjh::cli
                     while (opt->is_repeatable() && i + 1 < args.size())
                     {
                         auto nxt = args[i + 1];
-                        if (!nxt.empty() && nxt[0] == '-')
+                        if (is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
                             break;
                         r = opt->parse_value(ctx, args[++i]);
                         if (r.is_err())
@@ -158,7 +169,7 @@ namespace pjh::cli
                 while (opt->is_repeatable() && i + 1 < args.size())
                 {
                     next = args[i + 1];
-                    if (is_option_flag(next))
+                    if (is_option_flag(next) || is_subcommand_token(cmd, next))
                         break;
                     r = opt->parse_value(ctx, args[++i]);
                     if (r.is_err())

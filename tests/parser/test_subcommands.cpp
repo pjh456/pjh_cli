@@ -359,3 +359,61 @@ TEST_CASE("Parser alias with fuzzy match")
     CHECK(r.is_ok());
     CHECK(MatchedPathResolver::to_path_string(r.unwrap().matched_command()) == "serve");
 }
+
+// ──────────────────────────────────────────
+//  Repeatable greedy stops at subcommand boundary
+// ──────────────────────────────────────────
+
+TEST_CASE("Repeatable greedy stops at subcommand name")
+{
+    App app("test", "1.0", "Greedy sub long");
+    app.option<fixed_string("human")>("--human", "Human seat").str().repeatable();
+    app.add_leaf("new", "New");
+    Argv argv{"test", "--human", "P0", "new"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "new");
+    auto all = ctx.get_all<std::string, fixed_string("human")>();
+    REQUIRE(all.size() == 1);
+    CHECK(all[0] == "P0");
+}
+
+TEST_CASE("Repeatable greedy short option stops at subcommand name")
+{
+    App app("test", "1.0", "Greedy sub short");
+    app.option<fixed_string("human")>("--human", 'H', "Human seat").str().repeatable();
+    app.add_leaf("new", "New");
+    Argv argv{"test", "-H", "P0", "new"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "new");
+    auto all = ctx.get_all<std::string, fixed_string("human")>();
+    REQUIRE(all.size() == 1);
+    CHECK(all[0] == "P0");
+}
+
+TEST_CASE("Repeatable greedy deep nesting stops at every subcommand boundary")
+{
+    App app("test", "1.0", "Greedy sub deep");
+    app.option<fixed_string("human")>("--human", "Human seat").str().repeatable();
+    auto &mid = app.add_branch("mid", "Middle");
+    mid.option<fixed_string("leg")>("--leg", 'l', "Leg seat").str().repeatable();
+    mid.option<fixed_string("arm")>("--arm", 'a', "Arm seat").str().repeatable();
+    mid.add_leaf("leaf", "Leaf");
+    Argv argv{"test", "--human", "P0", "mid", "-l", "L0", "-aL1", "leaf"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "mid leaf");
+    auto human = ctx.get_all<std::string, fixed_string("human")>();
+    REQUIRE(human.size() == 1);
+    CHECK(human[0] == "P0");
+    auto leg = ctx.get_all<std::string, fixed_string("leg")>();
+    REQUIRE(leg.size() == 1);
+    CHECK(leg[0] == "L0");
+    auto arm = ctx.get_all<std::string, fixed_string("arm")>();
+    REQUIRE(arm.size() == 1);
+    CHECK(arm[0] == "L1");
+}
