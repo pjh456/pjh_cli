@@ -214,6 +214,10 @@ Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
 navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.
 
+`run()` is re-entrant on the same console: an action may call `run()` again and
+the outer loop resumes when the nested loop exits; `stop()` stops the innermost
+active loop.
+
 ### Fuzzy matching
 
 ```cpp

@@ -80,6 +80,12 @@ namespace pjh::cli
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
         ///        "q", or stop() is called from a callback.
         ///
+        /// Re-entrant on the same console: an action may call run() again, and
+        /// the outer invocation's running state is restored when the nested loop
+        /// returns (EOF, "quit"/"exit"/"q", or stop()), so the outer loop
+        /// continues.  stop() from a nested invocation stops only the innermost
+        /// active loop.
+        ///
         /// When an interactive TTY (or a terminal installed via set_terminal())
         /// is available, input is read through a LineEditor that handles Tab
         /// completion, hint rendering, and Up/Down recall from the injected
@@ -95,10 +101,14 @@ namespace pjh::cli
         ///   5. Calls process_line() and prints errors to m_error.
         void run();
 
-        /// @brief Signal the loop to exit gracefully on the next iteration.
+        /// @brief Signal the innermost active run() to exit gracefully on the
+        ///        next iteration.
         ///
         /// The currently running iteration completes normally, then the
-        /// next iteration sees m_running == false and exits.
+        /// next iteration sees m_running == false and exits.  When run() is
+        /// nested on the same console, only the innermost active invocation is
+        /// stopped; after it returns, the outer loop resumes unless the outer
+        /// action calls stop() as well.
         void stop();
 
         /// @brief Get the current prompt string.
@@ -169,6 +179,10 @@ namespace pjh::cli
         std::function<std::string(const HelpNavigationResult &)> m_help_formatter;
 
         /// @brief Whether the REPL loop should continue running.
+        ///
+        /// Saved and restored per run() invocation by a function-local RAII
+        /// guard, so nested run() calls on the same console do not clobber the
+        /// outer loop's state.
         bool m_running = false;
 
         /// @brief Command history storage.

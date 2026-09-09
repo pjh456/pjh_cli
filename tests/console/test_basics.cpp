@@ -7,6 +7,7 @@
 #include <pjh_cli/console/in_memory_history.hpp>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include "test_helpers.hpp"
 
@@ -183,6 +184,90 @@ TEST_CASE("set_terminal during run keeps the active terminal alive")
     CHECK(t1_alive_during_action);  // old terminal not freed by set_terminal
     CHECK(p2->read_calls >= 1u);    // replacement used on the next line
     CHECK_FALSE(*t1_alive);         // released after the in-flight line
+}
+
+TEST_CASE("nested run stop does not terminate the outer REPL")
+{
+    App app("test", "1.0", "Nested run getline");
+    StreamFixture streams;
+    InteractiveConsole console(app, "> ", streams.input, streams.output, streams.error);
+
+    bool inner_entered = false;
+    bool after_ran = false;
+
+    auto &nest = app.add_leaf("nest", "Nest");
+    nest.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            inner_entered = true;
+            console.run();  // nested invocation on the same console
+            return CliResult<void>::Ok();
+        });
+    auto &halt = app.add_leaf("halt", "Halt");
+    halt.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            console.stop();  // clears the shared flag; must only stop the inner run
+            return CliResult<void>::Ok();
+        });
+    auto &after = app.add_leaf("after", "After");
+    after.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            after_ran = true;
+            return CliResult<void>::Ok();
+        });
+
+    streams.input << "nest\nhalt\nafter\n";
+    console.run();
+
+    CHECK(inner_entered);
+    CHECK(after_ran);
+}
+
+TEST_CASE("nested run on a scripted terminal does not terminate the outer REPL")
+{
+    App app("test", "1.0", "Nested run tty");
+    InteractiveConsole console(app, "> ");
+
+    bool after_ran = false;
+    auto &nest = app.add_leaf("nest", "Nest");
+    nest.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            console.run();
+            return CliResult<void>::Ok();
+        });
+    auto &halt = app.add_leaf("halt", "Halt");
+    halt.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            console.stop();
+            return CliResult<void>::Ok();
+        });
+    auto &after = app.add_leaf("after", "After");
+    after.action(
+        [&](ParseContext &) -> CliResult<void>
+        {
+            after_ran = true;
+            return CliResult<void>::Ok();
+        });
+
+    auto term = std::make_unique<ScriptedTerminal>();
+    auto push = [&](std::string_view text)
+    {
+        for (char c : text) term->keys.push_back({KeyEvent::Code::Character, c});
+        term->keys.push_back({KeyEvent::Code::Enter, 0});
+    };
+    push("nest");
+    push("halt");
+    push("after");
+    term->keys.push_back({KeyEvent::Code::Eof, 0});
+    console.set_terminal(std::move(term));
+
+    console.run();
+
+    CHECK(after_ran);
 }
 
 TEST_CASE("set_terminal during process_line keeps the guarded terminal alive")

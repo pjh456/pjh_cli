@@ -50,6 +50,30 @@ namespace
     private:
         pjh::cli::ITerminal *m_terminal;
     };
+
+    /// @brief RAII guard making InteractiveConsole::run() re-entrancy-safe.
+    ///
+    /// Sets the running flag on construction and restores its previous value on
+    /// destruction, so a nested run() on the same console cannot leave the outer
+    /// loop's flag cleared when it exits.  Restores on exceptions too.
+    class RunningGuard
+    {
+    public:
+        /// @param running  Console running flag to set while the scope lives.
+        explicit RunningGuard(bool &running) : m_running(running), m_previous(running)
+        {
+            m_running = true;
+        }
+
+        ~RunningGuard() { m_running = m_previous; }
+
+        RunningGuard(const RunningGuard &) = delete;
+        RunningGuard &operator=(const RunningGuard &) = delete;
+
+    private:
+        bool &m_running;
+        bool m_previous;
+    };
 }  // namespace
 
 namespace pjh::cli
@@ -81,7 +105,7 @@ namespace pjh::cli
 
     void InteractiveConsole::run()
     {
-        m_running = true;
+        RunningGuard running(m_running);  // saves previous, sets true, restores on exit
 
         CompletionFn complete = [this](std::string_view line, std::size_t cursor)
         {
