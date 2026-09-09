@@ -172,7 +172,11 @@ namespace pjh::cli
     ///
     /// Iterates each character in the token.  Bool flags are set directly,
     /// counting options are incremented, and valued options consume a value
-    /// from the compact form (-p8080) or the next token.
+    /// from the compact form (-p8080 or -p=8080) or the next token.  Exactly
+    /// one leading '=' is stripped from the compact remainder, so -p=8080
+    /// equals -p8080 and -p==x yields the literal "=x"; an empty compact value
+    /// (-p=) is a missing value.  A flag/count option followed by '=' (-v=1)
+    /// is rejected with option_does_not_accept_value, mirroring the long form.
     CliResult<void> OptionConsumer::consume_short(
         const BaseCommand &cmd,
         ParseContext &ctx,
@@ -193,7 +197,16 @@ namespace pjh::cli
             {
                 if (j + 1 < arg.size())
                 {
-                    auto r = opt->parse_value(owner, arg.substr(j + 1));
+                    auto value = arg.substr(j + 1);
+                    if (value.front() == '=')
+                    {
+                        value.remove_prefix(1);
+                        if (value.empty())
+                            return CliFailure{
+                                ErrorFactory::missing_value(std::format("-{}", c))};
+                    }
+
+                    auto r = opt->parse_value(owner, value);
                     if (r.is_err())
                         return r;
 
@@ -232,6 +245,9 @@ namespace pjh::cli
             }
             else
             {
+                if (j + 1 < arg.size() && arg[j + 1] == '=')
+                    return CliFailure{ErrorFactory::option_does_not_accept_value(
+                        std::format("-{}", c))};
                 apply_flag(opt, owner);
             }
         }

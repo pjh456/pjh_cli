@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 
@@ -181,6 +181,87 @@ TEST_CASE("Parser compact short with repeatable greedy")
     Argv argv{"test", "-fa.txt", "b.txt", "c.txt"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_ok());
+    auto all = r.unwrap().get_all<fs::path, fixed_string("files")>();
+    REQUIRE(all.size() == 3);
+    CHECK(all[0] == "a.txt");
+    CHECK(all[1] == "b.txt");
+    CHECK(all[2] == "c.txt");
+}
+
+// ── compact short equals form (-p=8080) ──
+
+TEST_CASE("Parser compact short with equals -p=8080")
+{
+    App app("test", "1.0", "Compact equals");
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    Argv argv{"test", "-p=8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("Parser compact short equals accepts negative number")
+{
+    App app("test", "1.0", "Compact equals neg");
+    app.option<fixed_string("offset")>("--offset", 'o', "Offset").integer();
+    Argv argv{"test", "-o=-5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("offset")>() == -5);
+}
+
+TEST_CASE("Parser compact short equals stores unmarked value for string option")
+{
+    App app("test", "1.0", "Compact equals str");
+    app.option<fixed_string("name")>("--name", 'n', "Name").str();
+    Argv argv{"test", "-n=foo"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("name")>() == "foo");
+}
+
+TEST_CASE("Parser compact short equals strips exactly one leading equals")
+{
+    App app("test", "1.0", "Compact equals literal");
+    app.option<fixed_string("name")>("--name", 'n', "Name").str();
+    Argv argv{"test", "-n==x"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<std::string, fixed_string("name")>() == "=x");
+}
+
+TEST_CASE("Parser compact short equals with empty value errors")
+{
+    App app("test", "1.0", "Compact equals empty");
+    app.option<fixed_string("name")>("--name", 'n', "Name").str();
+    Argv argv{"test", "-n="};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '-n' requires a value"));
+}
+
+TEST_CASE("Parser compact short equals after flag group -vp=9090")
+{
+    App app("test", "1.0", "Compact equals group");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    app.option<fixed_string("port")>("--port", 'p', "Port").integer();
+    Argv argv{"test", "-vp=9090"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.get<bool, fixed_string("verbose")>() == true);
+    CHECK(ctx.get<int, fixed_string("port")>() == 9090);
+}
+
+TEST_CASE("Parser compact short equals with repeatable greedy")
+{
+    App app("test", "1.0", "Compact equals greedy");
+    app.option<fixed_string("files")>("--files", 'f', "Files").path().repeatable();
+    Argv argv{"test", "-f=a.txt", "b.txt", "c.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
     auto all = r.unwrap().get_all<fs::path, fixed_string("files")>();
     REQUIRE(all.size() == 3);
     CHECK(all[0] == "a.txt");

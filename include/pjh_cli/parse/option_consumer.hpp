@@ -63,10 +63,15 @@ namespace pjh::cli
         /// Iterates over each character in the token:
         ///   - Bool flags are set to true directly.
         ///   - Counting options are incremented.
-        ///   - Valued options support compact form (-p8080) or separated form
-        ///     (-p 8080); compact form must have the value immediately after
-        ///     the option character.  Grouped short options like -vp where
-        ///     'p' expects a value consume the next token.
+        ///   - Valued options support compact form (-p8080 or -p=8080) or
+        ///     separated form (-p 8080); compact form must have the value
+        ///     immediately after the option character.  Exactly one leading
+        ///     '=' is stripped from the compact remainder, so -p=8080 equals
+        ///     -p8080 and -p==x yields the literal value "=x"; an empty compact
+        ///     value (-p=) is a missing value.  Grouped short options like -vp
+        ///     where 'p' expects a value consume the next token.
+        ///   - A flag/count option followed by '=' (-v=1) is rejected with
+        ///     option_does_not_accept_value, mirroring the long form.
         /// For repeatable valued options, greedily consumes following
         /// non-flag tokens after the value.
         ///

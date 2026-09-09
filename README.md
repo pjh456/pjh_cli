@@ -89,6 +89,12 @@ int port = ctx.get<int, fixed_string("port")>();
 auto color = ctx.get_enum<Color, fixed_string("color")>();
 ```
 
+Valued short options accept `-p 8080`, `-p8080`, and `-p=8080`
+interchangeably; exactly one leading `=` is stripped, so `-p==x` yields the
+literal value `=x`. An empty compact value (`-p=`) is a missing value, and a
+value on a flag or count option (`-v=1`) is rejected, mirroring the long
+`--opt=` forms.
+
 ### Help and version
 
 `parse()` / `parse_fuzzy()` never print help or version and never exit. When

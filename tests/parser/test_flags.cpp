@@ -70,6 +70,18 @@ TEST_CASE("Parser short flag rejects -v=1")
     Argv argv{"test", "-v=1"};
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: option '-v' does not accept a value"));
+}
+
+TEST_CASE("Parser short bool flag rejects -v=1")
+{
+    App app("test", "1.0", "Short bool eq");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    Argv argv{"test", "-v=1"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    CHECK(r.is_err());
 }
 
 TEST_CASE("Parser valued option still accepts --opt=value")
