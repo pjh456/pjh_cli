@@ -10,26 +10,79 @@ using namespace pjh::cli;
 TEST_CASE("CliError basic")
 {
     CliError e("something went wrong");
-    CHECK(std::string_view(e.what()) == "Parse Error: something went wrong");
+    CHECK(std::string_view(e.what()) == "something went wrong");
+    CHECK(e.kind() == ErrorKind::Runtime);
 }
 
 TEST_CASE("CliError empty message")
 {
     CliError e("");
-    CHECK(std::string_view(e.what()) == "Parse Error: ");
+    CHECK(std::string_view(e.what()) == "");
+    CHECK(e.kind() == ErrorKind::Runtime);
 }
 
 TEST_CASE("CliError from char pointer")
 {
     CliError e("bad input");
-    CHECK(std::string_view(e.what()) == "Parse Error: bad input");
+    CHECK(std::string_view(e.what()) == "bad input");
+    CHECK(e.kind() == ErrorKind::Runtime);
 }
 
 TEST_CASE("CliError is runtime_error")
 {
     CliError e("test");
     const std::runtime_error &base = e;
-    CHECK(std::string_view(base.what()) == "Parse Error: test");
+    CHECK(std::string_view(base.what()) == "test");
+    CHECK(e.kind() == ErrorKind::Runtime);
+}
+
+TEST_CASE("CliError plain message is runtime kind")
+{
+    CliError e("boom");
+    CHECK(std::string_view(e.what()) == "boom");
+    CHECK(e.kind() == ErrorKind::Runtime);
+}
+
+TEST_CASE("ErrorFactory runtime_error omits parse prefix")
+{
+    auto e = ErrorFactory::runtime_error("读取存档失败");
+    CHECK(std::string_view(e.what()) == "读取存档失败");
+    CHECK(e.kind() == ErrorKind::Runtime);
+}
+
+TEST_CASE("ErrorFactory parse errors are parse kind")
+{
+    auto unknown = ErrorFactory::unknown_option("--bogus");
+    CHECK(std::string_view(unknown.what()) == "Parse Error: unknown option: '--bogus'");
+    CHECK(unknown.kind() == ErrorKind::Parse);
+
+    auto missing = ErrorFactory::missing_value("--port");
+    CHECK(
+        std::string_view(missing.what()) ==
+        "Parse Error: option '--port' requires a value");
+    CHECK(missing.kind() == ErrorKind::Parse);
+}
+
+TEST_CASE("CliError ErrorInfo defaults to parse kind")
+{
+    CliError e(ErrorInfo(RawMessageError{"raw"}));
+    CHECK(std::string_view(e.what()) == "Parse Error: raw");
+    CHECK(e.kind() == ErrorKind::Parse);
+}
+
+TEST_CASE("CliError explicit runtime kind omits prefix")
+{
+    CliError e(UnknownOptionError{"--x"}, ErrorKind::Runtime);
+    CHECK(std::string_view(e.what()) == "unknown option: '--x'");
+    CHECK(e.kind() == ErrorKind::Runtime);
+}
+
+TEST_CASE("CliError copy preserves kind")
+{
+    CliError original("boom");
+    CliError copy = original;
+    CHECK(copy.kind() == ErrorKind::Runtime);
+    CHECK(std::string_view(copy.what()) == "boom");
 }
 
 TEST_CASE("LogicError basic")

@@ -259,34 +259,70 @@ namespace pjh::cli
 
     // ── CliError ─────────────────────────────────────────────────────
 
-    /// @brief Error type for parse failures.
+    /// @brief Category of a CliError; drives the `what()` prefix.
+    enum class ErrorKind
+    {
+        Parse,   ///< Command-line parsing / validation failure.
+        Runtime  ///< Action/execution failure reported by the embedder.
+    };
+
+    /// @brief Error type for parse and runtime failures.
     ///
-    /// Stores a structured ErrorInfo variant.  The `what()` string is
-    /// automatically prefixed with "Parse Error: " and built from the
-    /// variant via format_error().
+    /// Stores a structured ErrorInfo variant plus an ErrorKind category.
+    /// Parse errors (constructed from an ErrorInfo, e.g. via ErrorFactory)
+    /// render `what()` as "Parse Error: " + format_error(info).  Runtime
+    /// errors (constructed from a plain string, or via
+    /// ErrorFactory::runtime_error) render the message only, with no
+    /// prefix.  Use kind() to introspect the category instead of parsing
+    /// `what()`.
+    ///
+    /// Note: wrapping a runtime message in ErrorInfo(RawMessageError{...})
+    /// and passing it to the one-argument constructor yields a Parse error.
     class CliError : public std::runtime_error
     {
         ErrorInfo m_info;
+        ErrorKind m_kind;
+
+        static std::string render_what(const ErrorInfo &info, ErrorKind kind)
+        {
+            if (kind == ErrorKind::Parse)
+                return std::format("Parse Error: {}", format_error(info));
+            return format_error(info);
+        }
 
     public:
-        /// @brief Construct from a structured ErrorInfo variant.
-        explicit CliError(ErrorInfo info) :
-            std::runtime_error(std::format("Parse Error: {}", format_error(info))),
-            m_info(std::move(info))
+        /// @brief Construct a parse error from a structured ErrorInfo variant.
+        explicit CliError(ErrorInfo info) : CliError(std::move(info), ErrorKind::Parse) {}
+
+        /// @brief Construct an error from a structured ErrorInfo and explicit kind.
+        /// @param info Structured error payload.
+        /// @param kind Category controlling the `what()` prefix.  Deliberately has
+        ///        no default, so the one-argument ErrorInfo overload is unambiguous.
+        CliError(ErrorInfo info, ErrorKind kind) :
+            std::runtime_error(render_what(info, kind)),
+            m_info(std::move(info)),
+            m_kind(kind)
         {
         }
 
-        /// @brief Construct from a plain string (wraps in RawMessageError).
+        /// @brief Construct a runtime error from a plain string.
+        ///
+        /// The message is stored as RawMessageError but categorised as
+        /// ErrorKind::Runtime, so `what()` returns the message with no
+        /// "Parse Error: " prefix.
         explicit CliError(const std::string &msg) :
-            CliError(ErrorInfo(RawMessageError{msg}))
+            CliError(ErrorInfo(RawMessageError{msg}), ErrorKind::Runtime)
         {
         }
 
-        /// @brief Construct from a C-string.
+        /// @brief Construct a runtime error from a C-string.
         explicit CliError(const char *msg) : CliError(std::string(msg)) {}
 
         /// @brief Access the structured error information.
         const ErrorInfo &info() const noexcept { return m_info; }
+
+        /// @brief Access the error category.
+        ErrorKind kind() const noexcept { return m_kind; }
     };
 
     // ── LogicError ───────────────────────────────────────────────────
@@ -412,6 +448,13 @@ namespace pjh::cli
         }
 
         static CliError no_command_matched() { return CliError(NoCommandMatchedError{}); }
+
+        /// @brief Build a runtime/execution error.  `what()` is the message only.
+        static CliError runtime_error(std::string_view message)
+        {
+            return CliError(
+                ErrorInfo(RawMessageError{std::string(message)}), ErrorKind::Runtime);
+        }
     };
 
 }  // namespace pjh::cli

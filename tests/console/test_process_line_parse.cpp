@@ -78,7 +78,9 @@ TEST_CASE("process_line execution error propagates")
     InteractiveConsole console(app, "> ");
     auto r = console.process_line("anything");
     CHECK(r.is_err());
-    CHECK(r.unwrap_err().what() == std::string_view("Parse Error: exec failed"));
+    auto &err = r.unwrap_err();
+    CHECK(err.what() == std::string_view("exec failed"));
+    CHECK(err.kind() == ErrorKind::Runtime);
 }
 
 TEST_CASE("process_line -- after subcommand")
