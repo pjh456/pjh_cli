@@ -277,3 +277,61 @@ TEST_CASE("format_error covers every ErrorInfo alternative")
         CHECK(std::string_view(e.what()).starts_with("Parse Error: "));
     }
 }
+
+TEST_CASE("format_error returns message without prefix")
+{
+    CHECK(format_error(RawMessageError{"raw"}) == "raw");
+    CHECK(format_error(UnknownOptionError{"--x"}) == "unknown option: '--x'");
+}
+
+TEST_CASE("value_out_of_range int format")
+{
+    auto e = ErrorFactory::value_out_of_range("--port", "9", 0, 5);
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: value '9' for '--port' is out of range [0, 5]");
+    CHECK(e.kind() == ErrorKind::Parse);
+}
+
+TEST_CASE("value_out_of_range double format")
+{
+    auto e = ErrorFactory::value_out_of_range("--ratio", "9.5", 0.0, 1.0);
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: value '9.5' for '--ratio' is out of range [0, 1]");
+}
+
+TEST_CASE("conflicting_options format")
+{
+    auto e = ErrorFactory::conflicting_options({"a", "b"});
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: conflicting options: a, b cannot be used together");
+}
+
+TEST_CASE("required_option_group exactly one format")
+{
+    auto e = ErrorFactory::required_option_group({"a", "b"}, true);
+    CHECK(std::string_view(e.what()) == "Parse Error: exactly one of a, b is required");
+}
+
+TEST_CASE("required_option_group at least one format")
+{
+    auto e = ErrorFactory::required_option_group({"a", "b"}, false);
+    CHECK(std::string_view(e.what()) == "Parse Error: at least one of a, b is required");
+}
+
+TEST_CASE("option_does_not_accept_value format")
+{
+    auto e = ErrorFactory::option_does_not_accept_value("--flag");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: option '--flag' does not accept a value");
+}
+
+TEST_CASE("no_command_matched format")
+{
+    auto e = ErrorFactory::no_command_matched();
+    CHECK(std::string_view(e.what()) == "Parse Error: no command matched");
+    CHECK(e.kind() == ErrorKind::Parse);
+}

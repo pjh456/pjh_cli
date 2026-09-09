@@ -24,6 +24,7 @@ set_target_properties(pjh_cli PROPERTIES EXPORT_NAME cli)
 target_sources(pjh_cli
     PRIVATE
     src/command.cpp
+    src/error.cpp
     src/app.cpp
     src/parser.cpp
     src/matched_path_resolver.cpp

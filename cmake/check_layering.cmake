@@ -48,6 +48,7 @@ set(_forbid_umbrella "")
 set(_src_map
     "src/app.cpp=app"
     "src/command.cpp=command"
+    "src/error.cpp=core"
     "src/parser.cpp=parse"
     "src/matched_path_resolver.cpp=parse"
     "src/option_consumer.cpp=parse"
