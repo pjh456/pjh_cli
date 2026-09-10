@@ -64,12 +64,15 @@ namespace pjh::cli
         ParseContext &ctx,
         std::string_view a,
         size_t pos,
-        bool double_dash)
+        bool double_dash,
+        bool suggestions_known_empty)
     {
         if (!double_dash && cmd->is_branch() && !cmd->extra_args_explicit() &&
             cmd->extra_args_policy() == ExtraArgsPolicy::Ignore &&
             !cmd->as_branch()->subcommands().empty())
         {
+            if (suggestions_known_empty)
+                return CliFailure{ErrorFactory::unknown_command(a, {})};
             return CliFailure{
                 SubcommandResolver::unknown_subcommand(*cmd->as_branch(), a)};
         }
@@ -146,19 +149,21 @@ namespace pjh::cli
                 continue;
             }
 
+            bool suggestions_known_empty = false;
             {
                 auto sr = SubcommandResolver::try_descend_subcommand(
                     cmd, ctx, a, max_fuzzy_distance, double_dash);
                 if (sr.is_err())
                     return CliResult<ParseContext>::Err(std::move(sr).unwrap_err());
-                if (sr.unwrap().matched)
+                auto &r = sr.unwrap();
+                if (r.matched)
                 {
-                    auto &r = sr.unwrap();
                     cmd = r.cmd;
                     ctx = std::move(r.ctx);
                     arg_pos = 0;
                     continue;
                 }
+                suggestions_known_empty = r.suggestions_known_empty;
             }
 
             if (auto *leaf = cmd->as_leaf();
@@ -172,7 +177,8 @@ namespace pjh::cli
             }
             else
             {
-                auto r = handle_extra_arg(cmd, ctx, a, i, double_dash);
+                auto r = handle_extra_arg(
+                    cmd, ctx, a, i, double_dash, suggestions_known_empty);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
             }

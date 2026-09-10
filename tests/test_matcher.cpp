@@ -388,6 +388,54 @@ TEST_CASE("parse_fuzzy no match")
         std::string_view::npos);
 }
 
+TEST_CASE("parse_fuzzy miss runs one fuzzy pass")
+{
+    App app("test", "1.0", "Single fuzzy pass");
+    int enabled_calls = 0;
+    app.add_leaf("server", "Server")
+        .enabled(
+            [&enabled_calls]
+            {
+                ++enabled_calls;
+                return true;
+            });
+    app.add_leaf("config", "Config")
+        .enabled(
+            [&enabled_calls]
+            {
+                ++enabled_calls;
+                return true;
+            });
+
+    Argv argv{"test", "zzzzz"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(std::holds_alternative<UnknownCommandError>(r.unwrap_err().info()));
+    // One is_visible_and_enabled() per visible child per fuzzy pass.
+    // Before the fix the resolver and unknown_subcommand each ran a pass (4).
+    CHECK(enabled_calls == 2);
+}
+
+TEST_CASE("try_descend_subcommand marks a resolved fuzzy miss")
+{
+    App app("test", "1.0", "Resolver flag");
+    app.add_leaf("server", "Server");
+
+    ParseContext fuzzy_ctx;
+    auto fuzzy =
+        SubcommandResolver::try_descend_subcommand(&app, fuzzy_ctx, "zzzzz", 3, false);
+    REQUIRE(fuzzy.is_ok());
+    CHECK_FALSE(fuzzy.unwrap().matched);
+    CHECK(fuzzy.unwrap().suggestions_known_empty);
+
+    ParseContext exact_ctx;
+    auto exact =
+        SubcommandResolver::try_descend_subcommand(&app, exact_ctx, "zzzzz", 0, false);
+    REQUIRE(exact.is_ok());
+    CHECK_FALSE(exact.unwrap().matched);
+    CHECK_FALSE(exact.unwrap().suggestions_known_empty);
+}
+
 TEST_CASE("parse_fuzzy multi-candidate ambiguous reports ambiguous command")
 {
     App app("test", "1.0", "Multi fuzzy");

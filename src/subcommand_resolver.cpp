@@ -6,6 +6,15 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+    /// @brief Fixed Levenshtein distance for unknown-command suggestions.
+    ///
+    /// Shared by unknown_subcommand() and the suggestions_known_empty flag so
+    /// the suggestion threshold and its reuse condition cannot drift apart.
+    constexpr int k_suggestion_distance = 3;
+}  // namespace
+
 namespace pjh::cli
 {
     /// @brief Find a subcommand by name, trying exact then fuzzy match.
@@ -49,7 +58,8 @@ namespace pjh::cli
         BranchCommand &cmd, std::string_view input)
     {
         std::vector<std::string> suggestions;
-        for (const auto &match : fuzzy_find_subcommands(cmd, input, 3, Visibility::Both))
+        for (const auto &match :
+             fuzzy_find_subcommands(cmd, input, k_suggestion_distance, Visibility::Both))
             suggestions.push_back(match.command->name());
         return ErrorFactory::unknown_command(input, suggestions);
     }
@@ -86,7 +96,11 @@ namespace pjh::cli
                 ErrorFactory::ambiguous_command(a, ambiguous));
 
         if (!sub)
-            return CliResult<SubcommandResult>::Ok(SubcommandResult{});
+        {
+            SubcommandResult r;
+            r.suggestions_known_empty = max_fuzzy_distance >= k_suggestion_distance;
+            return CliResult<SubcommandResult>::Ok(std::move(r));
+        }
 
         ParseContext child_ctx;
         detail::ParseContextWriter::set_parent(

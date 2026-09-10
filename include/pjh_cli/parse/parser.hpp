@@ -136,13 +136,20 @@ namespace pjh::cli
         /// @param a            Unrecognised token.
         /// @param pos          Argument position (for error messages).
         /// @param double_dash  Whether we have already seen '--'.
+        /// @param suggestions_known_empty  True when the resolver already
+        ///        established that the distance-3 suggestion set is empty (a
+        ///        fuzzy pass at a threshold >= 3 found nothing); the
+        ///        unknown-command error is then built with no suggestions
+        ///        instead of recomputing fuzzy matches.  Ignored on the
+        ///        non-unknown-command paths.
         /// @return Ok or Err if policy is Error or an unknown command.
         static CliResult<void> handle_extra_arg(
             BaseCommand *cmd,
             ParseContext &ctx,
             std::string_view a,
             size_t pos,
-            bool double_dash);
+            bool double_dash,
+            bool suggestions_known_empty);
     };
 }  // namespace pjh::cli
 

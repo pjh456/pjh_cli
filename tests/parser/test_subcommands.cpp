@@ -4,11 +4,13 @@
 #include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "test_helpers.hpp"
@@ -759,4 +761,20 @@ TEST_CASE("Store extra args across fuzzy descent")
     REQUIRE(extra.size() == 2);
     CHECK(extra[0] == "foo");
     CHECK(extra[1] == "bar");
+}
+
+TEST_CASE("Dash token still receives unknown command suggestions")
+{
+    App app("test", "1.0", "Dash suggestion");
+    app.add_leaf("5", "Five");
+    Argv argv{"test", "-5"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(std::holds_alternative<UnknownCommandError>(r.unwrap_err().info()));
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("unknown command: '-5'") != std::string_view::npos);
+    // The dash token takes the resolver's early return, so no fuzzy pass ran
+    // and the suggestions_known_empty flag stays false: the distance-3
+    // suggestion must still be computed.
+    CHECK(msg.find("did you mean: 5") != std::string_view::npos);
 }

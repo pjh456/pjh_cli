@@ -28,10 +28,15 @@ namespace pjh::cli
         /// @brief Result of a subcommand descent attempt.
         struct SubcommandResult
         {
-            bool matched = false;       ///< true if a subcommand was matched.
-            BaseCommand *cmd = nullptr; ///< Pointer to the matched subcommand.
-            ParseContext ctx;           ///< Child context, parent-linked to
-                                        ///< the caller's context.
+            bool matched = false;        ///< true if a subcommand was matched.
+            BaseCommand *cmd = nullptr;  ///< Pointer to the matched subcommand.
+            ParseContext ctx;            ///< Child context, parent-linked to
+                                         ///< the caller's context.
+            /// @brief True when try_descend_subcommand() ran a fuzzy pass at
+            ///        a threshold >= the fixed suggestion distance and found
+            ///        no candidate, so the distance-3 suggestion set is known
+            ///        empty and callers must not recompute fuzzy suggestions.
+            bool suggestions_known_empty = false;
         };
 
         SubcommandResolver() = delete;
@@ -100,6 +105,11 @@ namespace pjh::cli
         ///         than one fuzzy candidate is within threshold (the
         ///         candidate list is carried in
         ///         AmbiguousCommandError::candidates, closest first).
+        /// @note On an unmatched result, suggestions_known_empty is set when a
+        ///       fuzzy pass at max_fuzzy_distance >= 3 returned no candidate,
+        ///       so the distance-3 suggestion set is known empty.  It stays
+        ///       false on the double-dash / dash-prefixed / non-branch early
+        ///       returns and when max_fuzzy_distance < 3.
         static CliResult<SubcommandResult> try_descend_subcommand(
             BaseCommand *cmd,
             ParseContext &ctx,
