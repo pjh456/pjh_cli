@@ -43,6 +43,28 @@ namespace pjh::cli::detail
                !std::isdigit(static_cast<unsigned char>(s[1])) && s[1] != '.';
     }
 
+    /// @brief Necessary condition for edit_distance(a, b) <= max_distance.
+    ///
+    /// distance >= | |a| - |b| | (an insertion or deletion changes the length
+    /// by one, a substitution by zero), so a candidate whose length differs
+    /// from the other string by more than max_distance cannot match at that
+    /// threshold and can be rejected without running the DP.  A negative
+    /// threshold matches nothing, mirroring the acceptance test.
+    ///
+    /// @param a  First string.
+    /// @param b  Second string.
+    /// @param max_distance  Threshold k; negative values reject everything.
+    /// @return true if a and b can still be within max_distance edits.
+    inline constexpr bool within_edit_distance_bound(
+        std::string_view a, std::string_view b, int max_distance) noexcept
+    {
+        if (max_distance < 0)
+            return false;
+        const std::size_t diff =
+            a.size() > b.size() ? a.size() - b.size() : b.size() - a.size();
+        return diff <= static_cast<std::size_t>(max_distance);
+    }
+
     /// @brief True for a UTF-8 continuation byte (10xxxxxx).
     /// @param b  Byte to classify.
     /// @return true if @p b is a UTF-8 continuation byte.

@@ -75,6 +75,9 @@ namespace
     /// "--name" displays within k_suggestion_distance, closest first, capped at
     /// k_max_suggestions.  Options have no aliases, so one candidate per
     /// declared long name; the nearest declaration wins on duplicates.
+    /// Candidates whose long-name length differs from @p name by more than
+    /// k_suggestion_distance are rejected without running the distance
+    /// (necessary condition, results unchanged).
     ///
     /// @param cmd   Command in scope at the miss.
     /// @param name  Typed long-option name without the leading dashes.
@@ -85,8 +88,16 @@ namespace
     std::vector<std::string> suggest_long_options(
         const pjh::cli::BaseCommand &cmd, std::string_view name)
     {
+        // Chain-wide upper bound (also counts hidden/disabled commands, so it
+        // only over-reserves): keeps the per-call containers from growing.
+        std::size_t upper = 0;
+        for (const auto *c = &cmd; c != nullptr; c = c->parent())
+            upper += c->options().size();
+
         std::vector<std::pair<std::string, int>> matches;
         std::unordered_set<std::string_view> seen;
+        matches.reserve(upper);
+        seen.reserve(upper);
         for (const auto *c = &cmd; c != nullptr; c = c->parent())
         {
             if (!pjh::cli::detail::is_visible_and_enabled(*c, pjh::cli::Visibility::Both))
@@ -97,6 +108,9 @@ namespace
                     continue;  // unreachable via long lookup; nothing to suggest.
                 if (!seen.insert(opt->long_name()).second)
                     continue;  // nearest declaration wins.
+                if (!pjh::cli::detail::within_edit_distance_bound(
+                        name, opt->long_name(), k_suggestion_distance))
+                    continue;  // provably farther than k_suggestion_distance.
                 const int d = pjh::cli::edit_distance(name, opt->long_name());
                 if (d <= k_suggestion_distance)
                     matches.emplace_back(opt->display_name(), d);
@@ -104,6 +118,7 @@ namespace
         }
         std::ranges::stable_sort(matches, {}, [](const auto &m) { return m.second; });
         std::vector<std::string> out;
+        out.reserve(k_max_suggestions);
         for (auto &m : matches)
         {
             if (out.size() == k_max_suggestions)

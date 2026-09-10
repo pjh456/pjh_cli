@@ -121,10 +121,11 @@ namespace pjh::cli
         /// The parser's finalizer asks the parse root for the value of an
         /// option's env_var().  The default returns nullptr (no environment
         /// available), so a bare BranchCommand root disables env fallback.
+        /// The App override reads an environment snapshot captured at
+        /// construction; its lookup is heterogeneous and allocates nothing.
         ///
         /// @param name Environment variable name (OptionDef::env_var()).
         /// @return Pointer to the value, or nullptr if absent/unsupported.
-        /// @throws std::bad_alloc if the lookup key cannot be allocated.
         virtual const std::string *env_value(std::string_view name) const
         {
             return nullptr;

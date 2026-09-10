@@ -146,6 +146,18 @@ TEST_CASE("Parser unknown long option suggestions are capped")
     CHECK(msg.find("--pot") == std::string_view::npos);  // 4th dropped
 }
 
+TEST_CASE("Parser unknown long option with very long token has no suggestions")
+{
+    App app("test", "1.0", "Long token");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "--xxxxxxxxxxxxxxxx"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: unknown option: '--xxxxxxxxxxxxxxxx'"));
+}
+
 TEST_CASE("Parser unknown long option skips hidden command options")
 {
     App app("test", "1.0", "Hidden");

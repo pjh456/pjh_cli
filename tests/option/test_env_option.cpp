@@ -16,8 +16,8 @@
 using namespace pjh::cli;
 
 static_assert(
-    !noexcept(std::declval<const detail::EnvSnapshot &>().get(std::string_view{})),
-    "EnvSnapshot::get allocates a lookup key; must not be noexcept");
+    noexcept(std::declval<const detail::EnvSnapshot &>().get(std::string_view{})),
+    "EnvSnapshot::get is an allocation-free heterogeneous lookup; must stay noexcept");
 
 struct Argv
 {
@@ -245,6 +245,16 @@ TEST_CASE("bare BranchCommand root has no env fallback")
     auto r = Parser::parse_command(root, args, 0);
     CHECK(r.is_ok());
     CHECK_FALSE(r.unwrap().has<fixed_string("seam")>());
+}
+
+TEST_CASE("EnvSnapshot get resolves present and absent names directly")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_DIRECT", "direct-value"};
+    detail::EnvSnapshot snap;
+    auto *value = snap.get(env_guard.name());
+    REQUIRE(value != nullptr);
+    CHECK(*value == "direct-value");
+    CHECK(snap.get("PJH_CLI_TEST_ENV_NEVER_SET") == nullptr);
 }
 
 #ifdef _WIN32

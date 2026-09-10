@@ -778,3 +778,16 @@ TEST_CASE("Dash token still receives unknown command suggestions")
     // suggestion must still be computed.
     CHECK(msg.find("did you mean: 5") != std::string_view::npos);
 }
+
+TEST_CASE("Long unknown command receives no suggestions")
+{
+    App app("test", "1.0", "Long token");
+    app.add_leaf("server", "Server");
+    Argv argv{"test", "xxxxxxxxxxxxxxxx"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(std::holds_alternative<UnknownCommandError>(r.unwrap_err().info()));
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("unknown command: 'xxxxxxxxxxxxxxxx'") != std::string_view::npos);
+    CHECK(msg.find("did you mean") == std::string_view::npos);
+}

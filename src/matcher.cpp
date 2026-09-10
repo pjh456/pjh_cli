@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <limits>
 #include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
@@ -9,6 +11,7 @@
 #include <pjh_cli/format/matcher.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace
@@ -165,8 +168,27 @@ namespace pjh::cli
         auto m = a.size();
         auto n = b.size();
 
-        std::vector<int> prev(n + 1);
-        std::vector<int> cur(n + 1);
+        // Two DP rows: the stack buffers cover candidates of at most 63
+        // characters (every command name, alias, and long option in the tree),
+        // so the common short-name case allocates nothing; the vectors are the
+        // fallback for longer candidates and can throw std::bad_alloc.
+        constexpr std::size_t kStackRow = 64;
+        std::array<int, kStackRow> prev_s{};
+        std::array<int, kStackRow> cur_s{};
+        std::vector<int> prev_v, cur_v;
+        int *prev, *cur;
+        if (n + 1 <= kStackRow)
+        {
+            prev = prev_s.data();
+            cur = cur_s.data();
+        }
+        else
+        {
+            prev_v.assign(n + 1, 0);
+            cur_v.assign(n + 1, 0);
+            prev = prev_v.data();
+            cur = cur_v.data();
+        }
 
         for (size_t j = 0; j <= n; j++) prev[j] = static_cast<int>(j);
 
@@ -178,7 +200,7 @@ namespace pjh::cli
                 int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
                 cur[j] = std::min({prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost});
             }
-            swap(prev, cur);
+            std::swap(prev, cur);
         }
 
         return prev[n];
@@ -191,18 +213,28 @@ namespace pjh::cli
         Visibility mode)
     {
         std::vector<FuzzyMatch> results;
+        // Allocation-free upper bound: at most one match per child.
+        results.reserve(parent.subcommands().size());
 
         for (auto &sub_ptr : parent.subcommands())
         {
             if (!detail::is_visible_and_enabled(*sub_ptr, mode))
                 continue;
-            int best_d = edit_distance(input, sub_ptr->name());
-            for (const auto &a : sub_ptr->aliases())
+            int best_d = std::numeric_limits<int>::max();
+            auto consider = [&](std::string_view cand)
             {
-                int d = edit_distance(input, a);
+                // Length precheck: candidates whose length differs from the
+                // input by more than max_distance are provably farther than
+                // max_distance edits away (distance >= | |a| - |b| |), so the
+                // DP is skipped for them.
+                if (!detail::within_edit_distance_bound(input, cand, max_distance))
+                    return;
+                int d = edit_distance(input, cand);
                 if (d < best_d)
                     best_d = d;
-            }
+            };
+            consider(sub_ptr->name());
+            for (const auto &a : sub_ptr->aliases()) consider(a);
             if (best_d <= max_distance)
                 results.push_back({sub_ptr.get(), best_d});
         }

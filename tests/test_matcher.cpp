@@ -84,6 +84,15 @@ TEST_CASE("edit_distance")
     CHECK(edit_distance("start", "stop") == 3);
 }
 
+TEST_CASE("edit_distance stack and heap rows agree")
+{
+    std::string a(63, 'a'), b(63, 'a');
+    CHECK(edit_distance(a, b) == 0);
+    a.push_back('x');
+    b.push_back('y');  // 64 chars -> vector fallback
+    CHECK(edit_distance(a, b) == 1);
+}
+
 TEST_CASE("fuzzy find exact match")
 {
     App app("test", "1.0", "Fuzzy test");
@@ -122,6 +131,32 @@ TEST_CASE("fuzzy find no match beyond threshold")
 
     auto matches = fuzzy_find_subcommands(app, "zzzzz", 2);
     CHECK(matches.empty());
+}
+
+TEST_CASE("fuzzy find with very long input returns no match")
+{
+    App app("test", "1.0", "Long input");
+    app.add_leaf("server", "Server");
+    std::string long_input(1u << 16, 'x');
+    CHECK(fuzzy_find_subcommands(app, long_input, 3).empty());
+}
+
+TEST_CASE("fuzzy find length bound edges")
+{
+    App app("test", "1.0", "Length bound");
+    app.add_leaf("serve", "Serve");                        // 5 chars
+    CHECK(!fuzzy_find_subcommands(app, "se", 3).empty());  // |5-2| = 3 = k, distance 3
+    CHECK(fuzzy_find_subcommands(app, "s", 3).empty());    // |5-1| = 4 > k, distance 4
+}
+
+TEST_CASE("fuzzy find length bound applies per alias")
+{
+    App app("test", "1.0", "Alias bound");
+    auto &cmd = app.add_leaf("configuration", "Config");
+    cmd.alias("cfg");
+    auto m = fuzzy_find_subcommands(app, "cf", 3);  // name |13-2| > 3, alias |3-2| <= 3
+    REQUIRE(m.size() == 1);
+    CHECK(m[0].command->name() == "configuration");
 }
 
 TEST_CASE("fuzzy find respects visibility")

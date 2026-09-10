@@ -12,10 +12,14 @@
 namespace pjh::cli
 {
     /// @brief Compute Levenshtein edit distance between two strings.
+    ///
+    /// The two DP rows live on the stack for candidates of at most 63
+    /// characters; only the vector fallback for longer candidates allocates.
+    ///
     /// @param a First string.
     /// @param b Second string.
     /// @return Number of single-character edits (insert/delete/substitute) needed.
-    /// @throws std::bad_alloc if the two DP rows cannot be allocated.
+    /// @throws std::bad_alloc on the vector fallback (candidates over 63 chars).
     int edit_distance(std::string_view a, std::string_view b);
 
     /// @brief A fuzzy match result returned by fuzzy_find_subcommands().
@@ -30,6 +34,9 @@ namespace pjh::cli
     /// Enumerates all direct children of @p parent, applies the visibility
     /// + enabled filter, then computes edit_distance() against each name.
     /// Results within @p max_distance are returned sorted by distance.
+    /// Names and aliases whose length differs from @p input by more than
+    /// @p max_distance are rejected without running the distance (necessary
+    /// condition; the accepted set is unchanged).
     ///
     /// Read-only: @p parent is not mutated.  The returned FuzzyMatch::command
     /// pointers are non-owning aliases into the live command tree (valid only

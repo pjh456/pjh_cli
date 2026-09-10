@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_DETAIL_ENV_SNAPSHOT_HPP
 
 #include <memory>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -20,7 +21,14 @@ namespace pjh::cli::detail
 
     class EnvSnapshot
     {
-        std::unordered_map<std::string, std::string> m_env;
+        // Transparent key/equality: get() looks up with string_view directly,
+        // so no temporary std::string key is built per lookup.
+        std::unordered_map<
+            std::string,
+            std::string,
+            transparent_string_hash,
+            std::equal_to<void>>
+            m_env;
 
     public:
         EnvSnapshot()
@@ -52,12 +60,15 @@ namespace pjh::cli::detail
         }
 
         /// @brief Look up @p name in the captured environment.
+        ///
+        /// Heterogeneous lookup: no temporary key is built, so the lookup
+        /// allocates nothing and cannot throw.
+        ///
         /// @param name Environment variable name.
         /// @return Pointer to the value, or nullptr if absent.
-        /// @throws std::bad_alloc if the temporary lookup key cannot be allocated.
-        const std::string *get(std::string_view name) const
+        const std::string *get(std::string_view name) const noexcept
         {
-            auto it = m_env.find(std::string(name));
+            auto it = m_env.find(name);
             if (it == m_env.end())
                 return nullptr;
             return &it->second;
