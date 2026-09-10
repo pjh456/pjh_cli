@@ -37,7 +37,6 @@ namespace pjh::cli::detail
         static void set_value(ParseContext &ctx, size_t hash, T value)
         {
             ctx.scalar_map<T>()[hash] = std::move(value);
-            ctx.m_present.insert(hash);
         }
 
         /// @brief Append a value for a repeatable option.
@@ -45,10 +44,12 @@ namespace pjh::cli::detail
         static void append_value(ParseContext &ctx, size_t hash, T value)
         {
             ctx.vector_map<T>()[hash].push_back(std::move(value));
-            ctx.m_present.insert(hash);
         }
 
         /// @brief Check if a key hash is present (walks parent chain).
+        ///
+        /// Presence is derived from the value storage (scalar and vector
+        /// maps); no separate presence index is maintained.
         static bool has_value(const ParseContext &ctx, size_t hash) noexcept
         {
             return ctx.has_in_chain(hash);

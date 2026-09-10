@@ -188,6 +188,18 @@ TEST_CASE("Parser compact short with repeatable greedy")
     CHECK(all[2] == "c.txt");
 }
 
+TEST_CASE("Parser repeatable option is present after parse")
+{
+    App app("test", "1.0", "Repeatable presence");
+    app.option<fixed_string("files")>("--files", 'f', "Files").path().repeatable();
+    Argv argv{"test", "--files", "a.txt", "b.txt"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("files")>());
+    CHECK(ctx.get_all<fs::path, fixed_string("files")>().size() == 2);
+}
+
 // ── compact short equals form (-p=8080) ──
 
 TEST_CASE("Parser compact short with equals -p=8080")

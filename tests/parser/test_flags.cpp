@@ -107,3 +107,15 @@ TEST_CASE("Parser negatable flag rejects --no-opt=value")
         r.unwrap_err().what() ==
         std::string_view("Parse Error: option '--no-verbose' does not accept a value"));
 }
+
+TEST_CASE("Parser count option is present after flags")
+{
+    App app("test", "1.0", "Count presence");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity").count();
+    Argv argv{"test", "-vvv"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("verbose")>());
+    CHECK(ctx.get<int, fixed_string("verbose")>() == 3);
+}

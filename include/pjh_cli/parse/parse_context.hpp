@@ -12,7 +12,6 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -31,6 +30,10 @@ namespace pjh::cli
     /// Storage uses per-type unordered_map inside a tuple generated from
     /// detail::BuiltinTypes — one map for each builtin type (bool, int, double,
     /// string, path), in that order.
+    ///
+    /// Presence is derived from the value maps: a key is present iff a value is
+    /// stored for it in this context or an ancestor, so a stored value costs
+    /// one map node and there is no separate presence index.
     ///
     /// Lookup follows the parent chain (for subcommand scoping): if a value is
     /// not found in the current context, the parent context is queried
@@ -285,11 +288,31 @@ namespace pjh::cli
             return m_parent ? m_parent->template find_vector<T>(hash) : nullptr;
         }
 
+        /// @brief True when @p hash has a value in this context or an ancestor.
+        ///
+        /// Presence is derived from the value maps: a key is present iff it
+        /// appears in one of the scalar or vector maps.  There is no separate
+        /// presence set, so a stored value costs one map node, not two.
         bool has_in_chain(size_t hash) const noexcept
         {
-            if (m_present.contains(hash))
+            if (has_local_value(hash))
                 return true;
             return m_parent ? m_parent->has_in_chain(hash) : false;
+        }
+
+        /// @brief True when @p hash appears in one of this context's value maps.
+        bool has_local_value(size_t hash) const noexcept
+        {
+            return any_contains(m_scalars, hash) || any_contains(m_vectors, hash);
+        }
+
+        /// @brief Fold `contains(hash)` over a tuple of maps, skipping empties.
+        template <typename... Maps>
+        static bool any_contains(const std::tuple<Maps...> &maps, size_t hash) noexcept
+        {
+            return std::apply(
+                [hash](const auto &...m)
+                { return ((!m.empty() && m.contains(hash)) || ...); }, maps);
         }
 
         /// @brief Deepest ancestor of this context (the parse root).
@@ -310,7 +333,6 @@ namespace pjh::cli
 
         ScalarMaps m_scalars;
         VecMaps m_vectors;
-        std::unordered_set<size_t> m_present;
 
         std::shared_ptr<ParseContext> m_parent;
 

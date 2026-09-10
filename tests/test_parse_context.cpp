@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
 #include <initializer_list>
 #include <iostream>
 #include <memory>
@@ -274,4 +275,55 @@ TEST_CASE("extra args on a standalone context are unchanged")
     detail::ParseContextWriter::add_extra_arg(ctx, "x");
     REQUIRE(ctx.extra_args().size() == 1);
     CHECK(ctx.extra_args()[0] == "x");
+}
+
+// ── Derived presence (no separate presence set) ──
+
+TEST_CASE("has_value derives presence from every scalar map")
+{
+    ParseContext ctx;
+    constexpr auto hb = key_hash(fixed_string("b"));
+    constexpr auto hi = key_hash(fixed_string("i"));
+    constexpr auto hd = key_hash(fixed_string("d"));
+    constexpr auto hs = key_hash(fixed_string("s"));
+    constexpr auto hp = key_hash(fixed_string("p"));
+    detail::ParseContextWriter::set_value<bool>(ctx, hb, true);
+    detail::ParseContextWriter::set_value<int>(ctx, hi, 1);
+    detail::ParseContextWriter::set_value<double>(ctx, hd, 1.5);
+    detail::ParseContextWriter::set_value<std::string>(ctx, hs, std::string("s"));
+    detail::ParseContextWriter::set_value<std::filesystem::path>(
+        ctx, hp, std::filesystem::path("p"));
+
+    CHECK(detail::ParseContextWriter::has_value(ctx, hb));
+    CHECK(detail::ParseContextWriter::has_value(ctx, hi));
+    CHECK(detail::ParseContextWriter::has_value(ctx, hd));
+    CHECK(detail::ParseContextWriter::has_value(ctx, hs));
+    CHECK(detail::ParseContextWriter::has_value(ctx, hp));
+    CHECK(ctx.has<fixed_string("b")>());
+    CHECK_FALSE(ctx.has<fixed_string("missing")>());
+}
+
+TEST_CASE("has_value derives presence from vector maps")
+{
+    ParseContext ctx;
+    constexpr auto h = key_hash(fixed_string("tag"));
+    detail::ParseContextWriter::append_value<std::string>(ctx, h, std::string("a"));
+    detail::ParseContextWriter::append_value<std::string>(ctx, h, std::string("b"));
+
+    CHECK(detail::ParseContextWriter::has_value(ctx, h));
+    CHECK(ctx.has<fixed_string("tag")>());
+    auto &all = ctx.get_all<std::string, fixed_string("tag")>();
+    REQUIRE(all.size() == 2);
+    CHECK(all[0] == "a");
+    CHECK(all[1] == "b");
+}
+
+TEST_CASE("set_value overwrite keeps presence")
+{
+    ParseContext ctx;
+    constexpr auto h = key_hash(fixed_string("port"));
+    detail::ParseContextWriter::set_value<int>(ctx, h, 1);
+    detail::ParseContextWriter::set_value<int>(ctx, h, 2);
+    CHECK(detail::ParseContextWriter::has_value(ctx, h));
+    CHECK(ctx.get<int, fixed_string("port")>() == 2);
 }
