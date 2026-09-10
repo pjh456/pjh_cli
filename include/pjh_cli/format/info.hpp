@@ -40,7 +40,13 @@ namespace pjh::cli
         OptionInfo() = default;
 
         /// @brief Construct from an OptionDef in the command tree.
-        explicit OptionInfo(const OptionDef &opt) :
+        ///
+        /// @param opt  Option to copy metadata from.
+        /// @param with_default_str  When true (default), evaluate
+        ///        OptionDef::default_value_str() into default_str; pass false
+        ///        for consumers (hints) that never read default_str, to avoid
+        ///        the per-option heap string.
+        explicit OptionInfo(const OptionDef &opt, bool with_default_str = true) :
             long_name(opt.long_name()),
             short_name(opt.short_name()),
             description(opt.description()),
@@ -48,7 +54,8 @@ namespace pjh::cli
             has_value(opt.has_value()),
             is_required(opt.is_required()),
             has_default(opt.has_default()),
-            default_str(opt.has_default() ? opt.default_value_str() : ""),
+            default_str(
+                (with_default_str && opt.has_default()) ? opt.default_value_str() : ""),
             is_negatable(opt.is_negatable()),
             is_counting(opt.is_counting()),
             is_repeatable(opt.is_repeatable()),

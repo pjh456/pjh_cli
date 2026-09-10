@@ -25,7 +25,8 @@ namespace pjh::cli
     /// Results are sorted and deduplicated.
     ///
     /// Options are resolved on @p cmd and its ancestors (nearest declaration
-    /// wins); subcommands stay node-local.
+    /// wins); subcommands stay node-local.  Candidate buffers are reserved
+    /// up front and the result is sorted in place.
     ///
     /// @param cmd    Current command whose options/subcommands are consulted.
     /// @param prefix Partial token to match against.

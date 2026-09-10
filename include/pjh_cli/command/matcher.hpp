@@ -106,9 +106,15 @@ namespace pjh::cli::detail
     inline std::vector<ChainOption> collect_options_in_chain(
         const BaseCommand &cmd, bool include_current = true)
     {
+        std::size_t total = 0;
+        for (const BaseCommand *cur = &cmd; cur != nullptr; cur = cur->parent())
+            total += cur->options().size();
         std::vector<ChainOption> out;
         std::vector<std::string_view> seen_long;
         std::vector<char> seen_short;
+        out.reserve(total);
+        seen_long.reserve(total);
+        seen_short.reserve(total);
         bool first = true;
         for (const BaseCommand *cur = &cmd; cur != nullptr; cur = cur->parent())
         {

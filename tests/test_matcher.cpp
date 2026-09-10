@@ -907,3 +907,35 @@ TEST_CASE("complete_candidates deduplicates a shadowed ancestor option")
     REQUIRE(candidates.size() == 1);
     CHECK(candidates[0] == "--opt");
 }
+
+TEST_CASE("complete_value_candidates moves and sorts long names")
+{
+    LeafCommand cmd("cmd", "Cmd");
+    cmd.option<fixed_string("tool")>("--tool", 't', "Tool")
+        .str()
+        .completer(
+            []() -> std::vector<std::string>
+            { return {"very-long-candidate-name", "b", "a", "a"}; });
+    auto *opt = cmd.find_option_by_long("tool");
+    REQUIRE(opt != nullptr);
+
+    auto out = complete_value_candidates(*opt, "");
+    REQUIRE(out.size() == 3);
+    CHECK(out[0].display == "a");
+    CHECK(out[1].display == "b");
+    CHECK(out[2].display == "very-long-candidate-name");
+}
+
+TEST_CASE("complete_candidates orders long option names")
+{
+    App app("test", "1.0", "Order");
+    app.option<fixed_string("very-long-option-name")>(
+           "--very-long-option-name", 'l', "Long")
+        .str();
+    app.option<fixed_string("v")>("--v", 'v', "Short").str();
+
+    auto c = complete(app, "--");
+    REQUIRE(c.size() == 2);
+    CHECK(c[0] == "--v");
+    CHECK(c[1] == "--very-long-option-name");
+}

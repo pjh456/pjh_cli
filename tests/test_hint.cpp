@@ -388,3 +388,54 @@ TEST_CASE("format_hint unknown option token is not counted")
         HintBuilder::format(root, "--unknown src", HintConfig{HintOptionMode::None});
     CHECK(hint == "<dst>");  // unknown dash token skipped; HEAD: same
 }
+
+TEST_CASE("format_hint strips whole-token quotes")
+{
+    App app("test", "1.0", "Test");
+    auto &leaf = app.add_leaf("serve", "Serve");
+    leaf.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    // "serve" is one token after quote stripping (owned merge path in
+    // tokenize_views; the scanner does not special-case whole-token quotes).
+    auto hint = HintBuilder::format(app, "\"serve\"");
+    CHECK(hint.find("[INT:port]") != std::string_view::npos);
+}
+
+TEST_CASE("format_hint merges embedded quotes like the parser tokenizer")
+{
+    App app("test", "1.0", "Test");
+    auto &leaf = app.add_leaf("serve", "Serve");
+    leaf.option<fixed_string("port")>("--port", 'p', "Port").integer();
+
+    // ser"ve" tokenizes to "serve" (interior-quote merge, owned path).
+    auto hint = HintBuilder::format(app, "ser\"ve\"");
+    CHECK(hint.find("[INT:port]") != std::string_view::npos);
+}
+
+TEST_CASE("format_hint counts quoted option value as a value")
+{
+    LeafCommand root("copy", "Copy");
+    root.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+    root.arg<std::string, 0>("src", "Source").required();
+    root.arg<std::string, 1>("dst", "Destination").required();
+
+    CHECK(
+        HintBuilder::format(root, "--port \"8080\"", HintConfig{HintOptionMode::None}) ==
+        "<src> <dst>");
+}
+
+TEST_CASE("OptionInfo default_str is opt-out")
+{
+    LeafCommand cmd("test", "Test");
+    cmd.option<fixed_string("port")>("--port", 'p', "Port", 8080);
+    auto *opt = cmd.find_option_by_long("port");
+    REQUIRE(opt != nullptr);
+
+    OptionInfo with_default(*opt);
+    CHECK(with_default.has_default);
+    CHECK(with_default.default_str == "8080");
+
+    OptionInfo without_default(*opt, false);
+    CHECK(without_default.has_default);
+    CHECK(without_default.default_str.empty());
+}

@@ -6,7 +6,6 @@
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/hint.hpp>
 #include <pjh_cli/format/info.hpp>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -15,7 +14,7 @@ namespace pjh::cli
 
     namespace
     {
-        std::string type_name(ValueTag tag, bool is_counting)
+        std::string_view type_name(ValueTag tag, bool is_counting)
         {
             if (is_counting)
                 return "INT";
@@ -23,19 +22,103 @@ namespace pjh::cli
                 detail::hint_names(static_cast<detail::BuiltinTypes *>(nullptr));
             auto idx = static_cast<size_t>(tag);
             if (idx < names.size())
-                return std::string(names[idx]);
+                return names[idx];
             return "STR";
         }
 
-        std::string option_label(
-            ValueTag tag, bool is_counting, std::string_view long_name, char short_name)
+        /// @brief Append one option token ([INT:port] / INT:timeout) to @p out.
+        void append_option_display(std::string &out, const OptionInfo &opt)
         {
-            auto label = type_name(tag, is_counting) + ":";
-            if (!long_name.empty())
-                label += long_name;
-            else if (short_name != 0)
-                label += short_name;
-            return label;
+            if (!opt.is_required)
+                out += '[';
+            out += type_name(opt.value_tag, opt.is_counting);
+            out += ':';
+            if (!opt.long_name.empty())
+                out += opt.long_name;
+            else if (opt.short_name != 0)
+                out += opt.short_name;
+            if (!opt.is_required)
+                out += ']';
+        }
+
+        /// @brief Exact byte length of one option token in a rendered hint.
+        std::size_t option_display_size(const OptionInfo &opt)
+        {
+            std::size_t n = type_name(opt.value_tag, opt.is_counting).size() + 1;
+            if (!opt.long_name.empty())
+                n += opt.long_name.size();
+            else if (opt.short_name != 0)
+                n += 1;
+            if (!opt.is_required)
+                n += 2;
+            return n;
+        }
+
+        /// @brief Render the option/arg tokens of @p ctx (per @p config) into
+        ///        @p out, space-separated, in display order.
+        void append_hint(std::string &out, const HintContext &ctx, HintConfig config)
+        {
+            bool first = true;
+            auto add = [&](const OptionInfo &opt)
+            {
+                if (!first)
+                    out += ' ';
+                first = false;
+                append_option_display(out, opt);
+            };
+            switch (config.option_mode)
+            {
+            case HintOptionMode::All:
+                for (const auto &opt : ctx.options) add(opt);
+                break;
+            case HintOptionMode::Required:
+                for (const auto &opt : ctx.options)
+                    if (opt.is_required)
+                        add(opt);
+                break;
+            case HintOptionMode::None:
+                break;
+            }
+            for (const auto &arg : ctx.remaining_args)
+            {
+                if (!first)
+                    out += ' ';
+                first = false;
+                out += '<';
+                out += arg.name;
+                out += '>';
+            }
+        }
+
+        /// @brief Exact byte size of append_hint() output for @p ctx.
+        std::size_t hint_render_size(const HintContext &ctx, HintConfig config)
+        {
+            std::size_t total = 0;
+            std::size_t count = 0;
+            auto add = [&](const OptionInfo &opt)
+            {
+                total += option_display_size(opt);
+                ++count;
+            };
+            switch (config.option_mode)
+            {
+            case HintOptionMode::All:
+                for (const auto &opt : ctx.options) add(opt);
+                break;
+            case HintOptionMode::Required:
+                for (const auto &opt : ctx.options)
+                    if (opt.is_required)
+                        add(opt);
+                break;
+            case HintOptionMode::None:
+                break;
+            }
+            for (const auto &arg : ctx.remaining_args)
+            {
+                total += arg.name.size() + 2;
+                ++count;
+            }
+            return count == 0 ? 0 : total + count - 1;
         }
 
         /// @brief True when @p tok exactly names/aliases a direct subcommand.
@@ -48,7 +131,7 @@ namespace pjh::cli
 
     std::string HintBuilder::option_type_name(const OptionDef &opt)
     {
-        return type_name(opt.value_tag(), opt.is_counting());
+        return std::string(type_name(opt.value_tag(), opt.is_counting()));
     }
 
     // ── Data collection ──
@@ -56,15 +139,15 @@ namespace pjh::cli
     HintContext HintBuilder::build_context(
         const BaseCommand &root, std::string_view input)
     {
-        auto tokens = detail::Tokenizer::tokenize(input);
+        auto tokens = detail::Tokenizer::tokenize_views(input);
         const BaseCommand *cmd = &root;
         size_t arg_pos = 0;
 
         bool after_double_dash = false;
 
-        for (size_t i = 0; i < tokens.size(); ++i)
+        for (size_t i = 0; i < tokens.tokens.size(); ++i)
         {
-            std::string_view tok = tokens[i];
+            std::string_view tok = tokens.tokens[i];
 
             if (after_double_dash)
             {
@@ -81,15 +164,15 @@ namespace pjh::cli
                 auto scan = detail::scan_option_token(*cmd, tok);
                 if (scan.option && (scan.needs_next_token || scan.compact_value))
                 {
-                    if (scan.needs_next_token && i + 1 < tokens.size() &&
-                        !detail::is_option_flag(tokens[i + 1]))
+                    if (scan.needs_next_token && i + 1 < tokens.tokens.size() &&
+                        !detail::is_option_flag(tokens.tokens[i + 1]))
                         ++i;  // the option's separate value token
 
                     if (scan.option->is_repeatable())
                     {
-                        while (i + 1 < tokens.size() &&
-                               !detail::is_option_flag(tokens[i + 1]) &&
-                               !is_subcommand_of(*cmd, tokens[i + 1]))
+                        while (i + 1 < tokens.tokens.size() &&
+                               !detail::is_option_flag(tokens.tokens[i + 1]) &&
+                               !is_subcommand_of(*cmd, tokens.tokens[i + 1]))
                             ++i;
                     }
                 }
@@ -116,9 +199,11 @@ namespace pjh::cli
         ctx.reached_command = cmd;
         ctx.consumed_positional_args = arg_pos;
 
-        for (const auto &entry : detail::collect_options_in_chain(*cmd))
+        auto chain = detail::collect_options_in_chain(*cmd);
+        ctx.options.reserve(chain.size());
+        for (const auto &entry : chain)
         {
-            OptionInfo opt_info(*entry.opt);
+            OptionInfo opt_info(*entry.opt, /*with_default_str=*/false);
             if (entry.long_shadowed)
                 opt_info.long_name = {};
             if (entry.short_shadowed)
@@ -129,7 +214,8 @@ namespace pjh::cli
         if (auto *leaf = cmd->as_leaf())
         {
             auto &args = leaf->args();
-            ctx.remaining_args.reserve(args.size());
+            if (arg_pos < args.size())
+                ctx.remaining_args.reserve(args.size() - arg_pos);
             for (size_t i = arg_pos; i < args.size(); i++)
                 ctx.remaining_args.emplace_back(args[i]);
         }
@@ -142,16 +228,12 @@ namespace pjh::cli
     HintInfo HintBuilder::build_hint(const HintContext &ctx, HintConfig config)
     {
         HintInfo info;
+        info.tokens.reserve(ctx.options.size() + ctx.remaining_args.size());
 
         auto add_option = [&](const OptionInfo &opt)
         {
-            auto label = option_label(
-                opt.value_tag, opt.is_counting, opt.long_name, opt.short_name);
             HintToken tok;
-            if (opt.is_required)
-                tok.display = label;
-            else
-                tok.display = "[" + label + "]";
+            append_option_display(tok.display, opt);
             info.tokens.push_back(std::move(tok));
         };
 
@@ -173,7 +255,9 @@ namespace pjh::cli
         for (const auto &arg : ctx.remaining_args)
         {
             HintToken tok;
-            tok.display = "<" + std::string(arg.name) + ">";
+            tok.display += '<';
+            tok.display += arg.name;
+            tok.display += '>';
             info.tokens.push_back(std::move(tok));
         }
 
@@ -187,11 +271,18 @@ namespace pjh::cli
         if (info.tokens.empty())
             return {};
 
-        std::ostringstream os;
+        std::size_t total = 0;
+        for (const auto &tok : info.tokens) total += tok.display.size() + 1;
+        std::string result;
+        result.reserve(total - 1);
+        bool first = true;
         for (const auto &tok : info.tokens)
-            os << tok.display << " ";
-        auto result = os.str();
-        result.pop_back();
+        {
+            if (!first)
+                result += ' ';
+            first = false;
+            result += tok.display;
+        }
         return result;
     }
 
@@ -199,7 +290,11 @@ namespace pjh::cli
 
     std::string HintBuilder::format(const HintContext &ctx)
     {
-        return format(build_hint(ctx));
+        HintConfig config{};
+        std::string out;
+        out.reserve(hint_render_size(ctx, config));
+        append_hint(out, ctx, config);
+        return out;
     }
 
     // ── format(BaseCommand, input, config) — adapter ──
@@ -208,7 +303,10 @@ namespace pjh::cli
         const BaseCommand &root, std::string_view input, HintConfig config)
     {
         auto ctx = build_context(root, input);
-        return format(build_hint(ctx, config));
+        std::string out;
+        out.reserve(hint_render_size(ctx, config));
+        append_hint(out, ctx, config);
+        return out;
     }
 
 }  // namespace pjh::cli

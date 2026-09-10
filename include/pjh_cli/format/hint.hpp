@@ -37,6 +37,10 @@ namespace pjh::cli
 
         /// @brief Walk a partial input string to determine the current command position.
         ///
+        /// Tokens are scanned as string views (quoted tokens take one owned
+        /// copy) and rendered into a single reserved buffer; output is
+        /// unchanged.
+        ///
         /// The scan is option-value-aware and best-effort on partial or invalid
         /// input: it skips separate (`--opt v`, `-p v`), compact (`-pVALUE`) and
         /// inline (`--opt=v`) option values, greedily consumes following values

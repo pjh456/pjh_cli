@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstddef>
-#include <format>
 #include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
@@ -33,6 +32,13 @@ namespace
     std::vector<std::string_view> split_tokens(std::string_view text)
     {
         std::vector<std::string_view> out;
+        // Each token consumes at least one non-space character, so the
+        // non-space count is an allocation-free token upper bound.
+        std::size_t upper = 0;
+        for (char c : text)
+            if (c != ' ')
+                ++upper;
+        out.reserve(upper);
         std::size_t i = 0;
         while (i < text.size())
         {
@@ -224,6 +230,12 @@ namespace pjh::cli
 
         if (const auto *branch = cmd.as_branch())
         {
+            // Upper bound over all children (names + aliases) without invoking
+            // the user enabled predicate; hidden children only waste capacity.
+            std::size_t upper = 0;
+            for (const auto &sub_ptr : branch->subcommands())
+                upper += 1 + sub_ptr->aliases().size();
+            candidates.reserve(upper);
             for (const auto &sub_ptr : branch->subcommands())
             {
                 if (!detail::is_visible_and_enabled(*sub_ptr, mode))
@@ -239,6 +251,7 @@ namespace pjh::cli
         if (!prefix.empty() && prefix[0] == '-')
         {
             const auto chain = detail::collect_options_in_chain(cmd);
+            candidates.reserve(candidates.size() + chain.size());
             if (prefix.size() >= 2 && prefix[1] == '-')
             {
                 auto opt_prefix = prefix.substr(2);
@@ -247,27 +260,39 @@ namespace pjh::cli
                     const auto &name = entry.opt->long_name();
                     if (!entry.long_shadowed && !name.empty() &&
                         name.starts_with(opt_prefix))
-                        candidates.push_back({std::format("--{}", name)});
+                    {
+                        std::string s;
+                        s.reserve(name.size() + 2);
+                        s += "--";
+                        s += name;
+                        candidates.push_back({std::move(s)});
+                    }
                 }
             }
             else if (prefix.size() == 1)
             {
                 for (const auto &entry : chain)
                     if (!entry.short_shadowed && entry.opt->short_name() != 0)
-                        candidates.push_back(
-                            {std::format("-{}", entry.opt->short_name())});
+                    {
+                        std::string s{"-"};
+                        s += entry.opt->short_name();
+                        candidates.push_back({std::move(s)});
+                    }
             }
             else
             {
                 char c = prefix[1];
                 for (const auto &entry : chain)
                     if (!entry.short_shadowed && entry.opt->short_name() == c)
-                        candidates.push_back(
-                            {std::format("-{}", entry.opt->short_name())});
+                    {
+                        std::string s{"-"};
+                        s += entry.opt->short_name();
+                        candidates.push_back({std::move(s)});
+                    }
             }
         }
 
-        std::ranges::stable_sort(candidates, {}, &CompletionCandidate::display);
+        std::ranges::sort(candidates, {}, &CompletionCandidate::display);
         auto [first, last] = std::ranges::unique(
             candidates, {}, &CompletionCandidate::display);
         candidates.erase(first, last);
@@ -294,11 +319,13 @@ namespace pjh::cli
         if (!fn)
             return out;
 
-        for (const auto &c : fn())
+        auto items = fn();
+        out.reserve(items.size());
+        for (auto &c : items)
             if (c.starts_with(prefix))
-                out.push_back({c});
+                out.push_back({std::move(c)});
 
-        std::ranges::stable_sort(out, {}, &CompletionCandidate::display);
+        std::ranges::sort(out, {}, &CompletionCandidate::display);
         auto [first, last] = std::ranges::unique(out, {}, &CompletionCandidate::display);
         out.erase(first, last);
         return out;
