@@ -67,8 +67,9 @@ namespace pjh::cli
 
         /// @brief Format an interactive hint for the command reached by parsing @p input.
         ///
-        /// Internally calls build_context() + build_hint() + format(HintInfo).
-        /// For direct access to the structured data, use build_context() directly.
+        /// Internally calls build_context(), then renders directly from the
+        /// context (no intermediate HintInfo).  For direct access to the
+        /// structured data, use build_context() directly.
         static std::string format(
             const BaseCommand &root, std::string_view input, HintConfig config = {});
     };
