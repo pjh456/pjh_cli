@@ -280,7 +280,8 @@ namespace pjh::cli
         /// then renders through m_query_formatter to m_output.
         /// Does not write to any stream directly.
         ///
-        /// @param query  The search string (without the leading `?`).
+        /// @param query  The search string (without the leading `?` or
+        ///              surrounding padding).
         /// @return Ok() after printing results to m_output.
         CliResult<void> handle_query(const std::string &query);
 

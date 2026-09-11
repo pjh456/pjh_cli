@@ -74,6 +74,31 @@ namespace
         bool &m_running;
         bool m_previous;
     };
+
+    /// @brief Strip leading spaces and tabs from a REPL line.
+    ///
+    /// REPL meta lines (`?` query, quit/exit/q) dispatch on the first
+    /// non-blank character, so padding before the keyword must not change
+    /// the dispatch path.
+    std::string_view ltrim_repl_line(std::string_view line)
+    {
+        while (!line.empty() && (line.front() == ' ' || line.front() == '\t'))
+            line.remove_prefix(1);
+        return line;
+    }
+
+    /// @brief Strip surrounding spaces and tabs from a `?` query keyword.
+    ///
+    /// `? save`, `?  save` and `?save` are the same query, so the keyword
+    /// must not carry padding into substring or fuzzy matching.
+    std::string trim_repl_query(std::string_view query)
+    {
+        while (!query.empty() && (query.front() == ' ' || query.front() == '\t'))
+            query.remove_prefix(1);
+        while (!query.empty() && (query.back() == ' ' || query.back() == '\t'))
+            query.remove_suffix(1);
+        return std::string(query);
+    }
 }  // namespace
 
 namespace pjh::cli
@@ -131,9 +156,13 @@ namespace pjh::cli
             LineEditor editor(*term, m_prompt, m_history.get());
             if (!editor.read_line(line, complete, hint))
                 return;
-            if (line.empty())
+
+            // Padded meta lines (` ?query`, ` quit`) dispatch like their
+            // un-padded form; a blank line stays a no-op.
+            std::string_view rest = ltrim_repl_line(line);
+            if (rest.empty())
                 continue;
-            if (line == "quit" || line == "exit" || line == "q")
+            if (rest == "quit" || rest == "exit" || rest == "q")
                 return;
             auto r = process_line(line);
             if (r.is_err())
@@ -147,10 +176,13 @@ namespace pjh::cli
             if (!std::getline(m_input, line))
                 break;
 
-            if (line.empty())
+            // Padded meta lines (` ?query`, ` quit`) dispatch like their
+            // un-padded form; a blank line stays a no-op.
+            std::string_view rest = ltrim_repl_line(line);
+            if (rest.empty())
                 continue;
 
-            if (line == "quit" || line == "exit" || line == "q")
+            if (rest == "quit" || rest == "exit" || rest == "q")
                 break;
 
             auto r = process_line(line);
@@ -194,8 +226,14 @@ namespace pjh::cli
         if (m_history)
             m_history->push(line);
 
-        if (line[0] == '?')
-            return handle_query(line.substr(1));
+        // Skip leading padding before dispatch so callers passing padded lines
+        // (e.g. ` ?query`) reach the same branch as the un-padded form.
+        std::string_view rest = ltrim_repl_line(line);
+        if (rest.empty())
+            return CliResult<void>::Ok();
+
+        if (rest.front() == '?')
+            return handle_query(trim_repl_query(rest.substr(1)));
 
         auto tokens = detail::Tokenizer::tokenize(line);
         if (tokens.empty())

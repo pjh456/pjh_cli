@@ -129,6 +129,37 @@ TEST_CASE("process_line query substring match")
     CHECK(sf.output.str().find("server") != std::string_view::npos);
 }
 
+TEST_CASE("process_line query with padding stays a substring match")
+{
+    App app("test", "1.0", "Query padded");
+    app.add_leaf("server", "Server");
+    app.add_leaf("config", "Config");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    // `? <keyword>` is the documented padded form; it must not degrade to the
+    // fuzzy "Did you mean" fallback just because of the space.
+    auto spaced = console.process_line("? serv");
+    CHECK(spaced.is_ok());
+    CHECK(sf.output.str().find("Matching subcommands:") != std::string_view::npos);
+    CHECK(sf.output.str().find("server") != std::string_view::npos);
+    CHECK(sf.output.str().find("Did you mean:") == std::string_view::npos);
+
+    sf.output.str("");
+    sf.output.clear();
+    auto left_padded = console.process_line("  ?serv");
+    CHECK(left_padded.is_ok());
+    CHECK(sf.output.str().find("Matching subcommands:") != std::string_view::npos);
+    CHECK(sf.output.str().find("Did you mean:") == std::string_view::npos);
+
+    sf.output.str("");
+    sf.output.clear();
+    auto right_padded = console.process_line("?serv ");
+    CHECK(right_padded.is_ok());
+    CHECK(sf.output.str().find("Matching subcommands:") != std::string_view::npos);
+    CHECK(sf.output.str().find("Did you mean:") == std::string_view::npos);
+}
+
 TEST_CASE("process_line query fuzzy fallback")
 {
     App app("test", "1.0", "Query fuzzy");
