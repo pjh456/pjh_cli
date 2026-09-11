@@ -328,6 +328,26 @@ TEST_CASE("run padded quit terminates without dispatching")
     CHECK(calls == 0);
 }
 
+TEST_CASE("run quit with trailing blanks terminates without dispatching")
+{
+    App app("test", "1.0", "Trailing quit");
+    int calls = 0;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            ++calls;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    // Trailing blanks on the quit keyword must not divert the line into
+    // dispatch: the keyword decides the exit, and the next line stays
+    // unread.
+    sf.input << "quit \ngo\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(calls == 0);
+}
+
 TEST_CASE("run custom error formatter receives runtime kind")
 {
     App app("test", "1.0", "Runtime err fmt");

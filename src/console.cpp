@@ -87,17 +87,18 @@ namespace
         return line;
     }
 
-    /// @brief Strip surrounding spaces and tabs from a `?` query keyword.
+    /// @brief Strip surrounding spaces and tabs from a REPL meta-line keyword.
     ///
-    /// `? save`, `?  save` and `?save` are the same query, so the keyword
-    /// must not carry padding into substring or fuzzy matching.
-    std::string trim_repl_query(std::string_view query)
+    /// Meta lines dispatch on the keyword alone, so `? save`, `?  save` and
+    /// `?save` are the same query, and `quit `/`q\t` exit like their bare form
+    /// instead of leaking into command dispatch.
+    std::string trim_repl_view(std::string_view view)
     {
-        while (!query.empty() && (query.front() == ' ' || query.front() == '\t'))
-            query.remove_prefix(1);
-        while (!query.empty() && (query.back() == ' ' || query.back() == '\t'))
-            query.remove_suffix(1);
-        return std::string(query);
+        while (!view.empty() && (view.front() == ' ' || view.front() == '\t'))
+            view.remove_prefix(1);
+        while (!view.empty() && (view.back() == ' ' || view.back() == '\t'))
+            view.remove_suffix(1);
+        return std::string(view);
     }
 }  // namespace
 
@@ -157,12 +158,14 @@ namespace pjh::cli
             if (!editor.read_line(line, complete, hint))
                 return;
 
-            // Padded meta lines (` ?query`, ` quit`) dispatch like their
-            // un-padded form; a blank line stays a no-op.
+            // Meta lines dispatch on the trimmed keyword, so ` ?query`,
+            // ` quit` and `quit ` behave like their bare form; a blank line
+            // stays a no-op.
             std::string_view rest = ltrim_repl_line(line);
             if (rest.empty())
                 continue;
-            if (rest == "quit" || rest == "exit" || rest == "q")
+            std::string keyword = trim_repl_view(rest);
+            if (keyword == "quit" || keyword == "exit" || keyword == "q")
                 return;
             auto r = process_line(line);
             if (r.is_err())
@@ -176,13 +179,15 @@ namespace pjh::cli
             if (!std::getline(m_input, line))
                 break;
 
-            // Padded meta lines (` ?query`, ` quit`) dispatch like their
-            // un-padded form; a blank line stays a no-op.
+            // Meta lines dispatch on the trimmed keyword, so ` ?query`,
+            // ` quit` and `quit ` behave like their bare form; a blank line
+            // stays a no-op.
             std::string_view rest = ltrim_repl_line(line);
             if (rest.empty())
                 continue;
 
-            if (rest == "quit" || rest == "exit" || rest == "q")
+            std::string keyword = trim_repl_view(rest);
+            if (keyword == "quit" || keyword == "exit" || keyword == "q")
                 break;
 
             auto r = process_line(line);
@@ -233,7 +238,7 @@ namespace pjh::cli
             return CliResult<void>::Ok();
 
         if (rest.front() == '?')
-            return handle_query(trim_repl_query(rest.substr(1)));
+            return handle_query(trim_repl_view(rest.substr(1)));
 
         auto tokens = detail::Tokenizer::tokenize(line);
         if (tokens.empty())
