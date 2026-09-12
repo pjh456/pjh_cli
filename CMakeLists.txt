@@ -10,11 +10,10 @@ include(FetchContent)
 
 find_package(pjh_result 0.2.0 CONFIG QUIET)
 if(NOT TARGET pjh_result)
-    # pjh_result has no release tags yet; this SHA is the 0.2.0 dependency
-    # (upstream project version 0.2.0, adds Context/Diagnostic). Bump deliberately; see README.
+    # Pin to the v0.2.0 release tag (adds Context/Diagnostic). Bump deliberately; see README.
     FetchContent_Declare(pjh_result
         GIT_REPOSITORY https://github.com/pjh456/pjh_result.git
-        GIT_TAG 1c284c039df2526b9c948f1506149a115baaa9ca)
+        GIT_TAG v0.2.0)
     FetchContent_MakeAvailable(pjh_result)
 endif()
 
