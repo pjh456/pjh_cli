@@ -8,13 +8,13 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(FetchContent)
 
-find_package(pjh_result 0.1.0 CONFIG QUIET)
+find_package(pjh_result 0.2.0 CONFIG QUIET)
 if(NOT TARGET pjh_result)
-    # pjh_result has no release tags yet; this SHA is the 0.1.0 dependency
-    # (upstream project version 0.1.0). Bump deliberately; see README.
+    # pjh_result has no release tags yet; this SHA is the 0.2.0 dependency
+    # (upstream project version 0.2.0, adds Context/Diagnostic). Bump deliberately; see README.
     FetchContent_Declare(pjh_result
         GIT_REPOSITORY https://github.com/pjh456/pjh_result.git
-        GIT_TAG 4e2d37fa5a84ca9c70f3919c1fd7ce21ea4f22c5)
+        GIT_TAG 1c284c039df2526b9c948f1506149a115baaa9ca)
     FetchContent_MakeAvailable(pjh_result)
 endif()
 
