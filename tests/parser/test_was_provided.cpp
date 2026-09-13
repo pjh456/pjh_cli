@@ -282,3 +282,67 @@ TEST_CASE("was_provided is orthogonal to has")
     CHECK(ctx.has<fixed_string("def")>());
     CHECK_FALSE(ctx.was_provided<fixed_string("def")>());
 }
+
+TEST_CASE("Nearest declaration env wins across the command chain")
+{
+    ScopedEnvVar root_env{"PJH_CLI_TEST_CHAIN_ROOT", "1"};
+    ScopedEnvVar leaf_env{"PJH_CLI_TEST_CHAIN_LEAF", "2"};
+    App app("test", "1.0", "Nearest env wins");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(root_env.name());
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer().env(leaf_env.name());
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("port")>());
+    CHECK(ctx.get<int, fixed_string("port")>() == 2);
+    CHECK_FALSE(ctx.was_provided<fixed_string("port")>());
+}
+
+TEST_CASE("Ancestor env applies when the near declaration has no env")
+{
+    ScopedEnvVar root_env{"PJH_CLI_TEST_CHAIN_FALLBACK", "1"};
+    App app("test", "1.0", "Ancestor env fallback");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(root_env.name());
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("port")>());
+    CHECK(ctx.get<int, fixed_string("port")>() == 1);
+    CHECK_FALSE(ctx.was_provided<fixed_string("port")>());
+}
+
+TEST_CASE("Env beats default across declarations")
+{
+    ScopedEnvVar root_env{"PJH_CLI_TEST_CHAIN_ENVDEFAULT", "1"};
+    App app("test", "1.0", "Env beats default across");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(root_env.name());
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer().default_value(9);
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("port")>());
+    CHECK(ctx.get<int, fixed_string("port")>() == 1);
+    CHECK_FALSE(ctx.was_provided<fixed_string("port")>());
+}
+
+TEST_CASE("Cross-chain default is not was_provided")
+{
+    App app("test", "1.0", "Cross-chain default not provided");
+    app.option<fixed_string("port")>("--port", "Port").integer().default_value(1);
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer().default_value(2);
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(ctx.has<fixed_string("port")>());
+    CHECK(ctx.get<int, fixed_string("port")>() == 2);
+    CHECK_FALSE(ctx.was_provided<fixed_string("port")>());
+}

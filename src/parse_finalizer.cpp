@@ -35,13 +35,17 @@ namespace pjh::cli
 
     /// @brief Apply default values for every option along @p chain.
     ///
-    /// Iterates each command in the chain and delegates to apply_defaults().
+    /// Visits the chain from the deepest matched command back to the root
+    /// (nearest declaration first) and delegates each command to
+    /// apply_defaults().  Because apply_defaults() skips keys already set,
+    /// the nearest declaration of a repeated key wins; a farther declaration
+    /// still applies when the nearer one has no default.
     CliResult<void> ParseFinalizer::apply_chain_defaults(
         const std::vector<BaseCommand *> &chain, ParseContext &ctx)
     {
-        for (auto *c : chain)
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
         {
-            auto dr = apply_defaults(*c, ctx);
+            auto dr = apply_defaults(**it, ctx);
             if (dr.is_err())
                 return dr;
         }
@@ -50,20 +54,25 @@ namespace pjh::cli
 
     /// @brief Fall back to environment variables for unset options.
     ///
-    /// Asks the parse root for each option's environment value.  For each
-    /// option that has a non-empty env_var() and no value set, applies the
-    /// returned value via ValueWriter::apply_option_raw().
+    /// Visits the chain from the deepest matched command back to the root
+    /// (nearest declaration first); the environment snapshot is still read
+    /// from the root command.  For each option that has a non-empty env_var()
+    /// and no value set yet, applies the returned value via
+    /// ValueWriter::apply_option_raw().  The nearest declaration of a repeated
+    /// key wins; a farther declaration still applies when the nearer one has
+    /// no env_var().
     CliResult<void> ParseFinalizer::apply_chain_env(
         const std::vector<BaseCommand *> &chain, ParseContext &ctx)
     {
-        for (auto *c : chain)
+        auto *root = chain.front();
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
         {
-            for (const auto &opt_ptr : c->options())
+            for (const auto &opt_ptr : (*it)->options())
             {
                 if (!detail::ParseContextWriter::has_value(ctx, opt_ptr->key_hash()) &&
                     !opt_ptr->env_var().empty())
                 {
-                    auto *env_val = chain[0]->env_value(opt_ptr->env_var());
+                    auto *env_val = root->env_value(opt_ptr->env_var());
                     if (env_val)
                     {
                         auto r = ValueWriter::apply_option_raw(
@@ -174,7 +183,10 @@ namespace pjh::cli
     /// Chains together the five validation steps and returns the final
     /// ParseContext on success, or the first error encountered.  Values
     /// resolve with CLI > env > default precedence: env fills unset options
-    /// first, then defaults fill whatever env did not.
+    /// first, then defaults fill whatever env did not.  Within each of the
+    /// env and default passes a repeated key is resolved nearest-declaration-
+    /// first (deepest matched command to root); the required/group passes keep
+    /// scanning root-to-deepest.
     CliResult<ParseContext> ParseFinalizer::finalize(BaseCommand *cmd, ParseContext ctx)
     {
         if (!cmd)

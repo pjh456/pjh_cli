@@ -10,8 +10,8 @@ namespace pjh::cli
 {
     /// @brief Post-parse validation and value finalisation.
     ///
-    /// Called once after the main parse loop completes.  Walks the full
-    /// command chain from root to the deepest matched command and performs
+    /// Called once after the main parse loop completes.  Builds the full
+    /// command chain from the root to the deepest matched command and performs
     /// the following steps in order:
     ///   1. If an option has an env-var and no CLI value, read from env.
     ///   2. Apply compile-time default values for options not yet set.
@@ -21,6 +21,13 @@ namespace pjh::cli
     ///
     /// Values resolve with CLI > env > default precedence: env fills unset
     /// options first, then defaults fill whatever env did not.
+    ///
+    /// Within the env and default steps the chain is walked from the deepest
+    /// matched command back to the root, so a key declared at several levels
+    /// takes the nearest declaration's env/default metadata (nearest
+    /// declaration wins); a farther declaration still applies when the nearer
+    /// one has no env/default.  The required and group steps instead keep
+    /// scanning root-to-deepest.
     ///
     /// The public entry point is finalize(); the five steps are decomposed
     /// into private static methods that can be tested individually.
@@ -53,17 +60,19 @@ namespace pjh::cli
     private:
         /// @brief Apply default values for every option along @p chain.
         ///
-        /// Iterates each command in the chain and delegates to
-        /// apply_defaults().
+        /// Visits each command from the deepest matched command back to the
+        /// root (nearest declaration first) and delegates to apply_defaults(),
+        /// so the nearest declaration of a repeated key wins.
         static CliResult<void> apply_chain_defaults(
             const std::vector<BaseCommand *> &chain, ParseContext &ctx);
 
         /// @brief Fall back to environment variables for unset options.
         ///
-        /// Reads the env snapshot from the root command.  For each option
-        /// that has a non-empty env_var() and no value has been set, looks
-        /// up the environment variable and calls
-        /// ValueWriter::apply_option_raw().
+        /// Reads the env snapshot from the root command.  Visits each command
+        /// from the deepest matched command back to the root (nearest
+        /// declaration first); for each option that has a non-empty env_var()
+        /// and no value has been set, looks up the environment variable and
+        /// calls ValueWriter::apply_option_raw().
         static CliResult<void> apply_chain_env(
             const std::vector<BaseCommand *> &chain, ParseContext &ctx);
 

@@ -664,6 +664,44 @@ TEST_CASE("Ancestor option conversion error after descent")
         std::string_view(r.unwrap_err().what()).find("--port") != std::string_view::npos);
 }
 
+TEST_CASE("Nearest declaration default wins across the command chain")
+{
+    App app("test", "1.0", "Nearest default wins");
+    app.option<fixed_string("port")>("--port", "Port").integer().default_value(1);
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer().default_value(2);
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 2);
+}
+
+TEST_CASE("Ancestor default still applies when the near declaration has none")
+{
+    App app("test", "1.0", "Ancestor default fallback");
+    app.option<fixed_string("port")>("--port", "Port").integer().default_value(1);
+    auto &son = app.add_leaf("son", "Son");
+    son.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "son"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 1);
+}
+
+TEST_CASE("Nearest declaration default wins for deep nesting")
+{
+    App app("test", "1.0", "Nearest default deep");
+    app.option<fixed_string("port")>("--port", "Port").integer().default_value(1);
+    auto &mid = app.add_branch("mid", "Middle");
+    mid.option<fixed_string("port")>("--port", "Port").integer();
+    auto &leaf = mid.add_leaf("leaf", "Leaf");
+    leaf.option<fixed_string("port")>("--port", "Port").integer().default_value(3);
+    Argv argv{"test", "mid", "leaf"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 3);
+}
+
 // ──────────────────────────────────────────
 //  Extra args accumulate across subcommand descent (task 37)
 // ──────────────────────────────────────────
