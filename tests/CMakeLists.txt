@@ -44,6 +44,7 @@ set(PJH_CLI_TEST_SOURCES
     console/test_history.cpp
     console/test_file_history.cpp
     test_error.cpp
+    test_error_diagnostic.cpp
     test_string_utils.cpp
     test_io_retry.cpp
     test_command_utils.cpp

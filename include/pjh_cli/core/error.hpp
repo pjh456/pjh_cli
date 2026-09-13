@@ -180,6 +180,38 @@ namespace pjh::cli
         Runtime  ///< Action/execution failure reported by the embedder.
     };
 
+    /// @brief Stable error tag for localisation and diagnostic dispatch.
+    ///
+    /// One value per ErrorInfo alternative, in declaration order, plus Runtime for
+    /// errors whose ErrorKind is Runtime.  This is an append-only contract: never
+    /// renumber or reuse an existing value, so downstream mappings (e.g. message
+    /// catalogues) stay valid across releases.  Adding an ErrorInfo alternative
+    /// requires appending a matching tag; CliError::tag() enforces it with a
+    /// dependent static_assert.  Use CliError::tag() / ErrorDiagnostic::kind()
+    /// rather than the coarser CliError::kind().
+    enum class ErrorTag : unsigned
+    {
+        RawMessage = 0,                 ///< RawMessageError: unstructured message.
+        Parse = 1,                      ///< ParseError: generic parse failure.
+        UnknownOption = 2,              ///< UnknownOptionError.
+        MissingValue = 3,               ///< MissingValueError.
+        MissingRequiredOption = 4,      ///< MissingRequiredOptionError.
+        MissingRequiredArg = 5,         ///< MissingRequiredArgError.
+        TypeConversion = 6,             ///< TypeConversionError.
+        AmbiguousCommand = 7,           ///< AmbiguousCommandError.
+        UnknownCommand = 8,             ///< UnknownCommandError.
+        ValueOutOfRange = 9,            ///< ValueOutOfRangeError.
+        EnumValue = 10,                 ///< EnumValueError.
+        CommandDisabled = 11,           ///< CommandDisabledError.
+        ConflictingOptions = 12,        ///< ConflictingOptionsError.
+        RequiredOptionGroup = 13,       ///< RequiredOptionGroupError.
+        OptionDoesNotAcceptValue = 14,  ///< OptionDoesNotAcceptValueError.
+        NoCommandMatched = 15,          ///< NoCommandMatchedError.
+        Runtime = 16,                   ///< ErrorKind::Runtime, any ErrorInfo.
+    };
+
+    class ErrorDiagnostic;
+
     /// @brief Error type for parse and runtime failures.
     ///
     /// Stores a structured ErrorInfo variant plus an ErrorKind category.
@@ -230,8 +262,67 @@ namespace pjh::cli
         /// @brief Access the structured error information.
         const ErrorInfo &info() const noexcept { return m_info; }
 
-        /// @brief Access the error category.
+        /// @brief Access the coarse-grained error category (drives the `what()` prefix).
+        ///
+        /// This is the ErrorKind (`Parse` / `Runtime`) consumed by `App::run()`'s
+        /// exit-code mapping and the `"Parse Error: "` prefix; it is deliberately
+        /// coarse.  For the stable, localisation-friendly tag, use tag() or
+        /// ErrorDiagnostic::kind().
         ErrorKind kind() const noexcept { return m_kind; }
+
+        /// @brief Diagnostic message: byte-for-byte equal to `what()`.
+        ///
+        /// Exposes the pjh_result `Diagnostic` protocol so CliError works with
+        /// pjh::result::render() and pjh::result::Context<CliError>.  Parse errors
+        /// therefore keep the `"Parse Error: "` prefix; use format_error(info())
+        /// for the prefix-free body.  The returned view aliases this error object
+        /// and is valid for its lifetime.
+        std::string_view message() const noexcept { return what(); }
+
+        /// @brief Stable, fine-grained tag for localisation.
+        ///
+        /// Returns ErrorTag::Runtime when kind() is ErrorKind::Runtime, otherwise
+        /// the tag matching the active ErrorInfo alternative.  Unlike kind(), this
+        /// value is append-only and safe to switch over in user renderers.
+        ErrorTag tag() const noexcept;
+
+        /// @brief Adapt this error to a pjh_result Diagnostic with a fine-grained kind().
+        ///
+        /// @return Non-owning view; valid only while this error object is alive.
+        ErrorDiagnostic diagnostic() const noexcept;
+    };
+
+    /// @brief Non-owning view adapting a CliError to the pjh_result Diagnostic protocol.
+    ///
+    /// `message()` mirrors CliError::what(), while `kind()` exposes the stable
+    /// ErrorTag (not ErrorKind), so generic rendering and localisation can switch
+    /// on tags without visiting ErrorInfo variants.  error_kind() and info()
+    /// forward the coarse category and the structured payload.
+    ///
+    /// @note This is a non-owning view: it stores only a pointer to the source
+    ///       CliError.  Neither the view nor any string_view returned by
+    ///       message() may outlive that error object.
+    class ErrorDiagnostic
+    {
+        const CliError *m_error;
+
+    public:
+        /// @brief Bind to a CliError, which must outlive this view.
+        explicit ErrorDiagnostic(const CliError &e) noexcept : m_error(&e) {}
+
+        /// @brief Diagnostic message, byte-for-byte equal to the source `what()`.
+        ///
+        /// Parse errors include the `"Parse Error: "` prefix.
+        std::string_view message() const noexcept { return m_error->what(); }
+
+        /// @brief Stable ErrorTag for localisation (see CliError::tag()).
+        ErrorTag kind() const noexcept { return m_error->tag(); }
+
+        /// @brief The coarse-grained ErrorKind of the source error.
+        ErrorKind error_kind() const noexcept { return m_error->kind(); }
+
+        /// @brief The structured error payload of the source error.
+        const ErrorInfo &info() const noexcept { return m_error->info(); }
     };
 
     // ── LogicError ───────────────────────────────────────────────────

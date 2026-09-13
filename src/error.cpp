@@ -137,6 +137,63 @@ namespace pjh::cli
         return format_error(info);
     }
 
+    ErrorTag CliError::tag() const noexcept
+    {
+        if (m_kind == ErrorKind::Runtime)
+            return ErrorTag::Runtime;
+
+        return std::visit(
+            [](const auto &e) -> ErrorTag
+            {
+                using T = std::decay_t<decltype(e)>;
+
+                if constexpr (std::same_as<T, RawMessageError>)
+                    return ErrorTag::RawMessage;
+                else if constexpr (std::same_as<T, ParseError>)
+                    return ErrorTag::Parse;
+                else if constexpr (std::same_as<T, UnknownOptionError>)
+                    return ErrorTag::UnknownOption;
+                else if constexpr (std::same_as<T, MissingValueError>)
+                    return ErrorTag::MissingValue;
+                else if constexpr (std::same_as<T, MissingRequiredOptionError>)
+                    return ErrorTag::MissingRequiredOption;
+                else if constexpr (std::same_as<T, MissingRequiredArgError>)
+                    return ErrorTag::MissingRequiredArg;
+                else if constexpr (std::same_as<T, TypeConversionError>)
+                    return ErrorTag::TypeConversion;
+                else if constexpr (std::same_as<T, AmbiguousCommandError>)
+                    return ErrorTag::AmbiguousCommand;
+                else if constexpr (std::same_as<T, UnknownCommandError>)
+                    return ErrorTag::UnknownCommand;
+                else if constexpr (std::same_as<T, ValueOutOfRangeError>)
+                    return ErrorTag::ValueOutOfRange;
+                else if constexpr (std::same_as<T, EnumValueError>)
+                    return ErrorTag::EnumValue;
+                else if constexpr (std::same_as<T, CommandDisabledError>)
+                    return ErrorTag::CommandDisabled;
+                else if constexpr (std::same_as<T, ConflictingOptionsError>)
+                    return ErrorTag::ConflictingOptions;
+                else if constexpr (std::same_as<T, RequiredOptionGroupError>)
+                    return ErrorTag::RequiredOptionGroup;
+                else if constexpr (std::same_as<T, OptionDoesNotAcceptValueError>)
+                    return ErrorTag::OptionDoesNotAcceptValue;
+                else if constexpr (std::same_as<T, NoCommandMatchedError>)
+                    return ErrorTag::NoCommandMatched;
+                else
+                {
+                    static_assert(
+                        detail::always_false_v<T>,
+                        "unhandled ErrorInfo alternative: add an ErrorTag mapping");
+                }
+            },
+            m_info);
+    }
+
+    ErrorDiagnostic CliError::diagnostic() const noexcept
+    {
+        return ErrorDiagnostic{*this};
+    }
+
     CliError ErrorFactory::parse_error(std::string_view arg_name, int position)
     {
         return CliError(ParseError{std::string(arg_name), position});
@@ -171,9 +228,8 @@ namespace pjh::cli
     CliError ErrorFactory::type_conversion_error(
         std::string_view name, std::string_view value, std::string_view expected_type)
     {
-        return CliError(
-            TypeConversionError{
-                std::string(name), std::string(value), std::string(expected_type)});
+        return CliError(TypeConversionError{
+            std::string(name), std::string(value), std::string(expected_type)});
     }
 
     CliError ErrorFactory::ambiguous_command(
@@ -191,19 +247,17 @@ namespace pjh::cli
     CliError ErrorFactory::value_out_of_range(
         std::string_view name, std::string_view value, int min, int max)
     {
-        return CliError(
-            ValueOutOfRangeError{
-                std::string(name), std::string(value), std::to_string(min),
-                std::to_string(max)});
+        return CliError(ValueOutOfRangeError{
+            std::string(name), std::string(value), std::to_string(min),
+            std::to_string(max)});
     }
 
     CliError ErrorFactory::value_out_of_range(
         std::string_view name, std::string_view value, double min, double max)
     {
-        return CliError(
-            ValueOutOfRangeError{
-                std::string(name), std::string(value), std::format("{}", min),
-                std::format("{}", max)});
+        return CliError(ValueOutOfRangeError{
+            std::string(name), std::string(value), std::format("{}", min),
+            std::format("{}", max)});
     }
 
     CliError ErrorFactory::enum_value_error(
