@@ -153,3 +153,94 @@ TEST_CASE("Converter int error carries display and structured type")
         std::string_view(err.what()) ==
         "Parse Error: invalid value 'abc' for '--port': expected integer");
 }
+
+TEST_CASE("Converter int accepts leading plus")
+{
+    using pjh::cli::Converter;
+    auto r1 = Converter<int>::from_string("+42");
+    REQUIRE(r1.is_ok());
+    CHECK(r1.unwrap() == 42);
+
+    auto r2 = Converter<int>::from_string("+0");
+    REQUIRE(r2.is_ok());
+    CHECK(r2.unwrap() == 0);
+}
+
+TEST_CASE("Converter int rejects lone plus and double sign")
+{
+    using pjh::cli::Converter;
+    CHECK(Converter<int>::from_string("+").is_err());
+    CHECK(Converter<int>::from_string("+-5").is_err());
+    CHECK(Converter<int>::from_string("++5").is_err());
+    CHECK(Converter<int>::from_string("+ 5").is_err());
+}
+
+TEST_CASE("Converter unsigned accepts leading plus")
+{
+    using pjh::cli::Converter;
+    auto r1 = Converter<unsigned>::from_string("+100");
+    REQUIRE(r1.is_ok());
+    CHECK(r1.unwrap() == 100u);
+
+    CHECK(Converter<unsigned>::from_string("+-1").is_err());
+}
+
+TEST_CASE("Converter float accepts leading plus")
+{
+    using pjh::cli::Converter;
+    auto r1 = Converter<double>::from_string("+3.14");
+    REQUIRE(r1.is_ok());
+    CHECK(r1.unwrap() == doctest::Approx(3.14));
+
+    auto r2 = Converter<double>::from_string("+.5");
+    REQUIRE(r2.is_ok());
+    CHECK(r2.unwrap() == doctest::Approx(0.5));
+
+    auto r3 = Converter<double>::from_string("+1e3");
+    REQUIRE(r3.is_ok());
+    CHECK(r3.unwrap() == doctest::Approx(1000.0));
+}
+
+TEST_CASE("Converter double rejects non-finite")
+{
+    using pjh::cli::Converter;
+    CHECK(Converter<double>::from_string("nan").is_err());
+    CHECK(Converter<double>::from_string("NaN").is_err());
+    CHECK(Converter<double>::from_string("nan(123)").is_err());
+    CHECK(Converter<double>::from_string("inf").is_err());
+    CHECK(Converter<double>::from_string("-inf").is_err());
+    CHECK(Converter<double>::from_string("INF").is_err());
+    CHECK(Converter<double>::from_string("infinity").is_err());
+    CHECK(Converter<double>::from_string("-Infinity").is_err());
+    CHECK(Converter<double>::from_string("+inf").is_err());
+}
+
+TEST_CASE("Converter float non-finite error is structured")
+{
+    using pjh::cli::Converter;
+    using pjh::cli::TypeConversionError;
+    auto r = Converter<double>::from_string("nan", "--rate");
+    REQUIRE(r.is_err());
+    auto err = r.unwrap_err();
+    const auto *info = std::get_if<TypeConversionError>(&err.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->option_display == "--rate");
+    CHECK(info->raw_value == "nan");
+    CHECK(info->expected_type == "float");
+    CHECK(
+        std::string_view(err.what()) ==
+        "Parse Error: invalid value 'nan' for '--rate': expected float");
+}
+
+TEST_CASE("Converter int plus error keeps raw value")
+{
+    using pjh::cli::Converter;
+    using pjh::cli::TypeConversionError;
+    auto r = Converter<int>::from_string("+abc", "--port");
+    REQUIRE(r.is_err());
+    auto err = r.unwrap_err();
+    const auto *info = std::get_if<TypeConversionError>(&err.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->raw_value == "+abc");
+    CHECK(info->expected_type == "integer");
+}

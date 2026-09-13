@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
@@ -216,4 +216,39 @@ TEST_CASE("IntOption repeatable default appends one value")
     auto all = r.unwrap().get_all<int, fixed_string("x")>();
     REQUIRE(all.size() == 1);
     CHECK(all[0] == 7);
+}
+
+TEST_CASE("IntOption accepts leading plus value")
+{
+    App app("test", "1.0", "Int plus");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "--port", "+8080"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("IntOption leading plus with range")
+{
+    App app("test", "1.0", "Int plus range");
+    app.option<fixed_string("port")>("--port", "Port").integer().min(1).max(65535);
+    Argv argv{"test", "--port", "+80"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 80);
+    Argv argv2{"test", "--port", "+0"};
+    CHECK(app.parse(argv2.argc(), argv2.argv()).is_err());
+}
+
+TEST_CASE("IntOption lone plus is rejected")
+{
+    App app("test", "1.0", "Int lone plus");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    Argv argv{"test", "--port", "+"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view(
+            "Parse Error: invalid value '+' for '--port': expected integer"));
 }

@@ -264,3 +264,45 @@ TEST_CASE("Parser fuzzy does not descend on a negative-number token")
     CHECK(r.is_err());
     CHECK(called == 0);
 }
+
+TEST_CASE("Parser int positional accepts leading plus")
+{
+    LeafCommand root("test", "Plus int positional");
+    root.arg<int, 0>("count", "Count");
+    Argv argv{"test", "+5"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, 0>() == 5);
+}
+
+TEST_CASE("Parser float positional accepts leading plus")
+{
+    LeafCommand root("test", "Plus float positional");
+    root.arg<double, 0>("ratio", "Ratio");
+    Argv argv{"test", "+3.14"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<double, 0>() == doctest::Approx(3.14));
+}
+
+TEST_CASE("Parser float positional rejects nan")
+{
+    LeafCommand root("test", "Nan float positional");
+    root.arg<double, 0>("ratio", "Ratio");
+    Argv argv{"test", "nan"};
+    auto r = Parser::parse_command(root, argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        std::string_view(r.unwrap_err().what()).find("for 'ratio': expected float") !=
+        std::string_view::npos);
+}
+
+TEST_CASE("Parser float positional rejects inf")
+{
+    LeafCommand root("test", "Inf float positional");
+    root.arg<double, 0>("ratio", "Ratio");
+    Argv a1{"test", "inf"};
+    CHECK(Parser::parse_command(root, a1.argc(), a1.argv()).is_err());
+    Argv a2{"test", "-inf"};
+    CHECK(Parser::parse_command(root, a2.argc(), a2.argv()).is_err());
+}

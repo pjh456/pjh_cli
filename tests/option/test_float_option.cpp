@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
@@ -108,4 +108,55 @@ TEST_CASE("FloatOption conversion error message names option and type")
     CHECK(
         r.unwrap_err().what() ==
         std::string_view("Parse Error: invalid value 'x' for '--rate': expected float"));
+}
+
+TEST_CASE("FloatOption accepts leading plus value")
+{
+    App app("test", "1.0", "Float plus");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating();
+    Argv argv{"test", "--rate", "+3.5"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<double, fixed_string("rate")>() == doctest::Approx(3.5));
+}
+
+TEST_CASE("FloatOption rejects nan")
+{
+    App app("test", "1.0", "Float nan");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating();
+    Argv argv{"test", "--rate", "nan"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view(
+            "Parse Error: invalid value 'nan' for '--rate': expected float"));
+}
+
+TEST_CASE("FloatOption rejects inf and negative inf")
+{
+    App app("test", "1.0", "Float inf");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating();
+    Argv a1{"test", "--rate", "inf"};
+    CHECK(app.parse(a1.argc(), a1.argv()).is_err());
+    Argv a2{"test", "--rate", "-inf"};
+    CHECK(app.parse(a2.argc(), a2.argv()).is_err());
+    Argv a3{"test", "--rate", "infinity"};
+    CHECK(app.parse(a3.argc(), a3.argv()).is_err());
+}
+
+TEST_CASE("FloatOption nan does not bypass range")
+{
+    App app("test", "1.0", "Float nan range");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().min(0.0).max(1.0);
+    Argv argv{"test", "--rate", "nan"};
+    CHECK(app.parse(argv.argc(), argv.argv()).is_err());
+}
+
+TEST_CASE("FloatOption inf does not bypass min-only range")
+{
+    App app("test", "1.0", "Float inf min");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().min(0.0);
+    Argv argv{"test", "--rate", "inf"};
+    CHECK(app.parse(argv.argc(), argv.argv()).is_err());
 }

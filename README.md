@@ -89,7 +89,6 @@ app.option<fixed_string("level")>("--level", 'l', "Log level").integer().min(0).
 
 // Env-var fallback (CLI > env > default)
 app.option<fixed_string("host")>("--host", "Host").str().env("MYAPP_HOST").required();
-
 // Option group (mutual exclusion / requirement)
 app.group<fixed_string("verbose"), fixed_string("quiet")>().at_most_one();
 
@@ -116,6 +115,10 @@ interchangeably; exactly one leading `=` is stripped, so `-p==x` yields the
 literal value `=x`. An empty compact value (`-p=`) is a missing value, and a
 value on a flag or count option (`-v=1`) is rejected, mirroring the long
 `--opt=` forms.
+
+Integer and floating-point values accept one optional leading `+`;
+floating-point values must be finite (`nan`/`inf`/`infinity` are rejected as
+invalid values).
 
 ### Help and version
 

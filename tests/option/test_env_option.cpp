@@ -267,3 +267,36 @@ TEST_CASE("EnvSnapshot reads Windows environment")
     CHECK(*v == "42");
 }
 #endif
+
+TEST_CASE("EnvVar int option accepts leading plus from environment")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_PLUS_PORT", "+8080"};
+    App app("test", "1.0", "Env plus int");
+    app.option<fixed_string("port")>("--port", "Port").integer().env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
+}
+
+TEST_CASE("EnvVar float option rejects nan from environment")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_NAN_RATE", "nan"};
+    App app("test", "1.0", "Env nan float");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("invalid value 'nan' for '--rate'") != std::string_view::npos);
+    CHECK(msg.find("expected float") != std::string_view::npos);
+}
+
+TEST_CASE("EnvVar float option rejects inf from environment")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_INF_RATE", "inf"};
+    App app("test", "1.0", "Env inf float");
+    app.option<fixed_string("rate")>("--rate", "Rate").floating().env(env_guard.name());
+    Argv argv{"test"};
+    CHECK(app.parse(argv.argc(), argv.argv()).is_err());
+}
