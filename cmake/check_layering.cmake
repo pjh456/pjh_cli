@@ -14,6 +14,11 @@
 # a command<->option umbrella cycle, so the closure is a fixed point, not a
 # topological sort.
 #
+# It also rejects external platform includes from installed public headers:
+# pjh_platform/<...> (and the raw OS headers listed below) may appear in src/**
+# only.  include/** — including the installed detail/ headers — must stay free
+# of them; the empty allow table is the single, deliberate escape hatch.
+#
 # Fail-closed policy: a file whose layer cannot be resolved, an include target
 # whose subsystem cannot be resolved, and a reachable target that is not part of
 # the scanned file set are all reported as violations, so a new source file or
@@ -43,6 +48,15 @@ set(_forbid_format  "parse;console;app;umbrella")
 set(_forbid_console "app;umbrella")
 set(_forbid_app     "console;umbrella")
 set(_forbid_umbrella "")
+
+# ── External includes forbidden in installed public headers (include/**) ─────
+# Platform code belongs to src/**. Add a new external dependency prefix here
+# deliberately; the allow table (empty on purpose) is the only escape hatch,
+# keyed "<repo-relative-file>|<prefix-or-header>".
+set(_public_ext_forbidden "pjh_platform")
+set(_public_raw_forbidden
+    "windows.h;conio.h;io.h;termios.h;poll.h;unistd.h;cwchar")
+set(_public_ext_allow "")
 
 # ── Explicit src/ layer map (new source files must be added here) ───────────
 set(_src_map
@@ -173,6 +187,35 @@ foreach(_file IN LISTS _files)
         endif()
         list(APPEND _edges "${_file}|${_tgt}")
         list(APPEND "_direct_${_key}" "${_tgt}")
+    endforeach()
+endforeach()
+
+# ── External-dependency boundary: pjh_platform et al. must stay in src/ ─────
+foreach(_file IN LISTS _files)
+    if(NOT _file MATCHES "^include/")
+        continue()
+    endif()
+    file(STRINGS "${_root}/${_file}" _ext_lines
+         REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"]")
+    foreach(_ext_line IN LISTS _ext_lines)
+        foreach(_prefix IN LISTS _public_ext_forbidden)
+            if(_ext_line MATCHES "[<\"]${_prefix}(/|\\.hpp|>)")
+                list(FIND _public_ext_allow "${_file}|${_prefix}" _ext_ok)
+                if(_ext_ok EQUAL -1)
+                    list(APPEND _violations
+                         "${_file}: public header must not include <${_prefix}/...>, move platform code to src/")
+                endif()
+            endif()
+        endforeach()
+        foreach(_header IN LISTS _public_raw_forbidden)
+            if(_ext_line MATCHES "[<\"]${_header}[>\"]")
+                list(FIND _public_ext_allow "${_file}|${_header}" _ext_ok)
+                if(_ext_ok EQUAL -1)
+                    list(APPEND _violations
+                         "${_file}: public header must not include <${_header}>")
+                endif()
+            endif()
+        endforeach()
     endforeach()
 endforeach()
 
