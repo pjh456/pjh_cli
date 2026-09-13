@@ -130,14 +130,15 @@ namespace pjh::cli
         /// continues.  stop() from a nested invocation stops only the innermost
         /// active loop.
         ///
-        /// The input path is chosen per line: when both stdin and stdout are
-        /// interactive TTYs — or a terminal is installed via set_terminal() —
-        /// input is read through a LineEditor that handles Tab completion, hint
-        /// rendering, and Up/Down recall from the injected IHistory.  m_terminal
-        /// is re-resolved and pinned once per line on both input paths, so
-        /// set_terminal() (or nullptr) may be called from an action: the current
-        /// line finishes on the input source it was read on and the replacement
-        /// takes effect on the next line.  On the LineEditor path Ctrl-C cancels
+        /// The input path is chosen per line from the current terminal: when a
+        /// terminal is installed via set_terminal(), or the entry-time auto-probe
+        /// found both stdin and stdout interactive TTYs, input is read through a
+        /// LineEditor that handles Tab completion, hint rendering, and Up/Down
+        /// recall from the injected IHistory.  m_terminal is re-resolved and
+        /// pinned once per line on both input paths, so set_terminal() (or
+        /// nullptr) may be called from an action: the current line finishes on
+        /// the input source it was read on and the replacement takes effect on
+        /// the next line.  On the LineEditor path Ctrl-C cancels
         /// the current line (buffer discarded, `^C` echoed, fresh prompt) and the
         /// REPL keeps running; Ctrl-D or `quit`/`exit`/`q` (case-insensitive)
         /// end it.  Otherwise each iteration:
@@ -169,7 +170,10 @@ namespace pjh::cli
         void set_prompt(std::string p) { m_prompt = std::move(p); }
 
         /// @brief Install a custom terminal (e.g. a scripted one in tests).
-        ///        Pass nullptr to fall back to TTY detection / std::getline.
+        ///        Pass nullptr to uninstall the terminal and fall back to the
+        ///        line-based std::getline path.  The TTY auto-probe runs only
+        ///        once at run() entry, so clearing a terminal mid-run() does not
+        ///        re-probe: the next line is read with std::getline.
         ///
         /// Safe to call while run() or process_line() is executing: the
         /// terminal currently in use is kept alive until the in-flight read or

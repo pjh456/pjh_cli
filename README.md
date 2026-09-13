@@ -26,8 +26,9 @@ Upgrade note: `pjh_result` 0.2.0 adds `Context` / `Diagnostic`, which the
 `CliError` integration relies on, so an installed 0.1.0 is no longer
 sufficient. Install or fetch 0.2.0 (or newer in the same major) instead.
 
-`pjh_platform` is a `PRIVATE` compile dependency used only by `src/env.cpp`
-(the environment capture moved out of the public header, so no platform header
+`pjh_platform` is a `PRIVATE` compile dependency used by `src/env.cpp`,
+`src/console/tty_terminal.cpp`, and `src/console/file_history.cpp` (the
+environment capture moved out of the public header, so no platform header
 reaches a consumer). CMake resolves it in this order:
 
 1. **Target already defined** — a parent project that already
@@ -89,6 +90,8 @@ app.option<fixed_string("level")>("--level", 'l', "Log level").integer().min(0).
 
 // Env-var fallback (CLI > env > default)
 app.option<fixed_string("host")>("--host", "Host").str().env("MYAPP_HOST").required();
+// Quiet flag (grouped with --verbose below)
+app.option<fixed_string("quiet")>("--quiet", 'q', "Suppress output").boolean();
 // Option group (mutual exclusion / requirement)
 app.group<fixed_string("verbose"), fixed_string("quiet")>().at_most_one();
 
@@ -172,8 +175,9 @@ app.set_help_formatter([](const BaseCommand &cmd) {
 same seam to direct `Parser` users. The REPL's `help` command keeps using its own
 injected navigation formatter.
 
-`format_help` annotates options with `(env: VAR)`, `(default: X)`, `(negatable)`,
-`(counting)`, and `(repeatable)` in the Options table.
+`format_help` annotates options with `(required)`, `(env: VAR)`, `(default: X)`,
+`(negatable)`, `(counting)`, and `(repeatable)`, in that order, in the Options and
+Inherited Options tables.
 
 ### One-shot execution (run / run_fuzzy)
 
@@ -245,6 +249,11 @@ cmd.arg<std::string, 1>("dest", "Destination path").required();
 // Access by compile-time index
 auto src = ctx.get<std::string, 0>();
 ```
+
+Positional arguments are registered strictly in ascending order starting at `0`:
+each `Index` must equal the current number of registered arguments
+(`args().size()`).  A duplicate, skipped, out-of-order, or oversized index throws
+`LogicError` at registration and leaves the already-registered arguments unchanged.
 
 ### Subcommands
 
@@ -415,7 +424,7 @@ via that form.
 | `.env("VAR")` | Environment variable fallback (CLI > env > default) |
 | `.min(v)` / `.max(v)` | Numeric range validation |
 | `.default_value(v)` | Manual default value |
-| `cmd.arg<T, Index>(name, desc)` | Positional argument |
+| `cmd.arg<T, Index>(name, desc)` | Positional argument (`Index` must be contiguous from 0) |
 | `cmd.add_branch(name, desc)` | Child branch subcommand |
 | `cmd.add_leaf(name, desc)` | Child leaf subcommand |
 | `cmd.action(fn)` | Execute callback on match |
@@ -465,7 +474,7 @@ via that form.
 | `std::make_unique<FileHistory>(path, max?)` | Persistent REPL history backend: one entry per line, appended on push, `max` `0` = unlimited |
 | `console.run()` / `console.stop()` | Start / stop REPL loop |
 | `console.set_prompt(s)` | Override prompt string |
-| `console.set_terminal(t)` | Install a custom `ITerminal` (nullptr = TTY detect / getline) |
+| `console.set_terminal(t)` | Install a custom `ITerminal`; `nullptr` falls back to line-based `std::getline` (the TTY auto-probe runs only once at `run()` entry) |
 
 ### Key types
 
