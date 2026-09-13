@@ -141,7 +141,8 @@ namespace pjh::cli
         /// the current line (buffer discarded, `^C` echoed, fresh prompt) and the
         /// REPL keeps running; Ctrl-D or `quit`/`exit`/`q` (case-insensitive)
         /// end it.  Otherwise each iteration:
-        ///   1. Prints @p m_prompt to m_output.
+        ///   1. Prints @p m_prompt to m_output verbatim (no separator is
+        ///      appended; include any trailing space in the prompt).
         ///   2. Reads a line from m_input with std::getline (arrow keys are
         ///      consumed by the terminal line discipline and cannot navigate).
         ///   3. Skips empty lines.

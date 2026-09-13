@@ -296,7 +296,9 @@ Redirecting stdout (e.g. `./app > log`) disables raw mode and falls back to
 consumed invisibly.
 Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
-navigate.  A custom `ITerminal` can be installed with `console.set_terminal(...)`.
+navigate.  On both input paths the prompt string is written verbatim, so include
+any trailing space (the default `"> "` already does).  A custom `ITerminal` can
+be installed with `console.set_terminal(...)`.
 Submitted lines share one tokenizer with Tab completion and hints: separators are
 spaces and tabs, `"..."` groups a span, a backslash escapes only `\"`, `\\`, a
 space, or a tab, and `""` is a valid empty argument.

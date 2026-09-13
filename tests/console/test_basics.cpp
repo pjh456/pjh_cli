@@ -419,6 +419,36 @@ TEST_CASE("run padded mixed-case quit terminates")
     CHECK(calls == 0);
 }
 
+TEST_CASE("run non-TTY prompt is written verbatim")
+{
+    App app("test", "1.0", "Prompt verbatim");
+    StreamFixture sf;
+    sf.input << "quit\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(sf.output.str() == "> ");
+}
+
+TEST_CASE("run empty prompt writes nothing")
+{
+    App app("test", "1.0", "Empty prompt");
+    StreamFixture sf;
+    sf.input << "quit\n";
+    InteractiveConsole console(app, "", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(sf.output.str().empty());
+}
+
+TEST_CASE("run prompt without trailing space is not padded")
+{
+    App app("test", "1.0", "Bare prompt");
+    StreamFixture sf;
+    sf.input << "quit\n";
+    InteractiveConsole console(app, ">", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(sf.output.str() == ">");
+}
+
 TEST_CASE("run custom error formatter receives runtime kind")
 {
     App app("test", "1.0", "Runtime err fmt");

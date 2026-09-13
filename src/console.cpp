@@ -164,7 +164,7 @@ namespace pjh::cli
             }
             else
             {
-                m_output << m_prompt << " " << std::flush;
+                m_output << m_prompt << std::flush;
                 if (!std::getline(m_input, line))
                     break;
             }
