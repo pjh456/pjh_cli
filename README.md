@@ -6,7 +6,7 @@ C++20 CLI library with Rust-style error handling. Compile-time option keys, subc
 
 - C++20 compiler
 - CMake 3.20+
-- `pjh_result` 0.1.0 or compatible — required, transitive (`PUBLIC`) dependency
+- `pjh_result` 0.2.0 or compatible — required, transitive (`PUBLIC`) dependency
 - Network access on a clean configure (CMake fetches the pinned dependencies)
 
 ## Dependencies
@@ -14,17 +14,19 @@ C++20 CLI library with Rust-style error handling. Compile-time option keys, subc
 `pjh_result` supplies `Result<T, E>` / `Option<T>` and is linked `PUBLIC`
 (consumers inherit it). CMake resolves it in one of two ways:
 
-1. **Installed** — if `find_package(pjh_result 0.1.0 CONFIG)` finds a
-   compatible package (same major, version >= 0.1.0), it is used as-is.
+1. **Installed** — if `find_package(pjh_result 0.2.0 CONFIG)` finds a
+   compatible package (same major, version >= 0.2.0), it is used as-is.
 2. **Fetched** — otherwise `FetchContent` clones
-   `https://github.com/pjh456/pjh_result.git` and checks out the pinned commit
-   `4e2d37fa5a84ca9c70f3919c1fd7ce21ea4f22c5` (upstream project version
-   `0.1.0`). Upstream has no release tags yet, so a commit SHA is the only
-   reproducible pin.
+   `https://github.com/pjh456/pjh_result.git` and checks out the release tag
+   `v0.2.0`.
+
+Upgrade note: `pjh_result` 0.2.0 adds `Context` / `Diagnostic`, which the
+`CliError` integration relies on, so an installed 0.1.0 is no longer
+sufficient. Install or fetch 0.2.0 (or newer in the same major) instead.
 
 For an offline or byte-reproducible configure, install `pjh_result` first and
 configure with `-DCMAKE_PREFIX_PATH=<prefix>` so path (1) is taken. The
-installed package config also calls `find_dependency(pjh_result 0.1.0)`, so an
+installed package config also calls `find_dependency(pjh_result 0.2.0)`, so an
 installed consumer must have a compatible `pjh_result` discoverable.
 
 When tests are enabled (`PJH_CLI_BUILD_TESTS=ON`, the default at top level),
@@ -442,7 +444,7 @@ target_link_libraries(myapp PRIVATE pjh::cli)
 ```
 
 Both modes expose the same target name `pjh::cli`. The package config calls
-`find_dependency(pjh_result 0.1.0)`, so an installed `pjh_result` must be discoverable
+`find_dependency(pjh_result 0.2.0)`, so an installed `pjh_result` must be discoverable
 when `find_package(pjh_cli)` runs.
 
 ## Layering guard
