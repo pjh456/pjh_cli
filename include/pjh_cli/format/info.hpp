@@ -2,7 +2,6 @@
 #define INCLUDE_PJH_CLI_INFO_HPP
 
 #include <cstddef>
-#include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/option/arg_def.hpp>
 #include <pjh_cli/option/option_def.hpp>
@@ -12,6 +11,8 @@
 
 namespace pjh::cli
 {
+
+    class BaseCommand;
 
     /// @brief Structured metadata about a registered option.
     ///

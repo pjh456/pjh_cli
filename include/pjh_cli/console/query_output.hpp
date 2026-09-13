@@ -3,6 +3,7 @@
 
 #include <pjh_cli/console/query_result.hpp>
 #include <string>
+#include <string_view>
 
 namespace pjh::cli
 {

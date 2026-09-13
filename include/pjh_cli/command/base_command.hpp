@@ -1,9 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_COMMAND_BASE_COMMAND_HPP
 #define INCLUDE_PJH_CLI_COMMAND_BASE_COMMAND_HPP
 
-#include <concepts>
 #include <deque>
-#include <filesystem>
 #include <functional>
 #include <memory>
 #include <pjh_cli/core/type.hpp>

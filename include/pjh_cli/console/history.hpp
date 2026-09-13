@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_HISTORY_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_HISTORY_HPP
 
+#include <cstddef>
 #include <pjh_result.hpp>
 #include <string>
 
