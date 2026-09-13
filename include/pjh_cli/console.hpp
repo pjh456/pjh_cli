@@ -30,6 +30,8 @@ namespace pjh::cli
     /// Reads lines from an input stream, dispatches them to:
     ///   - `?` / `?query` — list or search subcommands
     ///   - `help` / `--help` / `-h [cmd...]` — display help
+    ///   - `--version` / `cmd --version` — print the version text built by the
+    ///     parser and skip the matched command's action
     ///   - everything else — parsed as CLI args and executed via action callbacks
     ///
     /// Two distinct help formatters are involved: the `help` / `--help` / `-h`
@@ -37,6 +39,12 @@ namespace pjh::cli
     /// a `cmd --help` line is parsed and rendered by the root command's
     /// help_formatter() (App::set_help_formatter), empty selecting the built-in
     /// renderer.
+    ///
+    /// A parsed `--version` line writes the parser-built version text verbatim
+    /// (it is already newline-terminated) and returns Ok without executing any
+    /// action.  Version output does not go through any formatter: neither the
+    /// root command's help_formatter() (batch) nor the console's @p help_fmt
+    /// participates.
     ///
     /// Failed lines are written to the error stream through an injectable error
     /// formatter (set_error_formatter() or the trailing @p error_fmt constructor
@@ -200,6 +208,12 @@ namespace pjh::cli
         ///
         /// A `cmd --help` line is rendered by the root command's help_formatter()
         /// (empty selects the built-in), so App::set_help_formatter governs it.
+        ///
+        /// A `--version` line (including `cmd --version`, where the parser
+        /// reports the root version) consumes version_requested() before the
+        /// matched action runs: the newline-terminated version_text() is written
+        /// to m_output verbatim and Ok is returned.  This path is independent of
+        /// App::set_help_formatter and of the console's navigation formatter.
         ///
         /// The line is appended to the injected IHistory before dispatch, so a
         /// parse failure or a meta (`help` / `?query` / `cmd --help`) line is

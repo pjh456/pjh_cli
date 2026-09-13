@@ -307,3 +307,90 @@ TEST_CASE("process_line non-App branch root uses built-in help")
     CHECK(r.is_ok());
     CHECK(sf.output.str().starts_with("Usage: test serve"));
 }
+
+TEST_CASE("process_line --version prints version")
+{
+    App app("test", "1.0", "Version repl");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("--version");
+    CHECK(r.is_ok());
+    // version_text() is newline-terminated: exactly one newline, no blank line.
+    CHECK(sf.output.str() == "test version 1.0\n");
+}
+
+TEST_CASE("process_line --version does not execute the root action")
+{
+    App app("test", "1.0", "Version no exec");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("--version");
+    CHECK(r.is_ok());
+    CHECK(called == 0);
+    CHECK(sf.output.str() == "test version 1.0\n");
+}
+
+TEST_CASE("process_line subcommand --version prints root version")
+{
+    App app("test", "1.0", "Version sub repl");
+    int called = 0;
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("serve --version");
+    CHECK(r.is_ok());
+    CHECK(called == 0);                              // subcommand action skipped
+    CHECK(sf.output.str() == "test version 1.0\n");  // root name/version
+}
+
+TEST_CASE("process_line --version ignores help and error formatters")
+{
+    App app("test", "1.0", "Version formatter separation");
+    app.set_help_formatter([](const BaseCommand &)
+                           { return std::string("BATCH CUSTOM"); });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    int error_calls = 0;
+    console.set_error_formatter(
+        [&error_calls](const CliError &)
+        {
+            ++error_calls;
+            return std::string("ERR");
+        });
+
+    auto r = console.process_line("--version");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str() == "test version 1.0\n");
+    CHECK(sf.output.str().find("BATCH CUSTOM") == std::string::npos);
+    CHECK(error_calls == 0);
+    CHECK(sf.error.str().empty());
+}
+
+TEST_CASE("process_line --version after double dash is not consumed")
+{
+    App app("test", "1.0", "Version dash barrier");
+    auto &run = app.add_leaf("run", "Run");
+    run.arg<std::string, 0>("file", "File");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("run -- --version");
+    CHECK(r.is_ok());
+    CHECK(sf.output.str().empty());  // no version printed; arg consumed
+}

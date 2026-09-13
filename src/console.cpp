@@ -262,6 +262,13 @@ namespace pjh::cli
             return CliResult<void>::Ok();
         }
 
+        if (ctx.version_requested())
+        {
+            // version_text() already ends with "\n"; do not append another.
+            m_output << ctx.version_text();
+            return CliResult<void>::Ok();
+        }
+
         auto *cmd = ctx.matched_command();
         if (!cmd)
             return CliFailure{ErrorFactory::no_command_matched()};
