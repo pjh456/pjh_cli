@@ -159,8 +159,8 @@ if (ctx.version_requested())
 ```
 
 The batch `--help` / `-h` text is rendered by `help_formatter()`, defaulting to
-`HelpFormatter::format_help`. Inject a custom renderer (it must return a
-non-empty string, because `help_requested()` is derived from `help_text()`):
+`HelpFormatter::format_help`. Inject a custom renderer (an empty return falls
+back to `HelpFormatter::format_help`, so a help request always yields text):
 
 ```cpp
 app.set_help_formatter([](const BaseCommand &cmd) {

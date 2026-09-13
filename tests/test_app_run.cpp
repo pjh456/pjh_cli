@@ -136,6 +136,48 @@ TEST_CASE("App::run does not execute the action on a help request")
     CHECK(called == 0);
 }
 
+TEST_CASE("App::run empty help formatter falls back and skips the action")
+{
+    App app("test", "1.0", "Empty run formatter");
+    app.option<fixed_string("port")>("--port", "Port").integer().required();
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    std::ostringstream out, err;
+    Argv argv{"test", "--help"};
+
+    CHECK(app.run(argv.argc(), argv.argv(), out, err) == kExitSuccess);
+    CHECK(called == 0);                           // action must not run
+    CHECK(out.str().starts_with("Usage: test"));  // built-in help printed
+    CHECK(err.str().empty());
+}
+
+TEST_CASE("App::run subcommand empty help formatter falls back and skips the action")
+{
+    App app("test", "1.0", "Empty subcommand formatter");
+    int called = 0;
+    app.add_leaf("serve", "Start server")
+        .action(
+            [&called](ParseContext &) -> CliResult<void>
+            {
+                ++called;
+                return CliResult<void>::Ok();
+            });
+    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    std::ostringstream out, err;
+    Argv argv{"test", "serve", "--help"};
+
+    CHECK(app.run(argv.argc(), argv.argv(), out, err) == kExitSuccess);
+    CHECK(called == 0);                                 // action must not run
+    CHECK(out.str().starts_with("Usage: test serve"));  // built-in help printed
+    CHECK(err.str().empty());
+}
+
 TEST_CASE("App::run_fuzzy auto-corrects a typo")
 {
     App app("test", "1.0", "Run fuzzy");

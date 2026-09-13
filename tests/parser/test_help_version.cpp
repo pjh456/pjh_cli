@@ -324,16 +324,23 @@ TEST_CASE("App help_formatter is empty by default")
     CHECK_FALSE(app.help_formatter());
 }
 
-TEST_CASE("Empty injected help text cancels help_requested")
+TEST_CASE("Empty injected help text falls back to the built-in renderer")
 {
-    App app("test", "1.0", "Empty help contract test");
-    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    App app("test", "1.0", "Empty help fallback test");
+    int calls = 0;
+    app.set_help_formatter(
+        [&calls](const BaseCommand &)
+        {
+            ++calls;
+            return std::string{};
+        });
     Argv argv{"test", "--help"};
     auto r = app.parse(argv.argc(), argv.argv());
     REQUIRE(r.is_ok());
     auto &ctx = r.unwrap();
-    CHECK_FALSE(ctx.help_requested());
-    CHECK(ctx.help_text().empty());
+    CHECK(calls == 1);            // injected renderer was tried first
+    CHECK(ctx.help_requested());  // no longer silently cancelled
+    CHECK(ctx.help_text().starts_with("Usage: test"));
 }
 
 TEST_CASE("near-reserved user options do not shadow help or version")

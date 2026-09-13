@@ -16,8 +16,9 @@ namespace pjh::cli
     ///
     /// Receives the command whose help was requested and returns the text stored
     /// in ParseContext::help_text().  An empty std::function selects the built-in
-    /// HelpFormatter::format_help.  A custom formatter must return a non-empty
-    /// string: help_requested() is derived from help_text() being non-empty.
+    /// HelpFormatter::format_help; an injected formatter that returns an empty
+    /// string also falls back to the built-in renderer, so a help request always
+    /// yields non-empty text.
     using HelpFormatterFn = detail::HelpFormatterFn;
 
     /// @brief Command-line argument parser for a command tree.

@@ -10,6 +10,7 @@
 #include <pjh_cli/parse/parser.hpp>
 #include <pjh_cli/parse/subcommand_resolver.hpp>
 #include <pjh_cli/parse/value_writer.hpp>
+#include <string>
 
 namespace pjh::cli
 {
@@ -29,8 +30,10 @@ namespace pjh::cli
         if (double_dash || !detail::is_meta_help_token(a))
             return pjh::result::Option<ParseContext>::None();
 
-        detail::ParseContextWriter::set_help_text(
-            ctx, help_fmt ? help_fmt(*cmd) : detail::default_format_help(*cmd));
+        std::string text = help_fmt ? help_fmt(*cmd) : detail::default_format_help(*cmd);
+        if (text.empty())
+            text = detail::default_format_help(*cmd);
+        detail::ParseContextWriter::set_help_text(ctx, std::move(text));
         detail::ParseContextWriter::set_matched_command(ctx, cmd);
         return pjh::result::Option<ParseContext>::Some(std::move(ctx));
     }

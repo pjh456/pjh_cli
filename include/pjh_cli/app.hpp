@@ -69,10 +69,10 @@ namespace pjh::cli
         /// @brief Override how batch --help / -h is rendered.
         ///
         /// The formatter receives the command whose help was requested; its
-        /// non-empty return value becomes ParseContext::help_text().  Pass an
-        /// empty function to restore the built-in HelpFormatter::format_help.
-        /// The formatter must return a non-empty string: help_requested() is
-        /// derived from help_text() being non-empty.
+        /// return value becomes ParseContext::help_text().  Pass an empty
+        /// function to restore the built-in HelpFormatter::format_help.  A
+        /// formatter that returns an empty string also falls back to the
+        /// built-in renderer, so a help request always yields non-empty text.
         ///
         /// The formatter governs parse() / parse_fuzzy() and the REPL's
         /// `cmd --help` path; InteractiveConsole reads it through the

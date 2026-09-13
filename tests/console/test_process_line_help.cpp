@@ -259,6 +259,47 @@ TEST_CASE("process_line leaf --help uses App help formatter")
     CHECK(sf.output.str() == "LEAF CUSTOM\n");
 }
 
+TEST_CASE("process_line --help skips the root action with an empty formatter")
+{
+    App app("test", "1.0", "Repl root empty formatter");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("--help");
+    CHECK(r.is_ok());
+    CHECK(called == 0);
+    CHECK(sf.output.str().starts_with("Usage: test"));
+}
+
+TEST_CASE("process_line subcommand empty help formatter falls back and skips the action")
+{
+    App app("test", "1.0", "Repl empty formatter");
+    int called = 0;
+    app.add_leaf("serve", "Start server")
+        .action(
+            [&called](ParseContext &) -> CliResult<void>
+            {
+                ++called;
+                return CliResult<void>::Ok();
+            });
+    app.set_help_formatter([](const BaseCommand &) { return std::string{}; });
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    auto r = console.process_line("serve --help");
+    CHECK(r.is_ok());
+    CHECK(called == 0);
+    CHECK(sf.output.str().starts_with("Usage: test serve"));  // process_line adds "\n"
+}
+
 TEST_CASE("process_line help navigation keeps console formatter")
 {
     App app("test", "1.0", "Repl formatter separation");
