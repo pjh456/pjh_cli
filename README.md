@@ -223,11 +223,11 @@ auto &server = app.add_branch("server", "Server management");
 server.add_leaf("start", "Start server");
 server.add_leaf("stop", "Stop server");
 
-// Parse walks the tree; ctx.matched_path() returns "server start"
-std::cout << ctx.matched_path();
+// Parse walks the tree; the deepest command is ctx.matched_command()
+std::cout << MatchedPathResolver::to_path_string(ctx.matched_command());
 
 // Structured path info
-MatchedPath path = ctx.matched_path_info();
+MatchedPath path = MatchedPathResolver::to_path_info(ctx.matched_command());
 for (auto &name : path.commands) { /* "server", "start" */ }
 ```
 
@@ -402,8 +402,8 @@ via that form.
 | `ctx.try_get_enum<E, Key>()` | Get enum → `Option<E>` |
 | `ctx.get_or_enum<E, Key>(fallback)` | Get enum or fallback |
 | `ctx.get_all_enum<E, Key>()` | All enum values for repeatable |
-| `ctx.matched_path()` | Matched subcommand path, e.g. `"server start"` |
-| `ctx.matched_path_info()` | MatchedPath{commands} struct |
+| `MatchedPathResolver::to_path_string(cmd)` | Matched subcommand path, e.g. `"server start"` (`cmd = ctx.matched_command()`) |
+| `MatchedPathResolver::to_path_info(cmd)` | `MatchedPath{commands}` struct (`cmd = ctx.matched_command()`) |
 | `ctx.matched_command()` | Deepest matched command pointer |
 | `ctx.extra_args()` | Extra positional args (when policy is `Store`); parse-wide, includes tokens seen before a subcommand |
 | `ctx.help_requested()` | True if --help / -h was passed; caller prints `help_text()` and exits |
@@ -445,6 +445,7 @@ via that form.
 | `CompletionCandidate` | Completion candidate struct |
 | `KeyEvent / ITerminal / LineEditor` | Injectable raw-mode line editor (`console/line_editor.hpp`) |
 | `MatchedPath` | Matched subcommand path struct |
+| `MatchedPathResolver::to_path_string / to_path_info` | Convert `ctx.matched_command()` to a path string / `MatchedPath` |
 
 ## Build
 
