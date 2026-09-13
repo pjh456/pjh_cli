@@ -919,6 +919,32 @@ TEST_CASE("complete_line_result keeps negative values from numeric short options
     CHECK(r.candidates[0].display == "-10C");
 }
 
+TEST_CASE("complete_line_result ignores numeric short names in the head segment")
+{
+    // The head scan must classify tokens with the same negative-number rule as
+    // the parser and hint builder (detail::is_option_flag).  A valued numeric
+    // short name such as -1 is therefore not an option in the head: it must not
+    // set value_option.  The cursor keeps its two-character carve-out.
+    App app("test", "1.0", "Complete line");
+    app.option<fixed_string("one")>("--one", '1', "One")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"one-c"}; });
+    app.option<fixed_string("temp")>("--temp", 't', "Temp")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"-10C"}; });
+    app.add_leaf("serve", "Serve");
+
+    auto isolated = complete_line_result(app, "-1 ", 3);
+    CHECK(isolated.prefix_len == 0);
+    REQUIRE(isolated.candidates.size() == 1);
+    CHECK(isolated.candidates[0].display == "serve");
+
+    auto with_option = complete_line_result(app, "-1 -t ", 6);
+    CHECK(with_option.prefix_len == 0);
+    REQUIRE(with_option.candidates.size() == 1);
+    CHECK(with_option.candidates[0].display == "-10C");
+}
+
 TEST_CASE("scan_option_token exposes attached and next-token forms")
 {
     App app("test", "1.0", "Scan");

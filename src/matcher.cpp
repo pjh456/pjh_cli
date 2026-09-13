@@ -97,7 +97,7 @@ namespace
                 scan.value_option = nullptr;  // this token is the pending value.
                 continue;
             }
-            if (t.size() >= 2 && t[0] == '-')
+            if (pjh::cli::detail::is_option_flag(t))
             {
                 auto info = pjh::cli::detail::scan_option_token(*scan.command, t);
                 if (info.needs_next_token)
