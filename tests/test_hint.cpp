@@ -424,6 +424,24 @@ TEST_CASE("format_hint counts quoted option value as a value")
         "<src> <dst>");
 }
 
+TEST_CASE("format_hint splits tab-separated tokens")
+{
+    LeafCommand root("copy", "Copy");
+    root.arg<std::string, 0>("src", "Source").required();
+    root.arg<std::string, 1>("dst", "Destination").required();
+
+    CHECK(HintBuilder::format(root, "a.txt\tb.txt").empty());
+}
+
+TEST_CASE("format_hint counts an empty quoted token as a positional")
+{
+    LeafCommand root("copy", "Copy");
+    root.arg<std::string, 0>("src", "Source").required();
+    root.arg<std::string, 1>("dst", "Destination").required();
+
+    CHECK(HintBuilder::format(root, "a.txt\t\"\"").empty());
+}
+
 TEST_CASE("OptionInfo default_str is opt-out")
 {
     LeafCommand cmd("test", "Test");

@@ -131,3 +131,76 @@ TEST_CASE("process_line ambiguous fuzzy returns ambiguous error")
         std::string_view(err.what()).find("ambiguous command 'st'") !=
         std::string_view::npos);
 }
+
+TEST_CASE("process_line splits tab-separated tokens")
+{
+    App app("test", "1.0", "Tab tokens");
+    bool called = false;
+    bool verbose = false;
+    auto &run = app.add_leaf("run", "Run");
+    run.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").boolean();
+    run.action(
+        [&](ParseContext &ctx) -> CliResult<void>
+        {
+            called = true;
+            verbose = ctx.get<bool, fixed_string("verbose")>();
+            return CliResult<void>::Ok();
+        });
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line("run\t--verbose");
+    CHECK(r.is_ok());
+    CHECK(called);
+    CHECK(verbose);
+}
+
+TEST_CASE("process_line empty quoted positional")
+{
+    App app("test", "1.0", "Empty positional");
+    bool called = false;
+    std::string captured = "sentinel";
+    auto &cmd = app.add_leaf("cmd", "Command");
+    cmd.arg<std::string, 0>("file", "File");
+    cmd.action(
+        [&](ParseContext &ctx) -> CliResult<void>
+        {
+            called = true;
+            captured = ctx.get<std::string, 0>();
+            return CliResult<void>::Ok();
+        });
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line(R"(cmd "")");
+    CHECK(r.is_ok());
+    CHECK(called);
+    CHECK(captured.empty());
+}
+
+TEST_CASE("process_line escaped quote positional")
+{
+    App app("test", "1.0", "Escaped quote");
+    std::string captured;
+    auto &cmd = app.add_leaf("cmd", "Command");
+    cmd.arg<std::string, 0>("file", "File");
+    cmd.action(
+        [&](ParseContext &ctx) -> CliResult<void>
+        {
+            captured = ctx.get<std::string, 0>();
+            return CliResult<void>::Ok();
+        });
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line(R"(cmd "a\"b")");
+    CHECK(r.is_ok());
+    CHECK(captured == "a\"b");
+}
+
+TEST_CASE("process_line lone empty quote is an error on a dispatcher branch")
+{
+    App app("test", "1.0", "Empty quote dispatch");
+    app.add_leaf("serve", "Serve");
+
+    InteractiveConsole console(app, "> ");
+    auto r = console.process_line(R"("")");
+    CHECK(r.is_err());
+}

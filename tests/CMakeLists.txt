@@ -47,6 +47,7 @@ set(PJH_CLI_TEST_SOURCES
     test_error.cpp
     test_error_diagnostic.cpp
     test_string_utils.cpp
+    test_tokenizer.cpp
     test_io_retry.cpp
     test_command_utils.cpp
     test_hint.cpp

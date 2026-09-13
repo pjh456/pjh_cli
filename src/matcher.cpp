@@ -24,46 +24,19 @@ namespace
         std::string_view prefix;                            ///< token under cursor.
     };
 
-    /// @brief Split @p text into whitespace-separated tokens.
+    /// @brief Split @p text into tokens using the shared execution grammar.
     ///
-    /// Double-quoted spans are kept as one token and the quotes are stripped.
-    /// Empty tokens are dropped; this scan only needs the complete tokens that
-    /// precede the token under the cursor.
+    /// Delegates to @ref pjh::cli::detail::Tokenizer::tokenize so completion
+    /// resolves exactly the token stream (space/tab separators, quote
+    /// stripping, the narrow backslash escapes, preserved empty quoted tokens)
+    /// that process_line and HintBuilder execute.  Owned strings are returned
+    /// because the shared scanner merges non-contiguous spans.
     ///
     /// @param text  Input slice.
-    /// @return Non-empty tokens in order.
-    std::vector<std::string_view> split_tokens(std::string_view text)
+    /// @return Tokens in order.
+    std::vector<std::string> split_tokens(std::string_view text)
     {
-        std::vector<std::string_view> out;
-        // Each token consumes at least one non-space character, so the
-        // non-space count is an allocation-free token upper bound.
-        std::size_t upper = 0;
-        for (char c : text)
-            if (c != ' ')
-                ++upper;
-        out.reserve(upper);
-        std::size_t i = 0;
-        while (i < text.size())
-        {
-            while (i < text.size() && text[i] == ' ') ++i;
-            if (i >= text.size())
-                break;
-            std::size_t start = i;
-            if (text[i] == '"')
-            {
-                start = ++i;
-                while (i < text.size() && text[i] != '"') ++i;
-                out.push_back(text.substr(start, i - start));
-                if (i < text.size())
-                    ++i;
-            }
-            else
-            {
-                while (i < text.size() && text[i] != ' ') ++i;
-                out.push_back(text.substr(start, i - start));
-            }
-        }
-        return out;
+        return pjh::cli::detail::Tokenizer::tokenize(text);
     }
 
     /// @brief Walk the tokens before @p cursor to find the command in scope and
@@ -83,7 +56,10 @@ namespace
             cursor = line.size();
 
         std::size_t start = cursor;
-        while (start > 0 && line[start - 1] != ' ') --start;
+        // The cursor token boundary uses the same separator set as the shared
+        // tokenizer (space + tab) so completion and execution agree.
+        while (start > 0 && !pjh::cli::detail::Tokenizer::is_separator(line[start - 1]))
+            --start;
         const std::string_view token = line.substr(start, cursor - start);
         const std::string_view head = line.substr(0, start);
 
@@ -325,8 +301,8 @@ namespace pjh::cli
         }
 
         std::ranges::sort(candidates, {}, &CompletionCandidate::display);
-        auto [first, last] = std::ranges::unique(
-            candidates, {}, &CompletionCandidate::display);
+        auto [first, last] =
+            std::ranges::unique(candidates, {}, &CompletionCandidate::display);
         candidates.erase(first, last);
 
         return candidates;
@@ -338,8 +314,7 @@ namespace pjh::cli
         auto ccs = complete_candidates(cmd, prefix, mode);
         std::vector<std::string> out;
         out.reserve(ccs.size());
-        for (auto &cc : ccs)
-            out.push_back(std::move(cc.display));
+        for (auto &cc : ccs) out.push_back(std::move(cc.display));
         return out;
     }
 

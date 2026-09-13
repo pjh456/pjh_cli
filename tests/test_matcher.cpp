@@ -516,7 +516,9 @@ TEST_CASE("collect_help includes option metadata")
 {
     LeafCommand cmd("test", "Test app");
     cmd.option<fixed_string("port")>("--port", 'p', "Port number")
-        .integer().default_value(8080).required();
+        .integer()
+        .default_value(8080)
+        .required();
     cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose output").boolean();
     cmd.arg<std::string, 0>("file", "Input file").required();
 
@@ -1021,4 +1023,51 @@ TEST_CASE("complete_candidates orders long option names")
     REQUIRE(c.size() == 2);
     CHECK(c[0] == "--v");
     CHECK(c[1] == "--very-long-option-name");
+}
+
+// ──────────────────────────────────────────
+//  Tab-separated completion (shared tokenizer)
+// ──────────────────────────────────────────
+
+TEST_CASE("complete_line splits a tab-separated context")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve\t--po", 10);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "--port");
+}
+
+TEST_CASE("complete_line_result tab-separated prefix length")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line_result(app, "serve\t--po", 10);
+    CHECK(r.prefix_len == 4);
+    REQUIRE(r.candidates.size() == 1);
+    CHECK(r.candidates[0].display == "--port");
+}
+
+TEST_CASE("complete_line reaches a value option across tabs")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve\t--color\tg", 15);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "green");
+}
+
+TEST_CASE("complete_line offers all values after a tab-separated valued option")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "serve\t--color\t", 14);
+    REQUIRE(r.size() == 3);
+    CHECK(r[0].display == "blue");
+    CHECK(r[1].display == "green");
+    CHECK(r[2].display == "red");
 }
