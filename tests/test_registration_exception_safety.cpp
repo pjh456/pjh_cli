@@ -159,18 +159,18 @@ TEST_CASE("alias() rolls back its append when parent indexing allocation fails")
     App app("test", "1.0", "OOM");
     auto &child = app.add_leaf("child", "Child");
 
-    // Calibrate on a warm tree: a first alias() appends to the child's alias
-    // vector and then inserts into the parent's name map.  The index insert is
-    // the last allocation, so failing it exercises the rollback path.
-    auto total = [&]
-    {
-        App cal("cal", "1.0", "Cal");
-        auto &warm = cal.add_leaf("warm", "Warm");
-        return measure_allocations([&] { warm.alias("cali"); });
-    }();
+    // Pre-grow the child's alias vector so the measured push_back cannot
+    // allocate: MSVC grows 1.5x (five pushes leave capacity 6) while
+    // libstdc++/libc++ grow 2x (capacity 8), so the sixth push is
+    // allocation-free on all of them.  The short keys fit the string SSO and
+    // the parent index already holds enough entries that inserting "zzz" does
+    // not force a rehash, so the only allocation left inside alias() is the
+    // parent index node insert -- the path exercised by add_leaf/add_branch.
+    for (const char *a : {"a1", "a2", "a3", "a4", "a5"}) child.alias(a);
+    REQUIRE(child.aliases().size() == 5);
 
     bool threw = false;
-    g_fail_after.store(total - 1, std::memory_order_relaxed);
+    g_fail_after.store(0, std::memory_order_relaxed);
     try
     {
         child.alias("zzz");
@@ -182,8 +182,9 @@ TEST_CASE("alias() rolls back its append when parent indexing allocation fails")
     g_fail_after.store(-1, std::memory_order_relaxed);
 
     CHECK(threw);
-    CHECK(child.aliases().empty());
+    CHECK(child.aliases().size() == 5);  // "zzz" rolled back, pre-grown aliases survive
     CHECK(app.find_subcommand("zzz") == nullptr);
+    CHECK(app.find_subcommand("a1") == &child);  // pre-grown index entry survives
 }
 
 TEST_CASE("every owned option is reachable through both indexes")
