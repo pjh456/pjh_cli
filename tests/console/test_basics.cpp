@@ -496,3 +496,77 @@ TEST_CASE("make_tty_terminal rejects injected streams")
     CHECK(make_tty_terminal(in, std::cout) == nullptr);  // input not std::cin
     CHECK(make_tty_terminal(std::cin, out) == nullptr);  // output not std::cout
 }
+
+TEST_CASE("set_terminal during getline run switches to the new terminal")
+{
+    App app("test", "1.0", "Getline terminal switch");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    bool tty_ran = false;
+    auto term = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *p = term.get();
+
+    app.add_leaf("enable-tty", "Enable TTY")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                console.set_terminal(std::move(term));
+                return CliResult<void>::Ok();
+            });
+    app.add_leaf("via-tty", "Via TTY")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                tty_ran = true;
+                return CliResult<void>::Ok();
+            });
+
+    for (char c : std::string("via-tty"))
+        p->keys.push_back({KeyEvent::Code::Character, c});
+    p->keys.push_back({KeyEvent::Code::Enter, 0});
+    p->keys.push_back({KeyEvent::Code::Eof, 0});
+
+    sf.input << "enable-tty\n";  // only line; the next line must come from the terminal
+    console.run();
+
+    CHECK(tty_ran);
+    CHECK(p->read_calls >= 1u);  // installed terminal was actually read
+}
+
+TEST_CASE("set_terminal(nullptr) during run resumes the getline fallback")
+{
+    App app("test", "1.0", "Terminal to getline");
+    StreamFixture sf;
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+
+    bool after_ran = false;
+    auto term = std::make_unique<ScriptedTerminal>();
+    ScriptedTerminal *p = term.get();
+
+    app.add_leaf("drop-tty", "Drop TTY")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                console.set_terminal(nullptr);
+                return CliResult<void>::Ok();
+            });
+    app.add_leaf("after", "After")
+        .action(
+            [&](ParseContext &) -> CliResult<void>
+            {
+                after_ran = true;
+                return CliResult<void>::Ok();
+            });
+
+    for (char c : std::string("drop-tty"))
+        p->keys.push_back({KeyEvent::Code::Character, c});
+    p->keys.push_back({KeyEvent::Code::Enter, 0});
+
+    sf.input << "after\n";
+    console.set_terminal(std::move(term));
+    console.run();
+
+    CHECK(after_ran);
+    CHECK(p->read_calls >= 1u);
+}

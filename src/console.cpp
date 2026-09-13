@@ -150,13 +150,23 @@ namespace pjh::cli
         std::string line;
         while (m_running)
         {
-            std::shared_ptr<ITerminal> term = m_terminal;  // pin for this line
-            if (!term)
-                break;  // removed mid-run -> getline fallback
-
-            LineEditor editor(*term, m_prompt, m_history.get());
-            if (!editor.read_line(line, complete, hint))
-                return;
+            // Re-read m_terminal every iteration so set_terminal()/nullptr from
+            // an action takes effect on the next line, on both input paths.
+            // term stays pinned for this whole iteration (including any action
+            // run by process_line), so the old terminal is not freed mid-action.
+            std::shared_ptr<ITerminal> term = m_terminal;
+            if (term)
+            {
+                LineEditor editor(*term, m_prompt, m_history.get());
+                if (!editor.read_line(line, complete, hint))
+                    return;
+            }
+            else
+            {
+                m_output << m_prompt << " " << std::flush;
+                if (!std::getline(m_input, line))
+                    break;
+            }
 
             // Meta lines dispatch on the trimmed keyword, so ` ?query`,
             // ` quit` and `quit ` behave like their bare form; a blank line
@@ -167,29 +177,6 @@ namespace pjh::cli
             std::string keyword = trim_repl_view(rest);
             if (keyword == "quit" || keyword == "exit" || keyword == "q")
                 return;
-            auto r = process_line(line);
-            if (r.is_err())
-                print_error(r.unwrap_err());
-        }
-
-        while (m_running)
-        {
-            m_output << m_prompt << " " << std::flush;
-
-            if (!std::getline(m_input, line))
-                break;
-
-            // Meta lines dispatch on the trimmed keyword, so ` ?query`,
-            // ` quit` and `quit ` behave like their bare form; a blank line
-            // stays a no-op.
-            std::string_view rest = ltrim_repl_line(line);
-            if (rest.empty())
-                continue;
-
-            std::string keyword = trim_repl_view(rest);
-            if (keyword == "quit" || keyword == "exit" || keyword == "q")
-                break;
-
             auto r = process_line(line);
             if (r.is_err())
                 print_error(r.unwrap_err());
