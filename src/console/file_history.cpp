@@ -2,6 +2,7 @@
 #include <iterator>
 #include <new>
 #include <pjh_cli/console/file_history.hpp>
+#include <pjh_platform/fs.hpp>
 #include <utility>
 #include <vector>
 
@@ -28,12 +29,9 @@ namespace
     /// @brief Append one line + '\n'; false on open/write failure.
     bool append_line(const std::filesystem::path &path, const std::string &line)
     {
-        std::ofstream out(path, std::ios::app | std::ios::binary);
-        if (!out)
-            return false;
-        out << line << '\n';
-        out.flush();
-        return out.good();
+        std::string payload = line;
+        payload.push_back('\n');
+        return pjh::platform::Fs::append(path, payload).is_ok();
     }
 
     /// @brief Truncate + rewrite every line + '\n'; false on failure.
