@@ -68,3 +68,10 @@ add_test(NAME layering_guard
     COMMAND ${CMAKE_COMMAND}
             "-DPJH_CLI_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
             -P "${PROJECT_SOURCE_DIR}/cmake/check_layering.cmake")
+
+# Build-independent public-header include-hygiene guard
+# (see cmake/check_header_hygiene.cmake).
+add_test(NAME header_hygiene
+    COMMAND ${CMAKE_COMMAND}
+            "-DPJH_CLI_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+            -P "${PROJECT_SOURCE_DIR}/cmake/check_header_hygiene.cmake")
