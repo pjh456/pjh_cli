@@ -840,6 +840,37 @@ TEST_CASE("complete_line_result reports compact-equals prefix length")
     CHECK(grouped.candidates[0].display == "green");
 }
 
+TEST_CASE("complete_line_result keeps pending value for two-char dash token")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    // A two-character non-`--` dash token under the cursor is not treated as
+    // an option token: it takes the word path and leaves the pending value
+    // option set by `-c`.  Widening the cursor guard to every dash token used
+    // to clear value_option and offer "-v" as an option-name candidate.
+    auto flag = complete_line_result(app, "-c -v", 5);
+    CHECK(flag.prefix_len == 2);
+    CHECK(flag.candidates.empty());
+
+    auto negative_literal = complete_line_result(app, "-c -5", 5);
+    CHECK(negative_literal.prefix_len == 2);
+    CHECK(negative_literal.candidates.empty());
+
+    // The parser consumes an is_option_flag-exempt negative token as the
+    // value, so value completion must keep offering candidates that start
+    // with "-5" (e.g. a temperature) rather than falling back to option names.
+    App temp_app("test", "1.0", "Complete line");
+    temp_app.option<fixed_string("temp")>("--temp", 't', "Temp")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"-5C", "0C"}; });
+
+    auto negative = complete_line_result(temp_app, "-t -5", 5);
+    CHECK(negative.prefix_len == 2);
+    REQUIRE(negative.candidates.size() == 1);
+    CHECK(negative.candidates[0].display == "-5C");
+}
+
 TEST_CASE("scan_option_token exposes attached and next-token forms")
 {
     App app("test", "1.0", "Scan");

@@ -90,8 +90,13 @@ namespace
 
         // Interpret the token under the cursor with the shared scanner, so the
         // attached-value grammar (including the short form's single '=' strip)
-        // lives in exactly one place.
-        if (token.size() >= 2 && token[0] == '-')
+        // lives in exactly one place.  Long tokens and short tokens of length
+        // >= 3 reach it; a bare 2-character non-`--` dash token (e.g. `-v`,
+        // `-5`) takes the word path below so a pending value_option set by the
+        // preceding token is preserved (it may name a value such as a negative
+        // number, not a fresh option).
+        if (token.size() >= 2 && token[0] == '-' &&
+            (token[1] == '-' || token.size() >= 3))
         {
             auto info = pjh::cli::detail::scan_option_token(*scan.command, token);
             if (info.option && info.has_attached)
