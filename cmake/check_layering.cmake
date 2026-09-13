@@ -47,6 +47,7 @@ set(_forbid_umbrella "")
 # ── Explicit src/ layer map (new source files must be added here) ───────────
 set(_src_map
     "src/app.cpp=app"
+    "src/env.cpp=detail"
     "src/command.cpp=command"
     "src/error.cpp=core"
     "src/parser.cpp=parse"

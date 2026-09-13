@@ -2,9 +2,17 @@
 
 include(CMakeFindDependencyMacro)
 find_dependency(pjh_result 0.2.0)
+find_dependency(pjh_platform 0.2.0)
 
 # The targets file exports the imported target `pjh::cli` (the real target has
 # EXPORT_NAME cli and the export is namespaced pjh:: in CMakeLists.txt).
 include("${CMAKE_CURRENT_LIST_DIR}/pjh_cliTargets.cmake")
+
+# pjh_platform is a PRIVATE dependency of the static library. It is linked
+# through the build interface only (see CMakeLists.txt), so re-add it here for
+# the installed target: $<LINK_ONLY:...> links it without leaking its usage
+# requirements (include dirs) to consumers.
+set_property(TARGET pjh::cli APPEND PROPERTY
+    INTERFACE_LINK_LIBRARIES "$<LINK_ONLY:pjh_platform>")
 
 check_required_components(pjh_cli)

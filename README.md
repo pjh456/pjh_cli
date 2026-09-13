@@ -7,6 +7,8 @@ C++20 CLI library with Rust-style error handling. Compile-time option keys, subc
 - C++20 compiler
 - CMake 3.20+
 - `pjh_result` 0.2.0 or compatible — required, transitive (`PUBLIC`) dependency
+- `pjh_platform` 0.2.0 or compatible — required, private compile dependency
+  (linked `PRIVATE`, not part of the usage requirements)
 - Network access on a clean configure (CMake fetches the pinned dependencies)
 
 ## Dependencies
@@ -24,10 +26,28 @@ Upgrade note: `pjh_result` 0.2.0 adds `Context` / `Diagnostic`, which the
 `CliError` integration relies on, so an installed 0.1.0 is no longer
 sufficient. Install or fetch 0.2.0 (or newer in the same major) instead.
 
-For an offline or byte-reproducible configure, install `pjh_result` first and
-configure with `-DCMAKE_PREFIX_PATH=<prefix>` so path (1) is taken. The
-installed package config also calls `find_dependency(pjh_result 0.2.0)`, so an
-installed consumer must have a compatible `pjh_result` discoverable.
+`pjh_platform` is a `PRIVATE` compile dependency used only by `src/env.cpp`
+(the environment capture moved out of the public header, so no platform header
+reaches a consumer). CMake resolves it in this order:
+
+1. **Target already defined** — a parent project that already
+   `add_subdirectory(pjh_platform)` (or otherwise defines the `pjh_platform`
+   target) is used as-is; `pjh_cli` never fetches in this case.
+2. **Installed** — if `find_package(pjh_platform 0.2.0 CONFIG)` finds a
+   compatible package (same major, version >= 0.2.0), it is used as-is.
+3. **Fetched (top-level only)** — when `pjh_cli` is the top-level project,
+   `FetchContent` clones `https://github.com/pjh456/pjh_platform.git` and
+   checks out `v0.2.0`.
+
+A subproject never fetches: if neither the target nor an installed package is
+available, configuration stops with a `FATAL_ERROR` telling you to add
+`pjh_platform` before `pjh_cli`.
+
+For an offline or byte-reproducible configure, install `pjh_result` and
+`pjh_platform` first and configure with `-DCMAKE_PREFIX_PATH=<prefix>` so the
+installed paths are taken. The installed package config calls
+`find_dependency(pjh_result 0.2.0)` and `find_dependency(pjh_platform 0.2.0)`,
+so an installed consumer must have both discoverable.
 
 When tests are enabled (`PJH_CLI_BUILD_TESTS=ON`, the default at top level),
 `doctest` `v2.5.0` is fetched the same way (`tests/CMakeLists.txt`).
@@ -429,9 +449,11 @@ CMake options:
 | `PJH_CLI_BUILD_TESTS` | `ON` (top-level) | Build tests with doctest |
 | `PJH_CLI_BUILD_EXAMPLES` | `OFF` | Build example programs |
 
-Include as a submodule:
+Include as a submodule (hard contract: **define the `pjh_platform` target
+first** — `pjh_cli` links it privately and does not fetch it as a subproject):
 
 ```cmake
+add_subdirectory(path/to/pjh_platform)   # must come first (defines pjh_platform)
 add_subdirectory(path/to/pjh_cli)
 target_link_libraries(myapp PRIVATE pjh::cli)
 ```
@@ -444,8 +466,11 @@ target_link_libraries(myapp PRIVATE pjh::cli)
 ```
 
 Both modes expose the same target name `pjh::cli`. The package config calls
-`find_dependency(pjh_result 0.2.0)`, so an installed `pjh_result` must be discoverable
-when `find_package(pjh_cli)` runs.
+`find_dependency(pjh_result 0.2.0)` and `find_dependency(pjh_platform 0.2.0)`,
+so both installed packages must be discoverable when `find_package(pjh_cli)`
+runs. `pjh_platform` is a static-library `PRIVATE` link dependency, so the
+package config re-links it onto `pjh::cli` as `$<LINK_ONLY:pjh_platform>`; it
+cannot be dropped by the consumer.
 
 ## Layering guard
 

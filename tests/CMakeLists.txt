@@ -15,6 +15,7 @@ set(PJH_CLI_TEST_SOURCES
     test_command_builder.cpp
     test_registration_exception_safety.cpp
     test_app_run.cpp
+    test_env_snapshot.cpp
     test_matcher.cpp
     test_parse_context.cpp
     test_value_writer.cpp

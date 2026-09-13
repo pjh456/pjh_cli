@@ -78,7 +78,27 @@ jobs:
         if: matrix.name == 'Linux GCC 14'
         run: |
           prefix="${RUNNER_TEMP}/pjh-cli-prefix"
+
+          # pjh_cliConfig references pjh_platform; pjh_result installs
+          # unconditionally (no top-level gate), pjh_platform does not.
           cmake --install build --prefix "${prefix}"
+
+          # Build+install pjh_platform as its own top-level project so its
+          # pjh_platformConfig.cmake is generated (as a FetchContent subproject
+          # pjh_platform's install(EXPORT) gate is false and nothing is installed).
+          platform_src="${GITHUB_WORKSPACE}/build/_deps/pjh_platform-src"
+          if [ ! -d "${platform_src}" ]; then
+            platform_src="${RUNNER_TEMP}/pjh-platform-src"
+            git clone --depth 1 --branch v0.2.0 \
+              https://github.com/pjh456/pjh_platform.git "${platform_src}"
+          fi
+          cmake -S "${platform_src}" -B "${RUNNER_TEMP}/pjh-platform" \
+            -DPJH_PLATFORM_BUILD_TESTS=OFF \
+            -DPJH_PLATFORM_BUILD_EXAMPLES=OFF \
+            -DCMAKE_PREFIX_PATH="${prefix}"
+          cmake --build "${RUNNER_TEMP}/pjh-platform" --parallel
+          cmake --install "${RUNNER_TEMP}/pjh-platform" --prefix "${prefix}"
+
           cmake -S tests/consumer -B "${RUNNER_TEMP}/pjh-cli-consumer" \
             -DCMAKE_PREFIX_PATH="${prefix}"
           cmake --build "${RUNNER_TEMP}/pjh-cli-consumer" --parallel

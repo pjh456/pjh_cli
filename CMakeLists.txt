@@ -17,6 +17,30 @@ if(NOT TARGET pjh_result)
     FetchContent_MakeAvailable(pjh_result)
 endif()
 
+# ── pjh_platform: PRIVATE compile dependency; never leaks into a public header ──
+# Resolution order:
+#   1. a target already defined by the parent (vendored add_subdirectory),
+#   2. an installed package (find_package CONFIG),
+#   3. top-level only: FetchContent the pinned v0.2.0 tag.
+# A subproject never fetches, so a wrong parent order fails here with an
+# actionable message instead of a duplicate-target error later.
+if(NOT TARGET pjh_platform AND NOT TARGET pjh::platform)
+    find_package(pjh_platform 0.2.0 CONFIG QUIET)
+endif()
+if(NOT TARGET pjh_platform AND NOT TARGET pjh::platform)
+    if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+        FetchContent_Declare(pjh_platform
+            GIT_REPOSITORY https://github.com/pjh456/pjh_platform.git
+            GIT_TAG v0.2.0)
+        FetchContent_MakeAvailable(pjh_platform)
+    else()
+        message(FATAL_ERROR
+            "pjh_cli needs the pjh_platform target before configuration; "
+            "add_subdirectory(<pjh_platform>) before add_subdirectory(pjh_cli) "
+            "(see README 'Dependencies').")
+    endif()
+endif()
+
 add_library(pjh_cli)
 add_library(pjh::cli ALIAS pjh_cli)
 set_target_properties(pjh_cli PROPERTIES EXPORT_NAME cli)
@@ -25,6 +49,7 @@ target_sources(pjh_cli
     src/command.cpp
     src/error.cpp
     src/app.cpp
+    src/env.cpp
     src/parser.cpp
     src/matched_path_resolver.cpp
     src/option_consumer.cpp
@@ -50,6 +75,14 @@ target_include_directories(pjh_cli
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(pjh_cli PUBLIC pjh_result)
+# pjh_platform is resolved above, but a static library's PRIVATE dependency is
+# still recorded in the install export as $<LINK_ONLY:pjh_platform>. Its own
+# install(EXPORT) is skipped when it is a subproject (e.g. FetchContent), which
+# would make the pjh_cli export reference a target that is not in any export
+# set and break `generate`. Keep the link to the build interface only; the
+# installed consumer re-adds it via pjh_cliConfig.cmake after
+# find_dependency(pjh_platform 0.2.0).
+target_link_libraries(pjh_cli PRIVATE $<BUILD_INTERFACE:pjh_platform>)
 
 
 option(PJH_CLI_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
