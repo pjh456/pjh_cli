@@ -205,6 +205,35 @@ and `run()` is opt-in.  The no-argument overloads use `std::cout` / `std::cerr`;
 `run(argc, argv, out, err)` / `run_fuzzy(argc, argv, out, err)` route through
 injected streams.
 
+### Structured / non-printing execution (run_quiet / run_fuzzy_quiet)
+
+`run_quiet(argc, argv)` / `run_fuzzy_quiet(argc, argv)` parse and execute like
+`run()` but write nothing and return an `AppRunResult` instead of an exit code:
+
+```cpp
+App app("hello", "1.0.0", "Minimal greeting example");
+auto result = app.run_fuzzy_quiet(argc, argv);
+if (result.kind == AppRunResult::Kind::Help)
+{
+    std::cout << result.text;
+    return 0;
+}
+if (result.error.is_some())
+{
+    // Reuse the REPL's localisation formatter, or render generically:
+    std::cerr << pjh::result::render(result.error.unwrap().diagnostic()) << "\n";
+}
+return result.exit_code();
+```
+
+`AppRunResult` carries `kind` (`Success` / `Help` / `Version` / `NoCommand` /
+`ParseError` / `RuntimeError`), `text` (the help/version payload, empty
+otherwise) and an optional `CliError`; `exit_code()` maps to the same `0`/`1`/`2`
+contract as `run()`.  The framework does not print and never calls `std::exit`;
+the matched action's own direct `std::cout` output is not captured.
+`CliError::tag()` / `diagnostic()` let embedders localise failures without
+copying the tag into the result.
+
 ### Positional arguments
 
 ```cpp
@@ -395,6 +424,8 @@ via that form.
 | `app.parse_fuzzy(argc, argv)` | Batch parse with typo correction |
 | `app.run(argc, argv)` | One-shot: parse + help/version dispatch + action + exit code (`0`/`1`/`2` by `ErrorKind`) |
 | `app.run_fuzzy(argc, argv)` | One-shot with typo correction; `run(argc, argv, out, err)` routes to injected streams |
+| `app.run_quiet(argc, argv)` | Non-printing structured one-shot: parse + help/version + action → `AppRunResult` |
+| `app.run_fuzzy_quiet(argc, argv)` | `run_quiet` with typo correction |
 | `ctx.get<T, Key>()` | Get value (throws if absent) |
 | `ctx.has<Key>()` | Check key exists |
 | `ctx.try_get<T, Key>()` | Get → `Option<T>` (no throw) |

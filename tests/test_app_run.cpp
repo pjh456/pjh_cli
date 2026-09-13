@@ -4,6 +4,7 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
+#include <pjh_result.hpp>
 #include <sstream>
 #include <string>
 
@@ -243,4 +244,280 @@ TEST_CASE("App::run with no tokens executes the root action")
     CHECK(app.run(argv.argc(), argv.argv(), out, err) == kExitSuccess);
     CHECK(called == 1);
     CHECK(out.str().empty());
+}
+
+TEST_CASE("App::run_quiet executes the action without writing to streams")
+{
+    App app("test", "1.0", "Quiet action");
+    int called = 0;
+    app.add_leaf("greet", "Greet")
+        .action(
+            [&called](ParseContext &) -> CliResult<void>
+            {
+                ++called;
+                return CliResult<void>::Ok();
+            });
+    Argv argv{"test", "greet"};
+    AppRunResult result;
+    {
+        IoCapture cap;
+        result = app.run_quiet(argv.argc(), argv.argv());
+        CHECK(cap.out.str().empty());
+        CHECK(cap.err.str().empty());
+    }
+
+    CHECK(result.kind == AppRunResult::Kind::Success);
+    CHECK(result.error.is_none());
+    CHECK(result.exit_code() == kExitSuccess);
+    CHECK(result.text.empty());
+    CHECK(called == 1);
+}
+
+TEST_CASE("App::run_quiet returns help text without printing")
+{
+    App app("test", "1.0", "Quiet help");
+    Argv argv{"test", "--help"};
+    AppRunResult result;
+    {
+        IoCapture cap;
+        result = app.run_quiet(argv.argc(), argv.argv());
+        CHECK(cap.out.str().empty());
+        CHECK(cap.err.str().empty());
+    }
+
+    CHECK(result.kind == AppRunResult::Kind::Help);
+    CHECK(result.text.starts_with("Usage: test"));
+    CHECK(result.error.is_none());
+    CHECK(result.exit_code() == kExitSuccess);
+}
+
+TEST_CASE("App::run_quiet returns version text without printing")
+{
+    App app("test", "1.0", "Quiet version");
+    Argv argv{"test", "--version"};
+    AppRunResult result;
+    {
+        IoCapture cap;
+        result = app.run_quiet(argv.argc(), argv.argv());
+        CHECK(cap.out.str().empty());
+        CHECK(cap.err.str().empty());
+    }
+
+    CHECK(result.kind == AppRunResult::Kind::Version);
+    CHECK(result.text == "test version 1.0\n");
+    CHECK(result.error.is_none());
+    CHECK(result.exit_code() == kExitSuccess);
+}
+
+TEST_CASE("App::run_quiet reports a parse error")
+{
+    App app("test", "1.0", "Quiet parse error");
+    Argv argv{"test", "--bogus"};
+    AppRunResult result;
+    {
+        IoCapture cap;
+        result = app.run_quiet(argv.argc(), argv.argv());
+        CHECK(cap.out.str().empty());
+        CHECK(cap.err.str().empty());
+    }
+
+    REQUIRE(result.error.is_some());
+    CHECK(result.kind == AppRunResult::Kind::ParseError);
+    CHECK(result.error.unwrap().kind() == ErrorKind::Parse);
+    CHECK(result.error.unwrap().tag() == ErrorTag::UnknownOption);
+    CHECK(result.exit_code() == kExitParseError);
+}
+
+TEST_CASE("App::run_quiet reports a runtime action error")
+{
+    App app("test", "1.0", "Quiet runtime error");
+    app.action(
+        [](ParseContext &) -> CliResult<void> { return CliFailure{CliError("boom")}; });
+    Argv argv{"test"};
+
+    auto result = app.run_quiet(argv.argc(), argv.argv());
+
+    REQUIRE(result.error.is_some());
+    CHECK(result.kind == AppRunResult::Kind::RuntimeError);
+    CHECK(std::string(result.error.unwrap().what()) == "boom");
+    CHECK(result.exit_code() == kExitRuntimeError);
+}
+
+TEST_CASE("App::run_quiet reports a parse-kind action error")
+{
+    App app("test", "1.0", "Quiet parse-kind error");
+    app.action(
+        [](ParseContext &) -> CliResult<void>
+        { return CliFailure{ErrorFactory::parse_error("x", 0)}; });
+    Argv argv{"test"};
+
+    auto result = app.run_quiet(argv.argc(), argv.argv());
+
+    REQUIRE(result.error.is_some());
+    CHECK(result.kind == AppRunResult::Kind::ParseError);
+    CHECK(result.exit_code() == kExitParseError);
+}
+
+TEST_CASE("App::run_quiet error composes with the Diagnostic protocol")
+{
+    App app("test", "1.0", "Quiet diagnostic");
+    Argv argv{"test", "--bogus"};
+
+    auto result = app.run_quiet(argv.argc(), argv.argv());
+
+    REQUIRE(result.error.is_some());
+    const CliError &error = result.error.unwrap();
+    CHECK(error.diagnostic().kind() == ErrorTag::UnknownOption);
+    CHECK(pjh::result::render(error.diagnostic()) == std::string(error.what()));
+}
+
+TEST_CASE("App::run and run_quiet agree on output and exit codes")
+{
+    {
+        App app("test", "1.0", "Agree help");
+        Argv argv{"test", "--help"};
+        std::ostringstream out, err;
+
+        int code = app.run(argv.argc(), argv.argv(), out, err);
+        auto quiet = app.run_quiet(argv.argc(), argv.argv());
+
+        CHECK(quiet.kind == AppRunResult::Kind::Help);
+        CHECK(out.str() == quiet.text);
+        CHECK(err.str().empty());
+        CHECK(code == quiet.exit_code());
+    }
+    {
+        App app("test", "1.0", "Agree version");
+        Argv argv{"test", "--version"};
+        std::ostringstream out, err;
+
+        int code = app.run(argv.argc(), argv.argv(), out, err);
+        auto quiet = app.run_quiet(argv.argc(), argv.argv());
+
+        CHECK(quiet.kind == AppRunResult::Kind::Version);
+        CHECK(out.str() == quiet.text);
+        CHECK(err.str().empty());
+        CHECK(code == quiet.exit_code());
+    }
+    {
+        App app("test", "1.0", "Agree parse error");
+        Argv argv{"test", "--bogus"};
+        std::ostringstream out, err;
+
+        int code = app.run(argv.argc(), argv.argv(), out, err);
+        auto quiet = app.run_quiet(argv.argc(), argv.argv());
+
+        REQUIRE(quiet.error.is_some());
+        CHECK(out.str().empty());
+        CHECK(err.str() == std::string(quiet.error.unwrap().what()) + "\n");
+        CHECK(code == quiet.exit_code());
+    }
+    {
+        App app("test", "1.0", "Agree success");
+        int called = 0;
+        app.action(
+            [&called](ParseContext &) -> CliResult<void>
+            {
+                ++called;
+                return CliResult<void>::Ok();
+            });
+        Argv argv{"test"};
+        std::ostringstream out, err;
+
+        int code = app.run(argv.argc(), argv.argv(), out, err);
+        auto quiet = app.run_quiet(argv.argc(), argv.argv());
+
+        CHECK(quiet.kind == AppRunResult::Kind::Success);
+        CHECK(out.str() == quiet.text);
+        CHECK(err.str().empty());
+        CHECK(code == quiet.exit_code());
+        CHECK(called == 2);
+    }
+    {
+        App app("test", "1.0", "Agree runtime error");
+        app.action(
+            [](ParseContext &) -> CliResult<void>
+            { return CliFailure{CliError("boom")}; });
+        Argv argv{"test"};
+        std::ostringstream out, err;
+
+        int code = app.run(argv.argc(), argv.argv(), out, err);
+        auto quiet = app.run_quiet(argv.argc(), argv.argv());
+
+        REQUIRE(quiet.error.is_some());
+        CHECK(out.str().empty());
+        CHECK(err.str() == std::string(quiet.error.unwrap().what()) + "\n");
+        CHECK(code == quiet.exit_code());
+    }
+}
+
+TEST_CASE("App::run_fuzzy_quiet auto-corrects a typo")
+{
+    App app("test", "1.0", "Quiet fuzzy");
+    int called = 0;
+    app.add_leaf("install", "Install")
+        .action(
+            [&called](ParseContext &) -> CliResult<void>
+            {
+                ++called;
+                return CliResult<void>::Ok();
+            });
+    Argv argv{"test", "instal"};
+
+    auto result = app.run_fuzzy_quiet(argv.argc(), argv.argv());
+
+    CHECK(result.kind == AppRunResult::Kind::Success);
+    CHECK(result.error.is_none());
+    CHECK(result.exit_code() == kExitSuccess);
+    CHECK(called == 1);
+}
+
+TEST_CASE("App::run_fuzzy_quiet reports ambiguity as a parse error")
+{
+    App app("test", "1.0", "Quiet fuzzy ambiguous");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
+    Argv argv{"test", "st"};
+
+    auto result = app.run_fuzzy_quiet(argv.argc(), argv.argv());
+
+    REQUIRE(result.error.is_some());
+    CHECK(result.kind == AppRunResult::Kind::ParseError);
+    CHECK(result.exit_code() == kExitParseError);
+    CHECK(
+        std::string(result.error.unwrap().what()).find("ambiguous command 'st'") !=
+        std::string::npos);
+}
+
+TEST_CASE("App::run_quiet with no tokens executes the root action")
+{
+    App app("test", "1.0", "Quiet root");
+    int called = 0;
+    app.action(
+        [&called](ParseContext &) -> CliResult<void>
+        {
+            ++called;
+            return CliResult<void>::Ok();
+        });
+    Argv argv{"test"};
+    AppRunResult result;
+    {
+        IoCapture cap;
+        result = app.run_quiet(argv.argc(), argv.argv());
+        CHECK(cap.out.str().empty());
+        CHECK(cap.err.str().empty());
+    }
+
+    CHECK(result.kind == AppRunResult::Kind::Success);
+    CHECK(called == 1);
+}
+
+TEST_CASE("AppRunResult::exit_code maps NoCommand to 2")
+{
+    AppRunResult result;
+    result.kind = AppRunResult::Kind::NoCommand;
+    result.error =
+        pjh::result::Option<CliError>::Some(ErrorFactory::no_command_matched());
+
+    CHECK(result.exit_code() == kExitParseError);
 }

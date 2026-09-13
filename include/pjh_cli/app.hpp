@@ -4,10 +4,12 @@
 #include <iosfwd>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/command_builder.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/detail/env_snapshot.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <pjh_cli/parse/parser.hpp>
+#include <pjh_result.hpp>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -25,6 +27,39 @@ namespace pjh::cli
     /// @brief Exit code returned when parsing/validation failed with an
     ///        ErrorKind::Parse error (unknown option, missing value, …).
     inline constexpr int kExitParseError = 2;
+
+    /// @brief Structured outcome of a non-printing one-shot execution.
+    ///
+    /// Returned by App::run_quiet() / App::run_fuzzy_quiet().  Unlike
+    /// App::run(), nothing is written to std::cout/std::cerr and no process
+    /// exit code is returned directly; embedders inspect @c kind / @c text /
+    /// @c error and call exit_code() to preserve the @c 0/1/2 contract.
+    ///
+    /// On success / help / version @c error is none.  On a parse, validation,
+    /// no-command or action failure @c error holds the CliError, whose
+    /// kind()/tag()/diagnostic() support reuse of the caller's localisation
+    /// formatter without copying those fields into this record.
+    struct AppRunResult
+    {
+        /// @brief Result category.
+        enum class Kind
+        {
+            Success,     ///< Action ran successfully.
+            Help,        ///< help_requested: text = help_text().
+            Version,     ///< version_requested: text = version_text().
+            NoCommand,   ///< Defensive: matched_command() == nullptr.
+            ParseError,  ///< error.kind() == ErrorKind::Parse (parse/validation/action).
+            RuntimeError,  ///< error.kind() == ErrorKind::Runtime (action failure).
+        };
+
+        Kind kind = Kind::Success;             ///< Result category.
+        std::string text;                      ///< Help/Version payload; empty otherwise.
+        pjh::result::Option<CliError> error =  ///< Set for *Error/NoCommand.
+            pjh::result::Option<CliError>::None();
+
+        /// @brief kExitSuccess for Success/Help/Version; otherwise error.kind() → 2/1.
+        [[nodiscard]] int exit_code() const noexcept;
+    };
 
     /// @brief Application entry point — the root branch command.
     ///
@@ -178,6 +213,31 @@ namespace pjh::cli
         /// @copydetails run_fuzzy(int, char **)
         [[nodiscard]] int run_fuzzy(
             int argc, char **argv, std::ostream &out, std::ostream &err);
+
+        /// @brief Non-printing one-shot execution (exact subcommand matching).
+        ///
+        /// Parses, dispatches help/version, executes the matched action and
+        /// returns a structured outcome.  Writes nothing to
+        /// std::cout/std::cerr and never calls std::exit; it does not catch
+        /// exceptions (an execute() throw propagates as in run()).  The
+        /// action's own direct std::cout output is NOT captured.
+        ///
+        /// help_text() / version_text() are produced by the parser (the
+        /// injectable formatter set via set_help_formatter() is honoured) and
+        /// returned verbatim in AppRunResult::text, with no extra newline.
+        ///
+        /// @note For localisation, consume AppRunResult::error with
+        ///       CliError::tag() / CliError::diagnostic() rather than parsing
+        ///       what().
+        ///
+        /// @param argc Argument count from main().
+        /// @param argv Argument vector from main().
+        /// @return Structured outcome; inspect kind/text/error and exit_code().
+        [[nodiscard]] AppRunResult run_quiet(int argc, char **argv);
+
+        /// @brief run_quiet() with fuzzy subcommand matching (distance 3).
+        /// @copydetails run_quiet(int, char **)
+        [[nodiscard]] AppRunResult run_fuzzy_quiet(int argc, char **argv);
 
     private:
         detail::EnvSnapshot m_env_snapshot;

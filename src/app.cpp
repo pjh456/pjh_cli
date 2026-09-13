@@ -17,38 +17,71 @@ namespace
                                                           : pjh::cli::kExitRuntimeError;
     }
 
-    /// @brief Shared dispatch tail of App::run() / App::run_fuzzy().
+    /// @brief Build a structured failure result from a CliError.
+    pjh::cli::AppRunResult error_result(pjh::cli::CliError error)
+    {
+        pjh::cli::AppRunResult result;
+        result.kind = error.kind() == pjh::cli::ErrorKind::Parse
+                          ? pjh::cli::AppRunResult::Kind::ParseError
+                          : pjh::cli::AppRunResult::Kind::RuntimeError;
+        result.error = pjh::result::Option<pjh::cli::CliError>::Some(std::move(error));
+        return result;
+    }
+
+    /// @brief Non-printing dispatch tail of App::run_quiet() / run_fuzzy_quiet().
     ///
-    /// Prints help/version to @p out or executes the matched action,
-    /// printing any error to @p err, and returns the exit code.
-    int dispatch(pjh::cli::ParseContext &ctx, std::ostream &out, std::ostream &err)
+    /// Moves help/version text into the result or executes the matched action,
+    /// classifying any failure; it never touches a stream.
+    pjh::cli::AppRunResult dispatch_quiet(pjh::cli::ParseContext &ctx)
     {
         if (ctx.help_requested())
         {
-            out << ctx.help_text();
-            return pjh::cli::kExitSuccess;
+            pjh::cli::AppRunResult result;
+            result.kind = pjh::cli::AppRunResult::Kind::Help;
+            result.text = ctx.help_text();
+            return result;
         }
         if (ctx.version_requested())
         {
-            out << ctx.version_text();
-            return pjh::cli::kExitSuccess;
+            pjh::cli::AppRunResult result;
+            result.kind = pjh::cli::AppRunResult::Kind::Version;
+            result.text = ctx.version_text();
+            return result;
         }
 
         auto *cmd = ctx.matched_command();
         if (!cmd)
         {
-            err << pjh::cli::ErrorFactory::no_command_matched().what() << "\n";
-            return pjh::cli::kExitParseError;
+            pjh::cli::AppRunResult result;
+            result.kind = pjh::cli::AppRunResult::Kind::NoCommand;
+            result.error = pjh::result::Option<pjh::cli::CliError>::Some(
+                pjh::cli::ErrorFactory::no_command_matched());
+            return result;
         }
 
         auto executed = cmd->execute(ctx);
         if (executed.is_err())
         {
-            auto error = executed.unwrap_err();
-            err << error.what() << "\n";
-            return exit_code_for(error);
+            return error_result(executed.unwrap_err());
         }
-        return pjh::cli::kExitSuccess;
+        return pjh::cli::AppRunResult{};
+    }
+
+    /// @brief Render a structured result through the legacy run() streams.
+    int render_result(
+        const pjh::cli::AppRunResult &result, std::ostream &out, std::ostream &err)
+    {
+        if (result.kind == pjh::cli::AppRunResult::Kind::Help ||
+            result.kind == pjh::cli::AppRunResult::Kind::Version)
+        {
+            out << result.text;
+            return pjh::cli::kExitSuccess;
+        }
+        if (result.error.is_some())
+        {
+            err << result.error.unwrap().what() << "\n";
+        }
+        return result.exit_code();
     }
 }  // namespace
 
@@ -71,18 +104,20 @@ namespace pjh::cli
         return Parser::parse_command(*this, argc, argv, 3, m_help_formatter);
     }
 
+    int AppRunResult::exit_code() const noexcept
+    {
+        if (error.is_none())
+        {
+            return kExitSuccess;
+        }
+        return exit_code_for(error.unwrap());
+    }
+
     int App::run(int argc, char **argv) { return run(argc, argv, std::cout, std::cerr); }
 
     int App::run(int argc, char **argv, std::ostream &out, std::ostream &err)
     {
-        auto parsed = parse(argc, argv);
-        if (parsed.is_err())
-        {
-            auto error = parsed.unwrap_err();
-            err << error.what() << "\n";
-            return exit_code_for(error);
-        }
-        return dispatch(parsed.unwrap(), out, err);
+        return render_result(run_quiet(argc, argv), out, err);
     }
 
     int App::run_fuzzy(int argc, char **argv)
@@ -92,14 +127,27 @@ namespace pjh::cli
 
     int App::run_fuzzy(int argc, char **argv, std::ostream &out, std::ostream &err)
     {
+        return render_result(run_fuzzy_quiet(argc, argv), out, err);
+    }
+
+    AppRunResult App::run_quiet(int argc, char **argv)
+    {
+        auto parsed = parse(argc, argv);
+        if (parsed.is_err())
+        {
+            return error_result(parsed.unwrap_err());
+        }
+        return dispatch_quiet(parsed.unwrap());
+    }
+
+    AppRunResult App::run_fuzzy_quiet(int argc, char **argv)
+    {
         auto parsed = parse_fuzzy(argc, argv);
         if (parsed.is_err())
         {
-            auto error = parsed.unwrap_err();
-            err << error.what() << "\n";
-            return exit_code_for(error);
+            return error_result(parsed.unwrap_err());
         }
-        return dispatch(parsed.unwrap(), out, err);
+        return dispatch_quiet(parsed.unwrap());
     }
 
 }  // namespace pjh::cli
