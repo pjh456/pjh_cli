@@ -25,6 +25,13 @@ namespace pjh::cli
             Backspace,  ///< 0x7f / '\b'.
             Up,         ///< Arrow up (reserved for history navigation).
             Down,       ///< Arrow down (reserved for history navigation).
+            Left,       ///< Arrow left: move the cursor one code point left.
+            Right,      ///< Arrow right: move the cursor one code point right.
+            Home,       ///< Home: move the cursor to the start of the line.
+            End,        ///< End: move the cursor to the end of the line.
+            Delete,     ///< Delete: remove the code point under the cursor.
+            WordLeft,   ///< Ctrl/Alt-Left: move the cursor one word left.
+            WordRight,  ///< Ctrl/Alt-Right: move the cursor one word right.
             Cancel,     ///< Ctrl-C: discard the current line and start over.
             Eof,        ///< Ctrl-D / stream end (ends the line).
             Unknown,    ///< Escape sequence not understood.
@@ -65,6 +72,20 @@ namespace pjh::cli
         ///       redraw.  ASCII input is unaffected.
         virtual void erase_last(std::size_t count) = 0;
 
+        /// @brief Move the cursor @p count code points left without erasing.
+        ///
+        /// @param count  Number of UTF-8 code points to move back.
+        ///
+        /// @note Counts code points, not terminal columns (same caveat as
+        ///       erase_last); ASCII input is unaffected.  The default
+        ///       implementation writes one ASCII backspace per code point, so
+        ///       a backend that only supports plain-text output needs no
+        ///       override and no ANSI/VT support is required.
+        virtual void move_cursor_left(std::size_t count)
+        {
+            for (std::size_t i = 0; i < count; ++i) write("\b");
+        }
+
         /// @brief Restore cooked terminal mode (line discipline + echo).
         ///
         /// Called before running a human-in-the-loop action that reads stdin,
@@ -93,11 +114,19 @@ namespace pjh::cli
     /// @brief Platform-independent interactive line editor.
     ///
     /// Owns the input buffer and dispatches Tab to the completion/hint
-    /// callbacks.  Only append-at-end editing is supported (no Left/Right,
-    /// no mid-line cursor).  Up/Down navigate the injected IHistory: Up recalls
-    /// older entries and Down recalls newer ones, replacing the current buffer.
-    /// The line typed before the first Up is kept as a draft and restored when
-    /// Down moves past the newest entry.  Without a history, Up/Down are no-ops.
+    /// callbacks.  Editing happens on UTF-8 code-point boundaries with a
+    /// movable cursor: Left/Right step one code point, Home/End jump to the
+    /// start/end, Delete removes the code point under the cursor, and
+    /// Ctrl/Alt-Left/Right move one word at a time (a word is an ASCII
+    /// alphanumeric run, `_`, or any non-ASCII code point).  A mid-line edit
+    /// redraws the buffer from its start and repositions the visible cursor
+    /// through @c ITerminal::move_cursor_left.
+    ///
+    /// Up/Down navigate the injected IHistory: Up recalls older entries and
+    /// Down recalls newer ones, replacing the current buffer and moving the
+    /// cursor to its end.  The line typed before the first Up is kept as a draft
+    /// and restored when Down moves past the newest entry.  Without a history,
+    /// Up/Down are no-ops.
     ///
     /// Ctrl-C (@c KeyEvent::Code::Cancel) discards the current line, echoes
     /// @c ^C, resets history navigation, and starts a fresh prompt without
@@ -138,6 +167,19 @@ namespace pjh::cli
         void show_candidates(
             const std::vector<CompletionCandidate> &candidates, std::string_view buffer);
 
+        /// @brief Redraw @p new_buffer from the start of the buffer region and
+        ///        park the visible cursor at @p new_cursor.
+        ///
+        /// Precondition: the hardware cursor is at the current @c m_cursor and
+        /// the visible line still shows the old buffer.  Uses only
+        /// @c move_cursor_left + @c write, so no cursor-addressing/ANSI support
+        /// is needed.
+        ///
+        /// @param new_buffer   Content to render.
+        /// @param new_cursor   Byte offset in @p new_buffer for the cursor; must
+        ///                     sit on a UTF-8 code-point boundary.
+        void render(std::string_view new_buffer, std::size_t new_cursor);
+
         /// @brief Recall the previous (older) history entry into @p buffer.
         ///        Saves @p buffer as the draft on the first call after a reset.
         /// @param buffer  Current edit buffer, replaced in place.
@@ -159,6 +201,10 @@ namespace pjh::cli
         IHistory *m_history = nullptr;  ///< Non-owning; nullptr disables Up/Down.
         std::string m_draft;            ///< Line typed before the first Up.
         bool m_navigating = false;      ///< True between first Up and reset.
+
+        std::size_t m_cursor = 0;        ///< Cursor byte offset into the buffer.
+        std::size_t m_cursor_cp = 0;     ///< Cursor offset in UTF-8 code points.
+        std::size_t m_rendered_len = 0;  ///< Rendered buffer length (code points).
     };
 
     namespace detail

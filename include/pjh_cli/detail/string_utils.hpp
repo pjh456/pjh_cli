@@ -110,6 +110,28 @@ namespace pjh::cli::detail
         return n;
     }
 
+    /// @brief Byte offset just past the UTF-8 code point starting at @p pos.
+    ///
+    /// Skips the lead byte at @p pos and any continuation bytes that follow it,
+    /// so the returned offset is always >= @p pos and lands on a code-point
+    /// boundary.  Malformed input (a lone continuation byte or a run of them)
+    /// degrades to the nearest byte boundary; the walk never reads outside
+    /// `[0, s.size()]`.
+    ///
+    /// @param s    Byte string; need not be valid UTF-8.
+    /// @param pos  Offset of a code-point start, clamped to `[0, s.size()]`.
+    /// @return Byte offset one past the code point starting at @p pos.
+    inline std::size_t utf8_next_code_point(std::string_view s, std::size_t pos) noexcept
+    {
+        if (pos >= s.size())
+            return s.size();
+        std::size_t i = pos + 1;
+        while (i < s.size() &&
+               is_utf8_continuation_byte(static_cast<unsigned char>(s[i])))
+            ++i;
+        return i;
+    }
+
     /// @brief General-purpose string manipulation utilities.
     ///
     /// Pure functions, no mutable state.  All methods operate on

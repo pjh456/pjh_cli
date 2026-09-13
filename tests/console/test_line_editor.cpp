@@ -37,6 +37,12 @@ namespace
         term.keys.push_back({KeyEvent::Code::Cancel, 0});
     }
 
+    /// @brief Push one plain key with no character payload.
+    void press(ScriptedTerminal &term, KeyEvent::Code code)
+    {
+        term.keys.push_back({code, 0});
+    }
+
     /// @brief Completion callback that always returns an empty candidate list.
     CompletionResult no_candidates(std::string_view, std::size_t) { return {}; }
 
@@ -602,4 +608,271 @@ TEST_CASE("LineEditor Ctrl-C resets history navigation")
     std::string line;
     CHECK(editor.read_line(line, no_candidates, no_hint));
     CHECK(line == "two");
+}
+
+// ──────────────────────────────────────────
+//  Cursor movement, Home/End/Delete, word movement
+// ──────────────────────────────────────────
+
+TEST_CASE("LineEditor Left then insert edits mid-line")
+{
+    ScriptedTerminal term;
+    chars(term, "ac");
+    press(term, KeyEvent::Code::Left);
+    chars(term, "b");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "abc");
+}
+
+TEST_CASE("LineEditor Right returns to the end for appending")
+{
+    ScriptedTerminal term;
+    chars(term, "ac");
+    press(term, KeyEvent::Code::Left);
+    chars(term, "b");
+    press(term, KeyEvent::Code::Right);
+    chars(term, "d");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "abcd");
+}
+
+TEST_CASE("LineEditor Home and End jump to the line bounds")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press(term, KeyEvent::Code::Home);
+    chars(term, "X");
+    press(term, KeyEvent::Code::End);
+    chars(term, "y");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "Xabcy");
+}
+
+TEST_CASE("LineEditor Left at the start and End at the end are no-ops")
+{
+    ScriptedTerminal term;
+    press(term, KeyEvent::Code::Home);
+    chars(term, "ab");
+    press(term, KeyEvent::Code::End);
+    press(term, KeyEvent::Code::Right);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ab");
+}
+
+TEST_CASE("LineEditor Left at the start with text is a no-op")
+{
+    ScriptedTerminal term;
+    chars(term, "ab");
+    press(term, KeyEvent::Code::Home);
+    press(term, KeyEvent::Code::Left);
+    chars(term, "X");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "Xab");
+}
+
+TEST_CASE("LineEditor Backspace deletes the code point before a mid-line cursor")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press(term, KeyEvent::Code::Left);
+    press(term, KeyEvent::Code::Backspace);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ac");
+}
+
+TEST_CASE("LineEditor Delete removes the code point under the cursor")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press(term, KeyEvent::Code::Home);
+    press(term, KeyEvent::Code::Delete);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "bc");
+}
+
+TEST_CASE("LineEditor Delete at the end is a no-op")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press(term, KeyEvent::Code::End);
+    press(term, KeyEvent::Code::Delete);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "abc");
+}
+
+TEST_CASE("LineEditor cursor does not split a CJK code point")
+{
+    ScriptedTerminal term;
+    chars(term, "\xE4\xB8\xAD\xE6\x96\x87");  // 中文
+    press(term, KeyEvent::Code::Left);
+    chars(term, "x");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "\xE4\xB8\xADx\xE6\x96\x87");  // 中x文
+}
+
+TEST_CASE("LineEditor Delete removes a whole CJK code point")
+{
+    ScriptedTerminal term;
+    chars(term, "\xE4\xB8\xAD\xE6\x96\x87");  // 中文
+    press(term, KeyEvent::Code::Home);
+    press(term, KeyEvent::Code::Delete);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "\xE6\x96\x87");  // 文
+}
+
+TEST_CASE("LineEditor WordLeft moves to the start of the previous word")
+{
+    ScriptedTerminal term;
+    chars(term, "foo bar baz");
+    press(term, KeyEvent::Code::WordLeft);
+    chars(term, "X");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "foo bar Xbaz");
+}
+
+TEST_CASE("LineEditor WordLeft twice crosses two words")
+{
+    ScriptedTerminal term;
+    chars(term, "foo bar baz");
+    press(term, KeyEvent::Code::WordLeft);
+    press(term, KeyEvent::Code::WordLeft);
+    chars(term, "X");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "foo Xbar baz");
+}
+
+TEST_CASE("LineEditor WordRight moves to the end of the next word")
+{
+    ScriptedTerminal term;
+    chars(term, "foo bar baz");
+    press(term, KeyEvent::Code::Home);
+    press(term, KeyEvent::Code::WordRight);
+    chars(term, "X");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "fooX bar baz");
+}
+
+TEST_CASE("LineEditor WordLeft treats a CJK run as one word")
+{
+    ScriptedTerminal term;
+    chars(term, "ab \xE4\xB8\xAD\xE6\x96\x87");  // ab 中文
+    press(term, KeyEvent::Code::WordLeft);
+    chars(term, "X");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ab X\xE4\xB8\xAD\xE6\x96\x87");  // ab X中文
+}
+
+TEST_CASE("LineEditor history recall resets a mid-line cursor to the end")
+{
+    InMemoryHistory h;
+    h.push("old");
+
+    ScriptedTerminal term;
+    chars(term, "ac");
+    press(term, KeyEvent::Code::Left);
+    chars(term, "b");  // "abc", cursor sits after 'b'
+    press_up(term);    // recall "old", cursor to end
+    press_down(term);  // restore draft "abc", cursor to end
+    chars(term, "d");  // must append, not insert at the old cursor
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ", &h);
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "abcd");
+}
+
+TEST_CASE("LineEditor Tab inserts a unique candidate at a mid-line cursor")
+{
+    ScriptedTerminal term;
+    chars(term, "ac");
+    press(term, KeyEvent::Code::Left);
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    CompletionFn complete = [](std::string_view line, std::size_t cursor)
+    {
+        CompletionResult out;
+        if (line == "ac" && cursor == 1)
+            out.candidates.push_back({"b"});
+        out.prefix_len = 0;
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "abc");  // inserted mid-line, no trailing space added
+}
+
+TEST_CASE("LineEditor Ctrl-C resets the cursor for the next line")
+{
+    ScriptedTerminal term;
+    chars(term, "abc");
+    press(term, KeyEvent::Code::Left);
+    press_cancel(term);
+    chars(term, "new");
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "new");
+    CHECK(term.written.find("^C\n") != std::string::npos);
 }

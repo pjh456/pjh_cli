@@ -305,6 +305,13 @@ previous/next line from the injected `IHistory` (`InMemoryHistory` by default,
 `RingBufferHistory` for bounded storage, `FileHistory` for history that survives
 restarts, `NoOpHistory`/`nullptr` to disable) and restore the draft typed before
 the first Up when Down passes the newest entry.
+Line editing supports cursor movement: Left/Right move one UTF-8 code point,
+Home/End jump to the start/end of the line, Delete removes the code point under
+the cursor, and Ctrl/Alt-Left/Right move one word at a time (a word is an ASCII
+alphanumeric run, `_`, or any non-ASCII code point).  Every edit stays on a
+UTF-8 code-point boundary; as with backspace, cursor movement counts code points
+rather than terminal columns, so double-width glyphs may shift the visible
+cursor by one column.
 Every submitted non-empty line is recorded — including `help`/`?` meta lines and
 lines that fail to parse — so Up can recall a typo and fix it.
 `FileHistory` (granular include

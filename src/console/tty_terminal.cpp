@@ -6,6 +6,7 @@
 #include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/detail/io_retry.hpp>
 #include <pjh_platform/console.hpp>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -59,12 +60,31 @@ namespace
                 return {pjh::cli::KeyEvent::Code::Eof, 0};
             if (c == 0xE0 || c == 0x00)  // Extended key prefix.
             {
+                using Code = pjh::cli::KeyEvent::Code;
                 int ext = ::_getch();
-                if (ext == 'H')
-                    return {pjh::cli::KeyEvent::Code::Up, 0};
-                if (ext == 'P')
-                    return {pjh::cli::KeyEvent::Code::Down, 0};
-                return {pjh::cli::KeyEvent::Code::Unknown, 0};
+                switch (ext)
+                {
+                case 'H':
+                    return {Code::Up, 0};
+                case 'P':
+                    return {Code::Down, 0};
+                case 'K':
+                    return {Code::Left, 0};
+                case 'M':
+                    return {Code::Right, 0};
+                case 'G':
+                    return {Code::Home, 0};
+                case 'O':
+                    return {Code::End, 0};
+                case 'S':
+                    return {Code::Delete, 0};
+                case 0x73:  // Ctrl-Left.
+                    return {Code::WordLeft, 0};
+                case 0x74:  // Ctrl-Right.
+                    return {Code::WordRight, 0};
+                default:
+                    return {Code::Unknown, 0};
+                }
             }
             if (c == '\r' || c == '\n')
                 return {pjh::cli::KeyEvent::Code::Enter, 0};
@@ -175,24 +195,116 @@ namespace
         }
 
     private:
-        /// @brief Decode an ESC-prefixed arrow sequence without blocking on a
-        ///        bare ESC (short poll between bytes).
+        /// @brief Decode an ESC-prefixed sequence without blocking on a bare ESC
+        ///        (short poll between bytes).
+        ///
+        /// Handles the SS3 (@c ESC @c O) and CSI (@c ESC @c [) forms, including
+        /// parameterized CSI sequences such as @c "[1;5D" and @c "[3~".  Every
+        /// byte of a recognized sequence is consumed so parameter bytes never
+        /// leak into the input buffer as characters; unrecognized sequences map
+        /// to @c Unknown.  Alt-b / Alt-f map to word movement.
         pjh::cli::KeyEvent read_escape()
         {
+            using Code = pjh::cli::KeyEvent::Code;
             char first = 0;
             if (!read_with_timeout(first))
-                return {pjh::cli::KeyEvent::Code::Unknown, 0};
-            if (first != '[' && first != 'O')
-                return {pjh::cli::KeyEvent::Code::Unknown, 0};
+                return {Code::Unknown, 0};  // Bare ESC.
+            if (first == 'b')
+                return {Code::WordLeft, 0};
+            if (first == 'f')
+                return {Code::WordRight, 0};
+            if (first == 'O')
+            {
+                char second = 0;
+                if (!read_with_timeout(second))
+                    return {Code::Unknown, 0};
+                switch (second)
+                {
+                case 'A':
+                    return {Code::Up, 0};
+                case 'B':
+                    return {Code::Down, 0};
+                case 'C':
+                    return {Code::Right, 0};
+                case 'D':
+                    return {Code::Left, 0};
+                case 'H':
+                    return {Code::Home, 0};
+                case 'F':
+                    return {Code::End, 0};
+                default:
+                    return {Code::Unknown, 0};
+                }
+            }
+            if (first != '[')
+                return {Code::Unknown, 0};
 
-            char second = 0;
-            if (!read_with_timeout(second))
-                return {pjh::cli::KeyEvent::Code::Unknown, 0};
-            if (second == 'A')
-                return {pjh::cli::KeyEvent::Code::Up, 0};
-            if (second == 'B')
-                return {pjh::cli::KeyEvent::Code::Down, 0};
-            return {pjh::cli::KeyEvent::Code::Unknown, 0};
+            // CSI: collect parameter bytes 0x20..0x3F until the final byte
+            // 0x40..0x7E.  The cap keeps a malformed stream from stalling.
+            std::string params;
+            char final = 0;
+            for (;;)
+            {
+                char byte = 0;
+                if (!read_with_timeout(byte))
+                    return {Code::Unknown, 0};
+                const auto ub = static_cast<unsigned char>(byte);
+                if (ub >= 0x40 && ub <= 0x7E)
+                {
+                    final = byte;
+                    break;
+                }
+                if (ub < 0x20 || ub > 0x3F || params.size() >= 8)
+                    return {Code::Unknown, 0};
+                params.push_back(byte);
+            }
+            return decode_csi(params, final);
+        }
+
+        /// @brief Map collected CSI parameters plus the final byte to a KeyEvent.
+        /// @param params  Parameter bytes (digits and ';'), empty when none.
+        /// @param final   Final byte in 0x40..0x7E.
+        /// @return Decoded key, or @c Unknown for an unmapped sequence.
+        static pjh::cli::KeyEvent decode_csi(std::string_view params, char final)
+        {
+            using Code = pjh::cli::KeyEvent::Code;
+            if (params.empty())
+            {
+                switch (final)
+                {
+                case 'A':
+                    return {Code::Up, 0};
+                case 'B':
+                    return {Code::Down, 0};
+                case 'C':
+                    return {Code::Right, 0};
+                case 'D':
+                    return {Code::Left, 0};
+                case 'H':
+                    return {Code::Home, 0};
+                case 'F':
+                    return {Code::End, 0};
+                default:
+                    return {Code::Unknown, 0};
+                }
+            }
+            if (final == '~')
+            {
+                if (params == "1" || params == "7")
+                    return {Code::Home, 0};
+                if (params == "4" || params == "8")
+                    return {Code::End, 0};
+                if (params == "3")
+                    return {Code::Delete, 0};
+                return {Code::Unknown, 0};
+            }
+            if (final == 'C' || final == 'D')
+            {
+                // Ctrl ("1;5" or "5") and Alt ("1;3" or "3") word movement.
+                if (params == "1;5" || params == "5" || params == "1;3" || params == "3")
+                    return {final == 'C' ? Code::WordRight : Code::WordLeft, 0};
+            }
+            return {Code::Unknown, 0};
         }
 
         /// @brief Read one byte, waiting at most a short interval.
