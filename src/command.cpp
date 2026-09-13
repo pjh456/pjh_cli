@@ -127,6 +127,40 @@ namespace pjh::cli
         return ref;
     }
 
+    BranchCommand::~BranchCommand()
+    {
+        // Iterative post-order teardown with O(1) extra space.  A node's
+        // children stay in its deque while we descend into the front one, so
+        // the parent link is the way back up; leaves are freed in place and a
+        // drained branch is popped (and destroyed) from its parent.  Children
+        // therefore die before their parent and siblings in registration order,
+        // matching the default recursive teardown, with no per-level stack
+        // frame and no allocation (allocation here would terminate on the OOM
+        // unwind path).
+        BranchCommand *cur = this;
+        while (true)
+        {
+            while (!cur->m_subcommands.empty())
+            {
+                BaseCommand *child = cur->m_subcommands.front().get();
+                if (auto *branch = child->as_branch())
+                {
+                    cur = branch;  // descend; the child stays owned by its parent
+                    continue;
+                }
+                cur->m_subcommands.pop_front();  // leaf: free in place
+            }
+
+            if (cur == this)
+                break;
+
+            // `cur` is drained and still the front child of its branch parent.
+            auto *parent = cur->m_parent->as_branch();
+            parent->m_subcommands.pop_front();  // destroys the drained `cur`
+            cur = parent;
+        }
+    }
+
     BaseCommand *BranchCommand::find_subcommand(std::string_view name) noexcept
     {
         auto it = m_subcommand_by_name.find(name);

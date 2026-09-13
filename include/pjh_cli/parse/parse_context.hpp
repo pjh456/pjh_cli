@@ -37,7 +37,7 @@ namespace pjh::cli
     ///
     /// Lookup follows the parent chain (for subcommand scoping): if a value is
     /// not found in the current context, the parent context is queried
-    /// recursively.
+    /// iteratively.
     ///
     /// Key types:
     ///   - Named options:  `fixed_string("port")`
@@ -59,6 +59,32 @@ namespace pjh::cli
 
     public:
         friend class detail::ParseContextWriter;
+
+        ParseContext() = default;
+        ParseContext(const ParseContext &) = default;
+        ParseContext(ParseContext &&) noexcept = default;
+        ParseContext &operator=(const ParseContext &) = default;
+        ParseContext &operator=(ParseContext &&) noexcept = default;
+
+        /// @brief Destroy the context, unlinking the parent chain iteratively.
+        ///
+        /// The copy/move special members above are explicitly defaulted because
+        /// a user-declared destructor would otherwise suppress the implicit move
+        /// operations and silently turn context moves into deep copies.
+        ///
+        /// Breaks the shared_ptr ownership chain so a deep subcommand context
+        /// does not recurse one stack frame per nesting level.  When a parent is
+        /// shared with another context, the walk stops there and the remaining
+        /// owner completes the teardown.  No allocation; implicitly noexcept.
+        ~ParseContext() noexcept
+        {
+            std::shared_ptr<ParseContext> p = std::move(m_parent);
+            while (p && p.use_count() == 1)
+            {
+                std::shared_ptr<ParseContext> next = std::move(p->m_parent);
+                p = std::move(next);
+            }
+        }
 
         /// @brief Retrieve a typed value by compile-time key.
         /// @tparam T Target type (must satisfy BuiltinType).
@@ -264,28 +290,37 @@ namespace pjh::cli
         template <detail::BuiltinType T>
         T *find_scalar(size_t hash) noexcept
         {
-            auto it = scalar_map<T>().find(hash);
-            if (it != scalar_map<T>().end())
-                return &it->second;
-            return m_parent ? m_parent->template find_scalar<T>(hash) : nullptr;
+            for (auto *c = this; c != nullptr; c = c->m_parent.get())
+            {
+                auto it = c->scalar_map<T>().find(hash);
+                if (it != c->scalar_map<T>().end())
+                    return &it->second;
+            }
+            return nullptr;
         }
 
         template <detail::BuiltinType T>
         const T *find_scalar(size_t hash) const noexcept
         {
-            auto it = scalar_map<T>().find(hash);
-            if (it != scalar_map<T>().end())
-                return &it->second;
-            return m_parent ? m_parent->template find_scalar<T>(hash) : nullptr;
+            for (const auto *c = this; c != nullptr; c = c->m_parent.get())
+            {
+                auto it = c->scalar_map<T>().find(hash);
+                if (it != c->scalar_map<T>().end())
+                    return &it->second;
+            }
+            return nullptr;
         }
 
         template <detail::BuiltinType T>
         const std::vector<T> *find_vector(size_t hash) const noexcept
         {
-            auto it = vector_map<T>().find(hash);
-            if (it != vector_map<T>().end())
-                return &it->second;
-            return m_parent ? m_parent->template find_vector<T>(hash) : nullptr;
+            for (const auto *c = this; c != nullptr; c = c->m_parent.get())
+            {
+                auto it = c->vector_map<T>().find(hash);
+                if (it != c->vector_map<T>().end())
+                    return &it->second;
+            }
+            return nullptr;
         }
 
         /// @brief True when @p hash has a value in this context or an ancestor.
@@ -295,9 +330,10 @@ namespace pjh::cli
         /// presence set, so a stored value costs one map node, not two.
         bool has_in_chain(size_t hash) const noexcept
         {
-            if (has_local_value(hash))
-                return true;
-            return m_parent ? m_parent->has_in_chain(hash) : false;
+            for (const auto *c = this; c != nullptr; c = c->m_parent.get())
+                if (c->has_local_value(hash))
+                    return true;
+            return false;
         }
 
         /// @brief True when @p hash appears in one of this context's value maps.

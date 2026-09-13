@@ -21,6 +21,15 @@ static_assert(
         bool (*)(const ParseContext &, size_t) noexcept>,
     "ParseContextWriter must live in pjh::cli::detail");
 
+// Special-member pin: a user-declared destructor must not suppress the move
+// operations, or parsing (which moves ParseContext on every descent) would
+// silently deep-copy.  The destructor must stay non-trivial and non-throwing.
+static_assert(std::is_nothrow_move_constructible_v<ParseContext>);
+static_assert(std::is_move_assignable_v<ParseContext>);
+static_assert(std::is_copy_constructible_v<ParseContext>);
+static_assert(!std::is_trivially_destructible_v<ParseContext>);
+static_assert(std::is_nothrow_destructible_v<ParseContext>);
+
 struct Argv
 {
     std::vector<std::string> storage;
@@ -326,4 +335,93 @@ TEST_CASE("set_value overwrite keeps presence")
     detail::ParseContextWriter::set_value<int>(ctx, h, 2);
     CHECK(detail::ParseContextWriter::has_value(ctx, h));
     CHECK(ctx.get<int, fixed_string("port")>() == 2);
+}
+
+// ── Deep parent chain: lookup and teardown must not recurse ──
+
+TEST_CASE("parent chain lookup is iterative at deep nesting")
+{
+    constexpr size_t kDepth = 10000;
+    constexpr auto h = key_hash(fixed_string("deep"));
+    constexpr auto hv = key_hash(fixed_string("list"));
+
+    auto root = std::make_shared<ParseContext>();
+    detail::ParseContextWriter::set_value<int>(*root, h, 7);
+    detail::ParseContextWriter::append_value<int>(*root, hv, 1);
+
+    std::shared_ptr<ParseContext> leaf = root;
+    for (size_t i = 0; i < kDepth; ++i)
+    {
+        auto next = std::make_shared<ParseContext>();
+        detail::ParseContextWriter::set_parent(*next, leaf);
+        leaf = std::move(next);
+    }
+
+    CHECK(leaf->get<int, fixed_string("deep")>() == 7);           // non-const scalar
+    CHECK(leaf->try_get<int, fixed_string("deep")>().is_some());  // const scalar
+    CHECK(leaf->get_or<int, fixed_string("deep")>(0) == 7);       // const scalar
+    CHECK(leaf->has<fixed_string("deep")>());                     // has_in_chain
+    CHECK_FALSE(leaf->has<fixed_string("missing")>());
+    REQUIRE(leaf->get_all<int, fixed_string("list")>().size() == 1);  // vector
+}
+
+TEST_CASE("parent chain keeps nearest value wins at deep nesting")
+{
+    constexpr size_t kDepth = 10000;
+    constexpr auto h = key_hash(fixed_string("winner"));
+
+    auto root = std::make_shared<ParseContext>();
+    detail::ParseContextWriter::set_value<int>(*root, h, 1);
+
+    std::shared_ptr<ParseContext> leaf = root;
+    for (size_t i = 0; i < kDepth; ++i)
+    {
+        auto next = std::make_shared<ParseContext>();
+        detail::ParseContextWriter::set_parent(*next, leaf);
+        leaf = std::move(next);
+    }
+    detail::ParseContextWriter::set_value<int>(*leaf, h, 2);
+
+    CHECK(leaf->get<int, fixed_string("winner")>() == 2);
+    CHECK(leaf->try_get<int, fixed_string("winner")>().unwrap() == 2);
+    CHECK(leaf->get_or<int, fixed_string("winner")>(0) == 2);
+}
+
+TEST_CASE("deep parent chain destruction is iterative")
+{
+    constexpr size_t kDepth = 20000;
+    auto root = std::make_shared<ParseContext>();
+    std::shared_ptr<ParseContext> leaf = root;
+    for (size_t i = 0; i < kDepth; ++i)
+    {
+        auto next = std::make_shared<ParseContext>();
+        detail::ParseContextWriter::set_parent(*next, leaf);
+        leaf = std::move(next);
+    }
+    CHECK(leaf.use_count() == 1);
+    root.reset();  // the leaf now sole-owns the whole chain
+    CHECK(leaf.use_count() == 1);
+    leaf.reset();  // iterative teardown; no per-level stack frame
+}
+
+TEST_CASE("shared parent chain survives one owner's destruction")
+{
+    constexpr auto h = key_hash(fixed_string("shared"));
+    auto ancestor = std::make_shared<ParseContext>();
+    detail::ParseContextWriter::set_value<int>(*ancestor, h, 42);
+
+    auto owner_a = std::make_shared<ParseContext>();
+    detail::ParseContextWriter::set_parent(*owner_a, ancestor);
+    auto owner_b = std::make_shared<ParseContext>();
+    detail::ParseContextWriter::set_parent(*owner_b, ancestor);
+
+    REQUIRE(ancestor.use_count() == 3);
+    owner_a.reset();  // must stop at the parent still shared with owner_b
+    CHECK(ancestor.use_count() == 2);
+    CHECK(owner_b->get<int, fixed_string("shared")>() == 42);
+    CHECK(ancestor->get<int, fixed_string("shared")>() == 42);
+
+    owner_b.reset();
+    CHECK(ancestor.use_count() == 1);
+    CHECK(ancestor->get<int, fixed_string("shared")>() == 42);
 }

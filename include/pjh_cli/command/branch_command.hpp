@@ -21,7 +21,16 @@ namespace pjh::cli
     {
     public:
         using BaseCommand::BaseCommand;
-        ~BranchCommand() override = default;
+
+        /// @brief Destroy the branch, tearing down the child subtree iteratively.
+        ///
+        /// Children are destroyed by walking the existing parent links rather
+        /// than one recursive stack frame per nesting level, so an arbitrarily
+        /// deep tree cannot overflow the stack.  Ordering matches the default
+        /// recursive teardown: each child subtree before its parent, siblings in
+        /// registration order.  The walk uses O(1) extra space and allocates
+        /// nothing, so it also stays safe during exception unwinding.
+        ~BranchCommand() override;
 
         BranchCommand *as_branch() noexcept override { return this; }
         const BranchCommand *as_branch() const noexcept override { return this; }

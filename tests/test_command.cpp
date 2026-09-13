@@ -18,6 +18,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 using namespace pjh::cli;
 
@@ -629,4 +630,78 @@ TEST_CASE("a rejected duplicate leaves the command usable")
     CHECK(app.find_option_by_long("bar") != nullptr);
     CHECK(app.find_option_by_short('b') != nullptr);
     CHECK(app.find_option_by_long("foo") != nullptr);
+}
+
+// ── Deep command tree: teardown must not recurse ──
+
+namespace
+{
+    /// @brief OptionDef that records its owning command's destruction order.
+    ///
+    /// Options are destroyed during the owning BaseCommand's member teardown,
+    /// which runs after that command's own destructor body, so the log mirrors
+    /// command-subtree destruction order.
+    struct OrderProbe : OptionDef
+    {
+        OrderProbe(std::vector<std::string> *log, std::string id) :
+            m_log(log), m_id(std::move(id))
+        {
+        }
+
+        ~OrderProbe() override { m_log->push_back(m_id); }
+
+        std::vector<std::string> *m_log;
+        std::string m_id;
+    };
+
+    void add_order_probe(BaseCommand &cmd, std::vector<std::string> &log, std::string id)
+    {
+        auto probe = std::make_unique<OrderProbe>(&log, std::move(id));
+        probe->set_long_name("order-probe");
+        cmd.add_option(std::move(probe));
+    }
+}  // namespace
+
+TEST_CASE("branch teardown destroys children before parents in registration order")
+{
+    std::vector<std::string> order;
+    {
+        App app("test", "1.0", "Order");
+        add_order_probe(app, order, "root");
+
+        auto &a = app.add_branch("a", "A");
+        add_order_probe(a, order, "a");
+        auto &a1 = a.add_leaf("a1", "A1");
+        add_order_probe(a1, order, "a1");
+        auto &a2 = a.add_leaf("a2", "A2");
+        add_order_probe(a2, order, "a2");
+
+        auto &b = app.add_leaf("b", "B");
+        add_order_probe(b, order, "b");
+    }
+
+    REQUIRE(order.size() == 5);
+    CHECK(order[0] == "a1");
+    CHECK(order[1] == "a2");
+    CHECK(order[2] == "a");
+    CHECK(order[3] == "b");
+    CHECK(order[4] == "root");
+}
+
+TEST_CASE("deep command tree builds, looks up and destroys iteratively")
+{
+    constexpr std::size_t kDepth = 20000;
+    App app("test", "1.0", "Deep tree");
+
+    BranchCommand *cur = &app;
+    for (std::size_t i = 0; i < kDepth; ++i)
+        cur = &cur->add_branch(std::format("c{}", i), "level");
+
+    CHECK(cur->name() == "c19999");
+    CHECK(cur->parent() != nullptr);
+
+    auto *first = app.find_subcommand("c0");
+    REQUIRE(first != nullptr);
+    CHECK(first->name() == "c0");
+    // Scope exit runs the iterative ~BranchCommand over the 20000-deep tree.
 }
