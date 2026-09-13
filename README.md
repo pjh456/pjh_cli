@@ -348,6 +348,10 @@ be installed with `console.set_terminal(...)`.
 Submitted lines share one tokenizer with Tab completion and hints: separators are
 spaces and tabs, `"..."` groups a span, a backslash escapes only `\"`, `\\`, a
 space, or a tab, and `""` is a valid empty argument.
+Completion resolves the tokens before the cursor with this same tokenizer, but the
+single token containing the cursor is bounded by scanning back over spaces/tabs
+only, so completing inside an unterminated quote or across a backslash-escaped
+separator is best-effort.
 On the raw-mode path Ctrl-C cancels the current line and prints a fresh prompt;
 Ctrl-D (or `quit`/`exit`/`q`, matched case-insensitively) ends the REPL.
 

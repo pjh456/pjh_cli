@@ -76,6 +76,15 @@ namespace pjh::cli
     /// @return Sorted, deduplicated candidates (may be empty).
     /// @throws std::bad_alloc if the candidate list cannot be allocated.
     /// @throws Any exception thrown by a registered completer is propagated.
+    ///
+    /// @note The token under @p cursor is bounded by scanning back over ASCII
+    ///       space and tab only (detail::Tokenizer::is_separator); the boundary
+    ///       is NOT quote- or escape-aware.  A leading quote or a backslash in
+    ///       the token is kept in the matched prefix (e.g. `--opt "gr` matches
+    ///       `"gr`, not `gr`), and a separator escaped with a backslash or
+    ///       enclosed in an open quote is treated as a token boundary.
+    ///       Completion inside a quoted or escaped value is best-effort and can
+    ///       differ from the tokenizer used to execute the line.
     std::vector<CompletionCandidate> complete_line(
         const BaseCommand &root,
         std::string_view line,
@@ -99,6 +108,15 @@ namespace pjh::cli
     /// @return Candidates plus the matched prefix byte length.
     /// @throws std::bad_alloc if the candidate list cannot be allocated.
     /// @throws Any exception thrown by a registered completer is propagated.
+    ///
+    /// @note The token under @p cursor is bounded by scanning back over ASCII
+    ///       space and tab only (detail::Tokenizer::is_separator); the boundary
+    ///       is NOT quote- or escape-aware.  A leading quote or a backslash in
+    ///       the token is kept in the matched prefix (e.g. `--opt "gr` matches
+    ///       `"gr`, not `gr`), and a separator escaped with a backslash or
+    ///       enclosed in an open quote is treated as a token boundary.
+    ///       Completion inside a quoted or escaped value is best-effort and can
+    ///       differ from the tokenizer used to execute the line.
     CompletionResult complete_line_result(
         const BaseCommand &root,
         std::string_view line,

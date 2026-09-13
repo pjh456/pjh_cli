@@ -945,6 +945,66 @@ TEST_CASE("complete_line_result ignores numeric short names in the head segment"
     CHECK(with_option.candidates[0].display == "-10C");
 }
 
+TEST_CASE("complete_line characterization: cursor token boundary ignores quotes")
+{
+    // Characterization of a known limitation, not expected behaviour: the
+    // cursor token is found by scanning back over separators only, so the raw
+    // token keeps its opening quote and value completion inside a quote is
+    // best-effort (see the @note on complete_line_result).  These assertions
+    // pin the current quote-blind results; a future quote-aware scan must
+    // deliberately flip them (revisit condition: the @note on
+    // complete_line_result / complete_line).
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    // `--color "gr`: the prefix is the raw `"gr` (opening quote retained), so no
+    // value candidate matches; a quote-aware scan would report prefix_len 2 and
+    // offer `green`.
+    const std::string quoted = "--color \"gr";
+    auto q = complete_line_result(app, quoted, quoted.size());
+    CHECK(q.prefix_len == 3);
+    CHECK(q.candidates.empty());
+
+    // A literal tab inside an open quote: the back-scan stops at the tab, the
+    // preceding quoted text clears the pending --color value, and name
+    // completion runs with an empty prefix, returning subcommands instead of
+    // value candidates.
+    std::string quoted_tab = "--color \"a b\t";
+    auto t = complete_line_result(app, quoted_tab, quoted_tab.size());
+    CHECK(t.prefix_len == 0);
+    REQUIRE(t.candidates.size() == 2);
+    CHECK(t.candidates[0].display == "serve");
+    CHECK(t.candidates[1].display == "server");
+}
+
+TEST_CASE(
+    "complete_line characterization: cursor token boundary ignores backslash escapes")
+{
+    // Characterization of a known limitation, not expected behaviour: the
+    // cursor back-scan treats a backslash-escaped separator as a real token
+    // boundary, so the escaped value splits and completion is lost.  The
+    // execution tokenizer yields a single value `a b`.  Revisit condition: the
+    // @note on complete_line_result / complete_line.
+    App app("test", "1.0", "Complete line");
+    app.option<fixed_string("path")>("--path", 'p', "Path")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"a b", "a c"}; });
+
+    // `--path a\ b`: the back-scan stops at the escaped space, the `a\ ` part
+    // is consumed as the pending value, and the prefix degrades to the bare
+    // `b`, so no value candidate matches.
+    const std::string escaped = "--path a\\ b";
+    auto e = complete_line_result(app, escaped, escaped.size());
+    CHECK(e.prefix_len == 1);
+    CHECK(e.candidates.empty());
+
+    // Same shape through an open double quote.
+    const std::string quoted = "--path \"a b";
+    auto q = complete_line_result(app, quoted, quoted.size());
+    CHECK(q.prefix_len == 1);
+    CHECK(q.candidates.empty());
+}
+
 TEST_CASE("scan_option_token exposes attached and next-token forms")
 {
     App app("test", "1.0", "Scan");
