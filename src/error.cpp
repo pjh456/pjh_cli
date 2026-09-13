@@ -23,6 +23,34 @@ namespace
 
 namespace pjh::cli
 {
+    std::string_view expected_type_name(ExpectedType type) noexcept
+    {
+        switch (type)
+        {
+        case ExpectedType::Integer:
+            return "integer";
+        case ExpectedType::Float:
+            return "float";
+        case ExpectedType::Bool:
+            return "bool (true/false/yes/no/1/0)";
+        case ExpectedType::Unknown:
+        case ExpectedType::Count:
+            break;
+        }
+        return {};
+    }
+
+    ExpectedType expected_type_from_string(std::string_view text) noexcept
+    {
+        if (text == "integer")
+            return ExpectedType::Integer;
+        if (text == "float")
+            return ExpectedType::Float;
+        if (text == "bool (true/false/yes/no/1/0)")
+            return ExpectedType::Bool;
+        return ExpectedType::Unknown;
+    }
+
     std::string format_error(const ErrorInfo &info)
     {
         return std::visit(
@@ -226,10 +254,19 @@ namespace pjh::cli
     }
 
     CliError ErrorFactory::type_conversion_error(
+        std::string_view name, std::string_view value, ExpectedType expected)
+    {
+        return CliError(TypeConversionError{
+            std::string(name), std::string(value),
+            std::string(expected_type_name(expected)), expected});
+    }
+
+    CliError ErrorFactory::type_conversion_error(
         std::string_view name, std::string_view value, std::string_view expected_type)
     {
         return CliError(TypeConversionError{
-            std::string(name), std::string(value), std::string(expected_type)});
+            std::string(name), std::string(value), std::string(expected_type),
+            expected_type_from_string(expected_type)});
     }
 
     CliError ErrorFactory::ambiguous_command(

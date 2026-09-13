@@ -56,12 +56,31 @@ namespace pjh::cli
         std::string arg_name;  // "file"
     };
 
+    /// @brief Stable expected-type tag for TypeConversionError.
+    ///
+    /// Append-only: never renumber or reuse an existing value.  Integer / Float /
+    /// Bool are the canonical builtin conversion targets; Unknown is the fallback
+    /// for custom Converter<T> specialisations that pass free-form expected_type
+    /// text.  Count is a sentinel: it is never stored and never passed to the
+    /// formatting helpers.
+    enum class ExpectedType : unsigned
+    {
+        Unknown = 0,  ///< Non-canonical expected_type text (custom Converter<T>).
+        Integer = 1,  ///< "integer"
+        Float = 2,    ///< "float"
+        Bool = 3,     ///< "bool (true/false/yes/no/1/0)"
+        Count = 4,    ///< Sentinel: number of enumerators; must stay last.
+    };
+
     /// @brief String value could not be converted to the expected type.
     struct TypeConversionError
     {
         std::string option_display;  // "--port" or positional arg name ("file")
         std::string raw_value;
         std::string expected_type;  // "integer", "float", "bool (…)"
+        /// Stable tag mirroring @ref expected_type for localisation.  Direct
+        /// construction must keep the two fields consistent; ErrorFactory does.
+        ExpectedType expected = ExpectedType::Unknown;
     };
 
     /// @brief Multiple commands matched the input (fuzzy match ambiguity).
@@ -170,6 +189,26 @@ namespace pjh::cli
     /// @param info Structured error payload.
     /// @return Rendered message without the "Parse Error: " prefix.
     std::string format_error(const ErrorInfo &info);
+
+    // ── ExpectedType helpers ─────────────────────────────────────────
+
+    /// @brief Canonical English display text for a builtin ExpectedType.
+    ///
+    /// Single source of truth for the builtin expected_type strings, shared by
+    /// the Converter<T> helpers and the tag-taking ErrorFactory overload.
+    /// @param type Expected-type tag.
+    /// @return "integer" / "float" / "bool (true/false/yes/no/1/0)" for the
+    ///         builtin tags; an empty view for Unknown and Count (the caller
+    ///         keeps its own free-form text).
+    std::string_view expected_type_name(ExpectedType type) noexcept;
+
+    /// @brief Best-effort tag for a free-form expected_type string.
+    ///
+    /// Recognises exactly the canonical strings produced by
+    /// expected_type_name(); every other string maps to ExpectedType::Unknown.
+    /// @param text Free-form expected_type display string.
+    /// @return Integer / Float / Bool for the canonical strings, else Unknown.
+    ExpectedType expected_type_from_string(std::string_view text) noexcept;
 
     // ── CliError ─────────────────────────────────────────────────────
 
@@ -373,6 +412,30 @@ namespace pjh::cli
 
         static CliError missing_required_arg(std::string_view name);
 
+        /// @brief Build a type-conversion error from a stable expected-type tag.
+        ///
+        /// The display string is generated from the tag, so the tag and the
+        /// expected_type text never diverge; this is the overload used by the
+        /// builtin Converter<T> helpers.
+        /// @param name     Option display or positional arg name.
+        /// @param value    Raw value that failed conversion.
+        /// @param expected Stable expected-type tag.
+        /// @return CliError rendering "invalid value '<value>' for '<name>':
+        ///         expected <expected_type_name(expected)>".
+        static CliError type_conversion_error(
+            std::string_view name, std::string_view value, ExpectedType expected);
+
+        /// @brief Build a type-conversion error from free-form display text.
+        ///
+        /// `expected_type` is authoritative and preserved byte-for-byte; the
+        /// stable tag is classified best-effort via expected_type_from_string()
+        /// (Unknown for custom text).  Custom Converter<T> specialisations use
+        /// this overload.
+        /// @param name          Option display or positional arg name.
+        /// @param value         Raw value that failed conversion.
+        /// @param expected_type Free-form expected-type display text.
+        /// @return CliError rendering "invalid value '<value>' for '<name>':
+        ///         expected <expected_type>".
         static CliError type_conversion_error(
             std::string_view name,
             std::string_view value,

@@ -18,6 +18,21 @@ namespace pjh::cli
 
     namespace detail
     {
+        /// @brief Stable expected-type tag for a Converter<T> target.
+        /// @tparam T Target type.
+        /// @return Bool for bool (checked before integral), Float for
+        ///         floating-point types, Integer otherwise.
+        template <typename T>
+        constexpr ExpectedType expected_type_tag() noexcept
+        {
+            if constexpr (std::is_same_v<T, bool>)  // must precede integral
+                return ExpectedType::Bool;
+            else if constexpr (std::floating_point<T>)
+                return ExpectedType::Float;
+            else
+                return ExpectedType::Integer;
+        }
+
         /// @brief Human-readable expected type name for TypeConversionError.
         /// @tparam T Target type.
         /// @return "bool (true/false/yes/no/1/0)" for bool, "float" for
@@ -25,12 +40,7 @@ namespace pjh::cli
         template <typename T>
         constexpr std::string_view expected_type_name() noexcept
         {
-            if constexpr (std::is_same_v<T, bool>)  // must precede integral
-                return "bool (true/false/yes/no/1/0)";
-            else if constexpr (std::floating_point<T>)
-                return "float";
-            else
-                return "integer";
+            return pjh::cli::expected_type_name(expected_type_tag<T>());
         }
 
         /// @brief Strip one optional leading '+' from @p s.
@@ -72,7 +82,7 @@ namespace pjh::cli
                     return CliResult<T>::Ok(v);
             }
             return CliResult<T>::Err(ErrorFactory::type_conversion_error(
-                display, raw, expected_type_name<T>()));
+                display, raw, expected_type_tag<T>()));
         }
 
         /// @brief Parse a floating-point number from a string using std::from_chars.
@@ -97,7 +107,7 @@ namespace pjh::cli
                     return CliResult<T>::Ok(v);
             }
             return CliResult<T>::Err(ErrorFactory::type_conversion_error(
-                display, raw, expected_type_name<T>()));
+                display, raw, expected_type_tag<T>()));
         }
 
     }  // namespace detail
@@ -214,7 +224,7 @@ namespace pjh::cli
                 detail::StringUtils::case_insensitive_equal(s, "n"))
                 return CliResult<bool>::Ok(false);
             return CliResult<bool>::Err(ErrorFactory::type_conversion_error(
-                display, s, detail::expected_type_name<bool>()));
+                display, s, detail::expected_type_tag<bool>()));
         }
     };
 

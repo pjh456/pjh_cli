@@ -7,6 +7,27 @@
 #include <string_view>
 #include <variant>
 
+namespace
+{
+    struct Widget
+    {
+    };
+}  // namespace
+
+/// @brief Custom Converter<T> used to verify the free-form string factory path.
+template <>
+struct pjh::cli::Converter<Widget>
+{
+    static auto from_string(std::string_view s, std::string_view display = {})
+        -> pjh::cli::CliResult<Widget>
+    {
+        if (s == "ok")
+            return pjh::cli::CliResult<Widget>::Ok(Widget{});
+        return pjh::cli::CliResult<Widget>::Err(
+            pjh::cli::ErrorFactory::type_conversion_error(display, s, "widget"));
+    }
+};
+
 TEST_CASE("Converter int")
 {
     using pjh::cli::Converter;
@@ -243,4 +264,78 @@ TEST_CASE("Converter int plus error keeps raw value")
     REQUIRE(info != nullptr);
     CHECK(info->raw_value == "+abc");
     CHECK(info->expected_type == "integer");
+}
+
+TEST_CASE("detail::expected_type_tag maps builtin converter targets")
+{
+    using pjh::cli::ExpectedType;
+    static_assert(pjh::cli::detail::expected_type_tag<int>() == ExpectedType::Integer);
+    static_assert(pjh::cli::detail::expected_type_tag<long>() == ExpectedType::Integer);
+    static_assert(
+        pjh::cli::detail::expected_type_tag<unsigned>() == ExpectedType::Integer);
+    static_assert(
+        pjh::cli::detail::expected_type_tag<long long>() == ExpectedType::Integer);
+    static_assert(pjh::cli::detail::expected_type_tag<float>() == ExpectedType::Float);
+    static_assert(pjh::cli::detail::expected_type_tag<double>() == ExpectedType::Float);
+    static_assert(pjh::cli::detail::expected_type_tag<bool>() == ExpectedType::Bool);
+    CHECK(true);
+}
+
+TEST_CASE("Converter errors carry a stable ExpectedType tag")
+{
+    using pjh::cli::Converter;
+    using pjh::cli::ExpectedType;
+    using pjh::cli::TypeConversionError;
+
+    auto int_r = Converter<int>::from_string("abc", "--port");
+    REQUIRE(int_r.is_err());
+    auto int_err = int_r.unwrap_err();
+    const auto *int_info = std::get_if<TypeConversionError>(&int_err.info());
+    REQUIRE(int_info != nullptr);
+    CHECK(int_info->expected == ExpectedType::Integer);
+    CHECK(int_info->expected_type == "integer");
+    CHECK(
+        std::string_view(int_err.what()) ==
+        "Parse Error: invalid value 'abc' for '--port': expected integer");
+
+    auto float_r = Converter<double>::from_string("nan", "--rate");
+    REQUIRE(float_r.is_err());
+    auto float_err = float_r.unwrap_err();
+    const auto *float_info = std::get_if<TypeConversionError>(&float_err.info());
+    REQUIRE(float_info != nullptr);
+    CHECK(float_info->expected == ExpectedType::Float);
+    CHECK(float_info->expected_type == "float");
+    CHECK(
+        std::string_view(float_err.what()) ==
+        "Parse Error: invalid value 'nan' for '--rate': expected float");
+
+    auto bool_r = Converter<bool>::from_string("bad", "--flag");
+    REQUIRE(bool_r.is_err());
+    auto bool_err = bool_r.unwrap_err();
+    const auto *bool_info = std::get_if<TypeConversionError>(&bool_err.info());
+    REQUIRE(bool_info != nullptr);
+    CHECK(bool_info->expected == ExpectedType::Bool);
+    CHECK(bool_info->expected_type == "bool (true/false/yes/no/1/0)");
+    CHECK(
+        std::string_view(bool_err.what()) ==
+        "Parse Error: invalid value 'bad' for '--flag': expected "
+        "bool (true/false/yes/no/1/0)");
+}
+
+TEST_CASE("Custom Converter specialization keeps free-form expected_type")
+{
+    using pjh::cli::Converter;
+    using pjh::cli::ExpectedType;
+    using pjh::cli::TypeConversionError;
+
+    auto r = Converter<Widget>::from_string("bad", "--w");
+    REQUIRE(r.is_err());
+    auto err = r.unwrap_err();
+    const auto *info = std::get_if<TypeConversionError>(&err.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->expected == ExpectedType::Unknown);
+    CHECK(info->expected_type == "widget");
+    CHECK(
+        std::string_view(err.what()) ==
+        "Parse Error: invalid value 'bad' for '--w': expected widget");
 }

@@ -4,6 +4,7 @@
 #include <pjh_cli/core/error.hpp>
 #include <stdexcept>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 using namespace pjh::cli;
@@ -346,4 +347,67 @@ TEST_CASE("no_command_matched format")
     auto e = ErrorFactory::no_command_matched();
     CHECK(std::string_view(e.what()) == "Parse Error: no command matched");
     CHECK(e.kind() == ErrorKind::Parse);
+}
+
+TEST_CASE("expected_type_name maps builtin tags to canonical text")
+{
+    CHECK(expected_type_name(ExpectedType::Integer) == "integer");
+    CHECK(expected_type_name(ExpectedType::Float) == "float");
+    CHECK(expected_type_name(ExpectedType::Bool) == "bool (true/false/yes/no/1/0)");
+    CHECK(expected_type_name(ExpectedType::Unknown).empty());
+    CHECK(expected_type_name(ExpectedType::Count).empty());
+}
+
+TEST_CASE("expected_type_from_string best-effort maps canonical text")
+{
+    CHECK(expected_type_from_string("integer") == ExpectedType::Integer);
+    CHECK(expected_type_from_string("float") == ExpectedType::Float);
+    CHECK(
+        expected_type_from_string("bool (true/false/yes/no/1/0)") == ExpectedType::Bool);
+    CHECK(expected_type_from_string("whatever") == ExpectedType::Unknown);
+    CHECK(expected_type_from_string("") == ExpectedType::Unknown);
+}
+
+TEST_CASE("type_conversion_error tag overload derives display text")
+{
+    auto e = ErrorFactory::type_conversion_error("--port", "abc", ExpectedType::Integer);
+    const auto *info = std::get_if<TypeConversionError>(&e.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->expected == ExpectedType::Integer);
+    CHECK(info->expected_type == "integer");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: invalid value 'abc' for '--port': expected integer");
+}
+
+TEST_CASE("type_conversion_error string overload classifies canonical text")
+{
+    auto e = ErrorFactory::type_conversion_error("--x", "v", "integer");
+    const auto *info = std::get_if<TypeConversionError>(&e.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->expected == ExpectedType::Integer);
+    CHECK(info->expected_type == "integer");
+}
+
+TEST_CASE("type_conversion_error custom display text stays Unknown")
+{
+    auto e = ErrorFactory::type_conversion_error("--x", "v", "whatever");
+    const auto *info = std::get_if<TypeConversionError>(&e.info());
+    REQUIRE(info != nullptr);
+    CHECK(info->expected == ExpectedType::Unknown);
+    CHECK(info->expected_type == "whatever");
+    CHECK(
+        std::string_view(e.what()) ==
+        "Parse Error: invalid value 'v' for '--x': expected whatever");
+}
+
+TEST_CASE("type_conversion_error tag and display text stay consistent")
+{
+    for (auto tag : {ExpectedType::Integer, ExpectedType::Float, ExpectedType::Bool})
+    {
+        auto e = ErrorFactory::type_conversion_error("--x", "v", tag);
+        const auto *info = std::get_if<TypeConversionError>(&e.info());
+        REQUIRE(info != nullptr);
+        CHECK(info->expected_type == expected_type_name(info->expected));
+    }
 }
