@@ -9,8 +9,10 @@ namespace pjh::cli
 {
     /// @brief Definition of a single positional argument.
     ///
-    /// Indexed by compile-time size_t.  The parser fills arguments in
-    /// index order (0, 1, 2, …).  Created via LeafCommand::arg<T, Index>().
+    /// Indexed by compile-time size_t and registered in strictly ascending
+    /// index order (0, 1, 2, …), so `args()[i].m_key_hash == i`.  The parser
+    /// fills positionals in that registration order.  Created via
+    /// LeafCommand::arg<T, Index>().
     struct ArgDef
     {
         std::string m_name;  ///< Display name for help / error messages (e.g. "src").

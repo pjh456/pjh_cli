@@ -705,3 +705,94 @@ TEST_CASE("deep command tree builds, looks up and destroys iteratively")
     CHECK(first->name() == "c0");
     // Scope exit runs the iterative ~BranchCommand over the 20000-deep tree.
 }
+
+TEST_CASE("non-zero first positional arg index is rejected at registration")
+{
+    LeafCommand cmd("test", "Test");
+
+    CHECK_THROWS_WITH_AS(
+        (cmd.arg<std::string, 1>("first", "")),
+        "LeafCommand::arg: positional index 1 on command 'test' is out of sequence "
+        "(expected 0)",
+        LogicError);
+    CHECK(cmd.args().empty());
+}
+
+TEST_CASE("duplicate positional arg index is rejected at registration")
+{
+    LeafCommand cmd("test", "Test");
+    cmd.arg<std::string, 0>("a", "");
+
+    CHECK_THROWS_WITH_AS(
+        (cmd.arg<std::string, 0>("b", "")),
+        "LeafCommand::arg: positional index 0 on command 'test' is out of sequence "
+        "(expected 1)",
+        LogicError);
+    REQUIRE(cmd.args().size() == 1);
+    CHECK(cmd.args()[0].m_name == "a");
+    CHECK(cmd.args()[0].m_key_hash == 0);
+}
+
+TEST_CASE("skipped positional arg index is rejected at registration")
+{
+    LeafCommand cmd("test", "Test");
+    cmd.arg<std::string, 0>("a", "");
+
+    CHECK_THROWS_WITH_AS(
+        (cmd.arg<std::string, 2>("c", "")),
+        "LeafCommand::arg: positional index 2 on command 'test' is out of sequence "
+        "(expected 1)",
+        LogicError);
+    REQUIRE(cmd.args().size() == 1);
+    CHECK(cmd.args()[0].m_name == "a");
+}
+
+TEST_CASE("oversized positional arg index is rejected at registration")
+{
+    LeafCommand cmd("test", "Test");
+
+    CHECK_THROWS_AS((cmd.arg<std::string, 42>("x", "")), LogicError);
+    CHECK(cmd.args().empty());
+}
+
+TEST_CASE("positional arg rejection leaves existing args untouched")
+{
+    LeafCommand cmd("test", "Test");
+    auto &a = cmd.arg<std::string, 0>("a", "A");
+    auto &b = cmd.arg<std::string, 1>("b", "B");
+    auto *a_addr = &a;
+    auto *b_addr = &b;
+
+    CHECK_THROWS_WITH_AS(
+        (cmd.arg<std::string, 1>("dup", "")),
+        "LeafCommand::arg: positional index 1 on command 'test' is out of sequence "
+        "(expected 2)",
+        LogicError);
+
+    REQUIRE(cmd.args().size() == 2);
+    CHECK(cmd.args()[0].m_name == "a");
+    CHECK(cmd.args()[1].m_name == "b");
+    CHECK(cmd.args()[0].m_key_hash == 0);
+    CHECK(cmd.args()[1].m_key_hash == 1);
+    CHECK(&a == a_addr);
+    CHECK(&b == b_addr);
+}
+
+TEST_CASE("sequential positional arg indices map to registration order")
+{
+    LeafCommand cmd("test", "Test");
+    cmd.arg<std::string, 0>("a", "A");
+    cmd.arg<int, 1>("b", "B");
+    cmd.arg<std::string, 2>("c", "C");
+
+    REQUIRE(cmd.args().size() == 3);
+    CHECK(cmd.args()[0].m_name == "a");
+    CHECK(cmd.args()[1].m_name == "b");
+    CHECK(cmd.args()[2].m_name == "c");
+    CHECK(cmd.args()[0].m_key_hash == 0);
+    CHECK(cmd.args()[1].m_key_hash == 1);
+    CHECK(cmd.args()[2].m_key_hash == 2);
+    CHECK(cmd.args()[0].m_value_tag == ValueTag::String);
+    CHECK(cmd.args()[1].m_value_tag == ValueTag::Int);
+    CHECK(cmd.args()[2].m_value_tag == ValueTag::String);
+}
