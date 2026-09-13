@@ -182,10 +182,12 @@ namespace pjh::cli
     /// @brief Completion candidates plus the prefix length they matched against.
     ///
     /// @c prefix_len is the byte length of the partial name/value the candidates
-    /// were filtered by.  For the inline `--opt=value` and compact `-pVALUE`
-    /// forms it is a suffix of the token under the cursor, so a caller inserting
-    /// a unique candidate appends @c candidate.display.substr(prefix_len) to the
-    /// line rather than assuming the whole trailing token is the prefix.
+    /// were filtered by.  For the inline `--opt=value`, compact `-pVALUE`, and
+    /// compact-equals `-p=VALUE` forms it is a suffix of the token under the
+    /// cursor, so a caller inserting a unique candidate appends
+    /// @c candidate.display.substr(prefix_len) to the line rather than assuming
+    /// the whole trailing token is the prefix.  A single leading `=` in the
+    /// compact form is stripped before filtering, mirroring the parser.
     struct CompletionResult
     {
         std::vector<CompletionCandidate> candidates;  ///< Sorted, deduplicated.

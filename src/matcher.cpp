@@ -43,7 +43,8 @@ namespace
     ///        the option whose value is being typed.
     ///
     /// Skips option values, handles `--opt=value`, grouped short flags and
-    /// compact `-pVALUE`, honours the `--` barrier, and descends subcommands.
+    /// compact `-pVALUE` / `-p=VALUE`, honours the `--` barrier, and descends
+    /// subcommands.
     ///
     /// @param root    Root of the command tree.
     /// @param line    Full input line.
@@ -121,6 +122,10 @@ namespace
                     {
                         scan.value_option = opt;
                         scan.prefix = token.substr(i + 1);
+                        // Mirror consume_short: strip exactly one leading '='
+                        // so -c=gr completes "gr" (and -c==x keeps "=x").
+                        if (scan.prefix.front() == '=')
+                            scan.prefix.remove_prefix(1);
                         return scan;
                     }
                     break;  // valued option without an attached value.

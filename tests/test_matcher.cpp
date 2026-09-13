@@ -803,6 +803,52 @@ TEST_CASE("complete_line_result reports the matched prefix length")
     CHECK(compact.candidates[0].display == "green");
 }
 
+TEST_CASE("complete_line completes short option value after compact equals")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto r = complete_line(app, "-c=gr", 5);
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].display == "green");
+
+    auto ancestor = complete_line(app, "serve -c=gr", 10);
+    REQUIRE(ancestor.size() == 1);
+    CHECK(ancestor[0].display == "green");
+}
+
+TEST_CASE("complete_line_result reports compact-equals prefix length")
+{
+    App app("test", "1.0", "Complete line");
+    populate_completion_app(app);
+
+    auto gr = complete_line_result(app, "-c=gr", 5);
+    CHECK(gr.prefix_len == 2);
+    REQUIRE(gr.candidates.size() == 1);
+    CHECK(gr.candidates[0].display == "green");
+
+    auto g = complete_line_result(app, "-c=g", 4);
+    CHECK(g.prefix_len == 1);
+    REQUIRE(g.candidates.size() == 1);
+    CHECK(g.candidates[0].display == "green");
+
+    auto empty = complete_line_result(app, "-c=", 3);
+    CHECK(empty.prefix_len == 0);
+    REQUIRE(empty.candidates.size() == 3);
+    CHECK(empty.candidates[0].display == "blue");
+    CHECK(empty.candidates[1].display == "green");
+    CHECK(empty.candidates[2].display == "red");
+
+    auto literal = complete_line_result(app, "-c==x", 5);
+    CHECK(literal.prefix_len == 2);
+    CHECK(literal.candidates.empty());
+
+    auto grouped = complete_line_result(app, "-vc=gr", 6);
+    CHECK(grouped.prefix_len == 2);
+    REQUIRE(grouped.candidates.size() == 1);
+    CHECK(grouped.candidates[0].display == "green");
+}
+
 TEST_CASE("complete_line completes subcommand after trailing space")
 {
     App app("test", "1.0", "Complete line");

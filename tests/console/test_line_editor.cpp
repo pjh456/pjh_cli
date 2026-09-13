@@ -137,6 +137,28 @@ TEST_CASE("LineEditor Tab completes compact short option value")
     CHECK(line == "-cgreen ");
 }
 
+TEST_CASE("LineEditor Tab completes compact-equals short option value")
+{
+    ScriptedTerminal term;
+    chars(term, "-c=gr");
+    term.keys.push_back({KeyEvent::Code::Tab, 0});
+    term.keys.push_back({KeyEvent::Code::Enter, 0});
+
+    CompletionFn complete = [](std::string_view line, std::size_t)
+    {
+        CompletionResult out;
+        if (line == "-c=gr")
+            out.candidates.push_back({"green"});
+        out.prefix_len = 2;  // "gr" after the stripped '='.
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "-c=green ");
+}
+
 TEST_CASE("LineEditor Tab completes inline long option value from empty prefix")
 {
     ScriptedTerminal term;
