@@ -191,7 +191,8 @@ namespace pjh::cli
         const BranchCommand &parent,
         std::string_view input,
         int max_distance,
-        Visibility mode)
+        Visibility mode,
+        std::vector<FuzzyMatch> *disabled_out)
     {
         std::vector<FuzzyMatch> results;
         // Allocation-free upper bound: at most one match per child.
@@ -199,7 +200,13 @@ namespace pjh::cli
 
         for (auto &sub_ptr : parent.subcommands())
         {
-            if (!detail::is_visible_and_enabled(*sub_ptr, mode))
+            // Exactly one is_enabled() call per child, in tree order; the
+            // visibility filter runs next so hidden children (including
+            // hidden + disabled) are never collected.
+            const bool enabled = sub_ptr->is_enabled();
+            if ((sub_ptr->visibility() & mode) == Visibility::Hidden)
+                continue;
+            if (!enabled && disabled_out == nullptr)
                 continue;
             int best_d = std::numeric_limits<int>::max();
             auto consider = [&](std::string_view cand)
@@ -217,7 +224,12 @@ namespace pjh::cli
             consider(sub_ptr->name());
             for (const auto &a : sub_ptr->aliases()) consider(a);
             if (best_d <= max_distance)
-                results.push_back({sub_ptr.get(), best_d});
+            {
+                if (enabled)
+                    results.push_back({sub_ptr.get(), best_d});
+                else
+                    disabled_out->push_back({sub_ptr.get(), best_d});
+            }
         }
 
         std::ranges::stable_sort(results, {}, &FuzzyMatch::distance);

@@ -29,14 +29,19 @@ namespace pjh::cli
         int distance;          ///< Levenshtein distance (lower = closer).
     };
 
-    /// @brief Find subcommands whose name fuzzily matches @p input.
+    /// @brief Find visible + enabled subcommands whose name fuzzily matches @p input.
     ///
     /// Enumerates all direct children of @p parent, applies the visibility
-    /// + enabled filter, then computes edit_distance() against each name.
-    /// Results within @p max_distance are returned sorted by distance.
-    /// Names and aliases whose length differs from @p input by more than
-    /// @p max_distance are rejected without running the distance (necessary
-    /// condition; the accepted set is unchanged).
+    /// filter and the enabled filter, then computes edit_distance() against
+    /// each name.  Enabled results within @p max_distance are returned sorted
+    /// by distance.  Names and aliases whose length differs from @p input by
+    /// more than @p max_distance are rejected without running the distance
+    /// (necessary condition; the accepted set is unchanged).
+    ///
+    /// Visible-but-disabled children never appear in the returned vector; when
+    /// @p disabled_out is non-null they are collected there instead.  Hidden
+    /// children (including hidden + disabled) are filtered before collection
+    /// and are never reported in either place.
     ///
     /// Read-only: @p parent is not mutated.  The returned FuzzyMatch::command
     /// pointers are non-owning aliases into the live command tree (valid only
@@ -47,13 +52,20 @@ namespace pjh::cli
     /// @param input        User input (potentially misspelled).
     /// @param max_distance  Max edit distance to accept (default 3).
     /// @param mode         Visibility filter (default Both).
-    /// @return Sorted vector of FuzzyMatch results (empty if none found).
-    /// @throws std::bad_alloc if the result vector cannot be allocated.
+    /// @param disabled_out  When non-null, appended with visible-but-disabled
+    ///                      children that fall within @p max_distance (hidden
+    ///                      children are never reported).  Null (default)
+    ///                      keeps the enabled-only behavior and skips distance
+    ///                      computation for disabled children.
+    /// @return Sorted vector of FuzzyMatch results for visible + enabled
+    ///         children (empty if none found).
+    /// @throws std::bad_alloc if a result vector cannot be allocated.
     std::vector<FuzzyMatch> fuzzy_find_subcommands(
         const BranchCommand &parent,
         std::string_view input,
         int max_distance = 3,
-        Visibility mode = Visibility::Both);
+        Visibility mode = Visibility::Both,
+        std::vector<FuzzyMatch> *disabled_out = nullptr);
 
     /// @brief Sorted list of all visible + enabled subcommand names under @p cmd.
     /// @param cmd  Parent branch command.

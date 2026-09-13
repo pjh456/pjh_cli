@@ -1,13 +1,16 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "test_helpers.hpp"
 
@@ -369,4 +372,59 @@ TEST_CASE("ParseFinalizer rejects null command")
 {
     ParseContext ctx;
     CHECK_THROWS_AS((void)ParseFinalizer::finalize(nullptr, std::move(ctx)), LogicError);
+}
+
+TEST_CASE("Parser fuzzy typo of a disabled command reports disabled")
+{
+    App app("test", "1.0", "Err msg");
+    app.add_branch("oldcmd", "Deprecated").enabled([] { return false; });
+    Argv argv{"test", "oldcm"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(std::holds_alternative<CommandDisabledError>(r.unwrap_err().info()));
+    CHECK(
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: command 'oldcmd' is not available"));
+}
+
+TEST_CASE("Parser fuzzy prefers enabled candidate over disabled")
+{
+    App app("test", "1.0", "Err msg");
+    app.add_leaf("server", "Server");
+    app.add_leaf("serve", "Serve").enabled([] { return false; });
+    Argv argv{"test", "servr"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().matched_command()->name() == "server");
+}
+
+TEST_CASE("Parser fuzzy miss with multiple disabled candidates is unknown")
+{
+    App app("test", "1.0", "Err msg");
+    app.add_leaf("start", "Start").enabled([] { return false; });
+    app.add_leaf("stop", "Stop").enabled([] { return false; });
+    Argv argv{"test", "st"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    CHECK(std::holds_alternative<UnknownCommandError>(r.unwrap_err().info()));
+    CHECK_FALSE(std::holds_alternative<CommandDisabledError>(r.unwrap_err().info()));
+    CHECK(
+        r.unwrap_err().what() == std::string_view("Parse Error: unknown command: 'st'"));
+}
+
+TEST_CASE("Parser fuzzy ambiguity ignores disabled candidates")
+{
+    App app("test", "1.0", "Err msg");
+    app.add_leaf("start", "Start");
+    app.add_leaf("stop", "Stop");
+    app.add_leaf("stat", "Stat").enabled([] { return false; });
+    Argv argv{"test", "st"};
+    auto r = app.parse_fuzzy(argv.argc(), argv.argv());
+    CHECK(r.is_err());
+    auto &err = r.unwrap_err();
+    REQUIRE(std::holds_alternative<AmbiguousCommandError>(err.info()));
+    const auto &e = std::get<AmbiguousCommandError>(err.info());
+    CHECK(
+        std::find(e.candidates.begin(), e.candidates.end(), "stat") ==
+        e.candidates.end());
 }

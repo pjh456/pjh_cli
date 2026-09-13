@@ -69,7 +69,8 @@ static_assert(
         const BranchCommand &,
         std::string_view,
         int,
-        Visibility>,
+        Visibility,
+        std::vector<FuzzyMatch> *>,
     "fuzzy_find_subcommands must accept a const BranchCommand");
 
 TEST_CASE("edit_distance")
@@ -386,12 +387,12 @@ TEST_CASE("find_subcommand_match reports ambiguity candidates")
     app.add_leaf("start", "Start");
     app.add_leaf("stop", "Stop");
 
-    bool disabled = false;
+    const BaseCommand *disabled = nullptr;
     std::vector<std::string> ambiguous;
     auto *m =
         SubcommandResolver::find_subcommand_match(app, "st", 3, disabled, ambiguous);
     CHECK(m == nullptr);
-    CHECK_FALSE(disabled);
+    CHECK(disabled == nullptr);
     REQUIRE(ambiguous.size() == 2);
     CHECK(ambiguous[0] == "stop");
     CHECK(ambiguous[1] == "start");
@@ -1127,4 +1128,51 @@ TEST_CASE("complete_line offers all values after a tab-separated valued option")
     CHECK(r[0].display == "blue");
     CHECK(r[1].display == "green");
     CHECK(r[2].display == "red");
+}
+
+TEST_CASE("fuzzy_find_subcommands reports disabled candidates via out parameter")
+{
+    App app("test", "1.0", "Fuzzy disabled");
+    app.add_leaf("secret", "Secret").enabled([] { return false; });
+    app.add_leaf("hush", "Hush")
+        .enabled([] { return false; })
+        .set_visibility(Visibility::Hidden);
+
+    // Default (no out-param): disabled children are skipped entirely.
+    CHECK(fuzzy_find_subcommands(app, "secret", 2).empty());
+
+    std::vector<FuzzyMatch> disabled;
+    auto matches = fuzzy_find_subcommands(app, "secret", 2, Visibility::Both, &disabled);
+    CHECK(matches.empty());
+    REQUIRE(disabled.size() == 1);
+    CHECK(disabled[0].command->name() == "secret");
+    CHECK(disabled[0].distance == 0);
+}
+
+TEST_CASE("find_subcommand_match reports fuzzy disabled candidate")
+{
+    App app("test", "1.0", "Resolver disabled");
+    app.add_leaf("oldcmd", "Deprecated").enabled([] { return false; });
+
+    const BaseCommand *disabled = nullptr;
+    std::vector<std::string> ambiguous;
+    auto *m =
+        SubcommandResolver::find_subcommand_match(app, "oldcm", 3, disabled, ambiguous);
+    CHECK(m == nullptr);
+    REQUIRE(disabled != nullptr);
+    CHECK(disabled->name() == "oldcmd");
+    CHECK(ambiguous.empty());
+}
+
+TEST_CASE("unknown_subcommand excludes disabled commands from suggestions")
+{
+    App app("test", "1.0", "Suggestion filter");
+    app.add_leaf("server", "Server");
+    app.add_leaf("secret", "Secret").enabled([] { return false; });
+
+    CliError err = SubcommandResolver::unknown_subcommand(app, "secre");
+    const auto &e = std::get<UnknownCommandError>(err.info());
+    CHECK(
+        std::find(e.suggestions.begin(), e.suggestions.end(), "secret") ==
+        e.suggestions.end());
 }

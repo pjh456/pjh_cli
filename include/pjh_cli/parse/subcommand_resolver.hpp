@@ -44,32 +44,36 @@ namespace pjh::cli
         /// @brief Find a subcommand by name, trying exact then fuzzy match.
         ///
         /// Exact name match is attempted first (including aliases).  If the
-        /// exact match is disabled, @p out_disabled is set to true and
-        /// nullptr is returned.  When no exact match is found and
+        /// exact match is disabled, @p out_disabled is set to that command
+        /// and nullptr is returned.  When no exact match is found and
         /// @p max_fuzzy_distance > 0, fuzzy_find_subcommands() is used with
-        /// a Levenshtein distance threshold.  Only when exactly one candidate
-        /// falls within the threshold is it returned; when more than one
-        /// candidate does, @p out_ambiguous is appended with the candidate
-        /// command names and nullptr is returned.
+        /// a Levenshtein distance threshold.  Only when exactly one enabled
+        /// candidate falls within the threshold is it returned; when more than
+        /// one enabled candidate does, @p out_ambiguous is appended with the
+        /// candidate command names and nullptr is returned.  When no enabled
+        /// candidate matches but exactly one visible disabled command does,
+        /// @p out_disabled is set to that disabled command.
         ///
         /// @param cmd                Parent BranchCommand to search.
         /// @param name               User-supplied subcommand name.
         /// @param max_fuzzy_distance  Max edit distance (0 = exact only).
-        /// @param out_disabled       Set to true if an exact match was found
-        ///                           but is disabled.
+        /// @param out_disabled       Set to the matched command when it is
+        ///                           disabled (exact or unique fuzzy hit);
+        ///                           reset to nullptr otherwise.
         /// @param out_ambiguous      Appended with the candidate command names
         ///                           (closest first) when more than one
         ///                           visible+enabled child is within
         ///                           @p max_fuzzy_distance; left untouched
-        ///                           otherwise.
+        ///                           otherwise.  Disabled candidates are never
+        ///                           included.
         /// @return Pointer to the matched BaseCommand, or nullptr.  A
-        ///         non-empty @p out_ambiguous or true @p out_disabled also
+        ///         non-empty @p out_ambiguous or non-null @p out_disabled also
         ///         yields nullptr.
         static BaseCommand *find_subcommand_match(
             BranchCommand &cmd,
             std::string_view name,
             int max_fuzzy_distance,
-            bool &out_disabled,
+            const BaseCommand *&out_disabled,
             std::vector<std::string> &out_ambiguous);
 
         /// @brief Build an unknown-command error with fuzzy suggestions.
@@ -101,7 +105,9 @@ namespace pjh::cli
         /// @param double_dash        Whether we have already seen '--'.
         /// @return Ok with .matched = true on match, Ok with .matched = false
         ///         when no match found, Err(command_disabled) if the exact
-        ///         match is disabled, or Err(ambiguous_command) when more
+        ///         match is disabled or a unique fuzzy hit is a visible
+        ///         disabled command (the error names the disabled command's
+        ///         canonical name), or Err(ambiguous_command) when more
         ///         than one fuzzy candidate is within threshold (the
         ///         candidate list is carried in
         ///         AmbiguousCommandError::candidates, closest first).

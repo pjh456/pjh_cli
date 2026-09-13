@@ -20,34 +20,44 @@ namespace pjh::cli
     /// @brief Find a subcommand by name, trying exact then fuzzy match.
     ///
     /// Exact name match is attempted first (including aliases).  If the
-    /// exact match is disabled, @p out_disabled is set to true and nullptr
-    /// is returned.  When no exact match is found and @p max_fuzzy_distance
-    /// > 0, fuzzy_find_subcommands() is used; a unique candidate is returned,
-    /// while several candidates are appended to @p out_ambiguous.
+    /// exact match is disabled, @p out_disabled is set to the matched command
+    /// and nullptr is returned.  When no exact match is found and
+    /// @p max_fuzzy_distance > 0, fuzzy_find_subcommands() is used; a unique
+    /// enabled candidate is returned, while several enabled candidates are
+    /// appended to @p out_ambiguous.  When no enabled candidate matches but
+    /// exactly one visible disabled command does, @p out_disabled is set to
+    /// that command.
     BaseCommand *SubcommandResolver::find_subcommand_match(
         BranchCommand &cmd,
         std::string_view name,
         int max_fuzzy_distance,
-        bool &out_disabled,
+        const BaseCommand *&out_disabled,
         std::vector<std::string> &out_ambiguous)
     {
+        out_disabled = nullptr;
         auto *exact = cmd.find_subcommand(name);
         if (exact)
         {
             if (exact->is_enabled())
                 return exact;
-            out_disabled = true;
+            out_disabled = exact;
             return nullptr;
         }
 
         if (max_fuzzy_distance > 0)
         {
-            auto fuzzy =
-                fuzzy_find_subcommands(cmd, name, max_fuzzy_distance, Visibility::Both);
+            std::vector<FuzzyMatch> disabled;
+            auto fuzzy = fuzzy_find_subcommands(
+                cmd, name, max_fuzzy_distance, Visibility::Both, &disabled);
             if (fuzzy.size() == 1)
                 return fuzzy[0].command;
             if (fuzzy.size() > 1)
+            {
                 for (const auto &m : fuzzy) out_ambiguous.push_back(m.command->name());
+                return nullptr;
+            }
+            if (disabled.size() == 1)
+                out_disabled = disabled[0].command;
         }
 
         return nullptr;
@@ -83,13 +93,14 @@ namespace pjh::cli
             return CliResult<SubcommandResult>::Ok(SubcommandResult{});
 
         auto *branch = cmd->as_branch();
-        bool disabled = false;
+        const BaseCommand *disabled = nullptr;
         std::vector<std::string> ambiguous;
         auto *sub =
             find_subcommand_match(*branch, a, max_fuzzy_distance, disabled, ambiguous);
 
         if (disabled)
-            return CliResult<SubcommandResult>::Err(ErrorFactory::command_disabled(a));
+            return CliResult<SubcommandResult>::Err(
+                ErrorFactory::command_disabled(disabled->name()));
 
         if (!ambiguous.empty())
             return CliResult<SubcommandResult>::Err(
