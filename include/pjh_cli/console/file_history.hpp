@@ -35,6 +35,7 @@ namespace pjh::cli
         ///                     memory and the file is rewritten.
         explicit FileHistory(std::filesystem::path path, std::size_t max_entries = 0);
 
+        /// @note Best-effort save(); never throws (allocation failures are swallowed).
         ~FileHistory() override;
 
         /// @brief Rewrite the backing file from the retained entries.

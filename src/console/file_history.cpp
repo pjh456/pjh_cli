@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iterator>
+#include <new>
 #include <pjh_cli/console/file_history.hpp>
 #include <utility>
 #include <vector>
@@ -69,7 +70,17 @@ namespace pjh::cli
         load();
     }
 
-    FileHistory::~FileHistory() { (void)save(); }
+    FileHistory::~FileHistory()
+    {
+        try
+        {
+            (void)save();
+        }
+        catch (...)
+        {
+            // Best-effort flush: a noexcept destructor must never terminate (e.g. OOM).
+        }
+    }
 
     bool FileHistory::insert(std::string line, bool &trimmed)
     {
@@ -118,9 +129,13 @@ namespace pjh::cli
         {
             return write_lines(m_path, m_lines);
         }
+        catch (const std::bad_alloc &)
+        {
+            throw;  // OOM is not an I/O failure; the documented contract allows it.
+        }
         catch (...)
         {
-            return false;
+            return false;  // I/O failure: silent, non-fatal.
         }
     }
 
