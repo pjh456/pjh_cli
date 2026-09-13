@@ -1,7 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_RING_BUFFER_HISTORY_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_RING_BUFFER_HISTORY_HPP
 
-#include <deque>
+#include <pjh_cli/console/detail/history_storage.hpp>
 #include <pjh_cli/console/history.hpp>
 #include <string>
 
@@ -30,9 +30,7 @@ namespace pjh::cli
         size_t size() const noexcept override;
 
     private:
-        size_t m_max_size;
-        std::deque<std::string> m_lines;
-        size_t m_cursor = 0;
+        detail::HistoryStorage m_storage;
     };
 
 }  // namespace pjh::cli

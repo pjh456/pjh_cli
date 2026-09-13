@@ -2,8 +2,8 @@
 #define INCLUDE_PJH_CLI_CONSOLE_FILE_HISTORY_HPP
 
 #include <cstddef>
-#include <deque>
 #include <filesystem>
+#include <pjh_cli/console/detail/history_storage.hpp>
 #include <pjh_cli/console/history.hpp>
 #include <string>
 
@@ -54,21 +54,14 @@ namespace pjh::cli
         const std::filesystem::path &path() const noexcept { return m_path; }
 
         /// @brief Retained-entry cap; 0 means unlimited.
-        size_t max_entries() const noexcept { return m_max_entries; }
+        size_t max_entries() const noexcept { return m_storage.max_entries(); }
 
     private:
-        /// @brief Store @p line in memory, applying empty/duplicate/cap rules.
-        /// @return true if the line was stored (not empty/duplicate).
-        /// @param[out] trimmed  True when the cap evicted the oldest entry.
-        bool insert(std::string line, bool &trimmed);
-
         /// @brief Read the file and seed memory (normalizing if needed).
         void load();
 
         std::filesystem::path m_path;
-        size_t m_max_entries = 0;
-        std::deque<std::string> m_lines;
-        size_t m_cursor = 0;
+        detail::HistoryStorage m_storage;
     };
 
 }  // namespace pjh::cli

@@ -1,3 +1,4 @@
+#include <deque>
 #include <fstream>
 #include <iterator>
 #include <new>
@@ -63,7 +64,7 @@ namespace pjh::cli
     using Option = pjh::result::Option<std::string>;
 
     FileHistory::FileHistory(std::filesystem::path path, std::size_t max_entries) :
-        m_path(std::move(path)), m_max_entries(max_entries)
+        m_path(std::move(path)), m_storage(max_entries)
     {
         load();
     }
@@ -80,33 +81,15 @@ namespace pjh::cli
         }
     }
 
-    bool FileHistory::insert(std::string line, bool &trimmed)
-    {
-        trimmed = false;
-        if (line.empty())
-            return false;
-        if (!m_lines.empty() && m_lines.back() == line)
-            return false;
-        if (m_max_entries != 0 && m_lines.size() == m_max_entries)
-        {
-            m_lines.pop_front();
-            trimmed = true;
-        }
-        m_lines.push_back(std::move(line));
-        m_cursor = m_lines.size();
-        return true;
-    }
-
     void FileHistory::load()
     {
         bool changed = false;
         for (auto &line : read_lines(m_path))
         {
-            bool trimmed = false;
-            if (!insert(std::move(line), trimmed))
-                changed = true;  // blank or duplicate line in the file
-            if (trimmed)
-                changed = true;  // cap dropped an old entry
+            // Ignored (blank/duplicate) or trimmed entries mean the file must be
+            // normalized to the retained window.
+            if (m_storage.push(std::move(line)) != detail::HistoryInsert::Stored)
+                changed = true;
         }
         if (changed)
             (void)save();  // normalize the file to the retained window
@@ -114,10 +97,11 @@ namespace pjh::cli
 
     void FileHistory::push(std::string line)
     {
-        bool trimmed = false;
-        if (!insert(std::move(line), trimmed))
+        const auto result = m_storage.push(std::move(line));
+        if (result == detail::HistoryInsert::Ignored)
             return;
-        if (trimmed || !append_line(m_path, m_lines.back()))
+        if (result == detail::HistoryInsert::StoredAndTrimmed ||
+            !append_line(m_path, m_storage.lines().back()))
             (void)save();  // rewrite on trim, or repair a failed append
     }
 
@@ -125,7 +109,7 @@ namespace pjh::cli
     {
         try
         {
-            return write_lines(m_path, m_lines);
+            return write_lines(m_path, m_storage.lines());
         }
         catch (const std::bad_alloc &)
         {
@@ -139,32 +123,16 @@ namespace pjh::cli
 
     void FileHistory::clear()
     {
-        m_lines.clear();
-        m_cursor = 0;
+        m_storage.clear();
         (void)truncate_file(m_path);
     }
 
-    auto FileHistory::prev() -> Option
-    {
-        if (m_lines.empty() || m_cursor == 0)
-            return Option::None();
-        --m_cursor;
-        return Option::Some(m_lines[m_cursor]);
-    }
+    auto FileHistory::prev() -> Option { return m_storage.prev(); }
 
-    auto FileHistory::next() -> Option
-    {
-        if (m_lines.empty() || m_cursor >= m_lines.size() - 1)
-        {
-            m_cursor = m_lines.size();
-            return Option::None();
-        }
-        ++m_cursor;
-        return Option::Some(m_lines[m_cursor]);
-    }
+    auto FileHistory::next() -> Option { return m_storage.next(); }
 
-    void FileHistory::reset_cursor() { m_cursor = m_lines.size(); }
+    void FileHistory::reset_cursor() { m_storage.reset_cursor(); }
 
-    size_t FileHistory::size() const noexcept { return m_lines.size(); }
+    size_t FileHistory::size() const noexcept { return m_storage.size(); }
 
 }  // namespace pjh::cli
