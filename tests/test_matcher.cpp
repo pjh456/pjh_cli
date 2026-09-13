@@ -3,7 +3,9 @@
 #include <initializer_list>
 #include <iostream>
 #include <pjh_cli/app.hpp>
+#include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/base_command.hpp>
+#include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
@@ -836,6 +838,74 @@ TEST_CASE("complete_line_result reports compact-equals prefix length")
     CHECK(grouped.prefix_len == 2);
     REQUIRE(grouped.candidates.size() == 1);
     CHECK(grouped.candidates[0].display == "green");
+}
+
+TEST_CASE("scan_option_token exposes attached and next-token forms")
+{
+    App app("test", "1.0", "Scan");
+    populate_completion_app(app);
+
+    auto port_attached = detail::scan_option_token(app, "--color=gr");
+    CHECK(port_attached.option != nullptr);
+    CHECK(port_attached.has_attached);
+    CHECK(port_attached.attached == "gr");
+    CHECK_FALSE(port_attached.needs_next_token);
+    CHECK_FALSE(port_attached.compact_value);
+
+    auto long_empty = detail::scan_option_token(app, "--color=");
+    CHECK(long_empty.has_attached);
+    CHECK(long_empty.attached.empty());
+
+    auto long_next = detail::scan_option_token(app, "--color");
+    CHECK(long_next.option != nullptr);
+    CHECK(long_next.needs_next_token);
+    CHECK_FALSE(long_next.has_attached);
+
+    auto compact = detail::scan_option_token(app, "-cgr");
+    CHECK(compact.option != nullptr);
+    CHECK(compact.has_attached);
+    CHECK(compact.compact_value);
+    CHECK(compact.attached == "gr");
+    CHECK_FALSE(compact.needs_next_token);
+
+    auto compact_eq = detail::scan_option_token(app, "-c=gr");
+    CHECK(compact_eq.has_attached);
+    CHECK(compact_eq.attached == "gr");
+
+    auto compact_literal = detail::scan_option_token(app, "-c==x");
+    CHECK(compact_literal.has_attached);
+    CHECK(compact_literal.attached == "=x");
+
+    auto compact_empty = detail::scan_option_token(app, "-c=");
+    CHECK(compact_empty.has_attached);
+    CHECK(compact_empty.attached.empty());
+
+    auto short_next = detail::scan_option_token(app, "-c");
+    CHECK(short_next.option != nullptr);
+    CHECK(short_next.needs_next_token);
+    CHECK_FALSE(short_next.has_attached);
+
+    auto flag = detail::scan_option_token(app, "-v");
+    CHECK(flag.option == nullptr);
+    CHECK_FALSE(flag.has_attached);
+    CHECK_FALSE(flag.needs_next_token);
+    CHECK_FALSE(flag.compact_value);
+}
+
+TEST_CASE("detail::is_subcommand_of matches name and alias only")
+{
+    App app("test", "1.0", "Sub");
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.alias("srv");
+    app.add_leaf("server", "Server");
+
+    CHECK(detail::is_subcommand_of(app, "serve"));
+    CHECK(detail::is_subcommand_of(app, "srv"));
+    CHECK(detail::is_subcommand_of(app, "server"));
+    CHECK_FALSE(detail::is_subcommand_of(app, "ser"));
+    CHECK_FALSE(detail::is_subcommand_of(app, "nope"));
+
+    CHECK_FALSE(detail::is_subcommand_of(serve, "serve"));
 }
 
 TEST_CASE("complete_line completes subcommand after trailing space")

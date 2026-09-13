@@ -96,6 +96,21 @@ namespace pjh::cli::detail
         return true;
     }
 
+    /// @brief True when @p tok exactly names or aliases a direct subcommand of
+    ///        @p cmd.
+    ///
+    /// Used to stop greedy repeatable consumption at a command boundary so a
+    /// following subcommand name is not swallowed.
+    ///
+    /// @param cmd  Command whose direct children are consulted.
+    /// @param tok  Token to match against child names and aliases.
+    /// @return true when @p tok names or aliases a direct subcommand.
+    inline bool is_subcommand_of(const BaseCommand &cmd, std::string_view tok) noexcept
+    {
+        const auto *branch = cmd.as_branch();
+        return branch != nullptr && branch->find_subcommand(tok) != nullptr;
+    }
+
     /// @brief One option reachable from a command, with shadow flags.
     ///
     /// `long_shadowed`/`short_shadowed` mark a name component claimed by a

@@ -88,48 +88,17 @@ namespace
                     scan.command = sub;
         }
 
-        // Interpret the token under the cursor.
-        if (token.size() >= 2 && token[0] == '-' && token[1] == '-')
+        // Interpret the token under the cursor with the shared scanner, so the
+        // attached-value grammar (including the short form's single '=' strip)
+        // lives in exactly one place.
+        if (token.size() >= 2 && token[0] == '-')
         {
-            auto lo = pjh::cli::detail::Tokenizer::parse_long_option(token);
-            const auto *opt =
-                pjh::cli::detail::find_option_by_long_in_chain(*scan.command, lo.name);
-            if (!opt && lo.is_negation)
-                opt = pjh::cli::detail::find_option_by_long_in_chain(
-                    *scan.command, lo.negated_name);
-            if (opt && lo.has_equals && opt->has_value())
+            auto info = pjh::cli::detail::scan_option_token(*scan.command, token);
+            if (info.option && info.has_attached)
             {
-                scan.value_option = opt;
-                scan.prefix = lo.value;
+                scan.value_option = info.option;
+                scan.prefix = info.attached;
                 return scan;
-            }
-            scan.value_option = nullptr;
-            scan.prefix = token;
-            return scan;
-        }
-
-        if (token.size() >= 3 && token[0] == '-' && token[1] != '-')
-        {
-            for (std::size_t i = 1; i < token.size(); ++i)
-            {
-                const auto *opt = pjh::cli::detail::find_option_by_short_in_chain(
-                    *scan.command, token[i]);
-                if (!opt)
-                    break;
-                if (opt->has_value())
-                {
-                    if (i + 1 < token.size())
-                    {
-                        scan.value_option = opt;
-                        scan.prefix = token.substr(i + 1);
-                        // Mirror consume_short: strip exactly one leading '='
-                        // so -c=gr completes "gr" (and -c==x keeps "=x").
-                        if (scan.prefix.front() == '=')
-                            scan.prefix.remove_prefix(1);
-                        return scan;
-                    }
-                    break;  // valued option without an attached value.
-                }
             }
             scan.value_option = nullptr;
             scan.prefix = token;

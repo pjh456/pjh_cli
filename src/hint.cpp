@@ -120,13 +120,6 @@ namespace pjh::cli
             }
             return count == 0 ? 0 : total + count - 1;
         }
-
-        /// @brief True when @p tok exactly names/aliases a direct subcommand.
-        bool is_subcommand_of(const BaseCommand &cmd, std::string_view tok) noexcept
-        {
-            const auto *branch = cmd.as_branch();
-            return branch != nullptr && branch->find_subcommand(tok) != nullptr;
-        }
     }
 
     std::string HintBuilder::option_type_name(const OptionDef &opt)
@@ -172,7 +165,7 @@ namespace pjh::cli
                     {
                         while (i + 1 < tokens.tokens.size() &&
                                !detail::is_option_flag(tokens.tokens[i + 1]) &&
-                               !is_subcommand_of(*cmd, tokens.tokens[i + 1]))
+                               !detail::is_subcommand_of(*cmd, tokens.tokens[i + 1]))
                             ++i;
                     }
                 }

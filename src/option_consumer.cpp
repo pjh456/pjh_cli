@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <format>
+#include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/matcher.hpp>
 #include <pjh_cli/core/error.hpp>
@@ -17,46 +18,6 @@
 
 namespace
 {
-    /// @brief True when @p tok exactly names/aliases a direct subcommand of
-    ///        @p cmd.  Used to stop greedy repeatable consumption at a command
-    ///        boundary so a following subcommand name is not swallowed.
-    bool is_subcommand_token(
-        const pjh::cli::BaseCommand &cmd, std::string_view tok) noexcept
-    {
-        const auto *branch = cmd.as_branch();
-        return branch != nullptr && branch->find_subcommand(tok) != nullptr;
-    }
-
-    /// @brief A resolved option plus how many parent hops away its declaring
-    ///        command is (0 == the current command).
-    struct OptionMatch
-    {
-        const pjh::cli::OptionDef *opt = nullptr;
-        size_t depth = 0;
-    };
-
-    /// @brief Find @p name on @p cmd or its nearest ancestor declaring it.
-    OptionMatch find_option_long_in_chain(
-        const pjh::cli::BaseCommand &cmd, std::string_view name) noexcept
-    {
-        size_t depth = 0;
-        for (const auto *c = &cmd; c != nullptr; c = c->parent(), ++depth)
-            if (const auto *opt = c->find_option_by_long(name))
-                return {opt, depth};
-        return {};
-    }
-
-    /// @brief Find short option @p ch on @p cmd or its nearest ancestor.
-    OptionMatch find_option_short_in_chain(
-        const pjh::cli::BaseCommand &cmd, char ch) noexcept
-    {
-        size_t depth = 0;
-        for (const auto *c = &cmd; c != nullptr; c = c->parent(), ++depth)
-            if (const auto *opt = c->find_option_by_short(ch))
-                return {opt, depth};
-        return {};
-    }
-
     /// @brief Maximum Levenshtein distance for a long-option suggestion.
     ///
     /// 2 (not the subcommand precedent's 3): option names are short, so a
@@ -70,7 +31,8 @@ namespace
 
     /// @brief Long-option displays near @p name on @p cmd or its ancestors.
     ///
-    /// Walks the same current→ancestor chain as find_option_long_in_chain(),
+    /// Walks the same current→ancestor chain as
+    /// find_option_by_long_in_chain_with_depth(),
     /// keeps options whose declaring command is visible+enabled, and returns
     /// "--name" displays within k_suggestion_distance, closest first, capped at
     /// k_max_suggestions.  Options have no aliases, so one candidate per
@@ -141,6 +103,38 @@ namespace
         }
         return c != nullptr ? *c : ctx;
     }
+
+    /// @brief Greedily consume following tokens as values of a repeatable option.
+    ///
+    /// Stops at end of input, at an option-looking token (is_option_flag), or at
+    /// a direct subcommand name of @p cmd (so a following subcommand is not
+    /// swallowed).  Writes each consumed value via ValueWriter.
+    ///
+    /// @param cmd    Command in scope, used for the subcommand stop predicate.
+    /// @param owner  Context of the option's declaring command.
+    /// @param opt    The repeatable option being filled.
+    /// @param i      Index of the last consumed token; advanced per value.
+    /// @param args   Full argument list.
+    /// @return Ok after the run stops; the first conversion failure otherwise.
+    pjh::cli::CliResult<void> consume_repeatable(
+        const pjh::cli::BaseCommand &cmd,
+        pjh::cli::ParseContext &owner,
+        const pjh::cli::OptionDef &opt,
+        size_t &i,
+        std::span<const std::string_view> args)
+    {
+        while (opt.is_repeatable() && i + 1 < args.size())
+        {
+            auto next = args[i + 1];
+            if (pjh::cli::detail::is_option_flag(next) ||
+                pjh::cli::detail::is_subcommand_of(cmd, next))
+                break;
+            auto r = pjh::cli::ValueWriter::apply_option_raw(owner, opt, args[++i]);
+            if (r.is_err())
+                return r;
+        }
+        return pjh::cli::CliResult<void>::Ok();
+    }
 }
 
 namespace pjh::cli
@@ -178,14 +172,15 @@ namespace pjh::cli
     {
         auto parsed = detail::Tokenizer::parse_long_option(arg);
 
-        auto match = find_option_long_in_chain(cmd, parsed.name);
-        auto *opt = match.opt;
+        auto match = detail::find_option_by_long_in_chain_with_depth(cmd, parsed.name);
+        auto *opt = match.option;
         if (!opt)
         {
             if (parsed.is_negation)
             {
-                auto neg = find_option_long_in_chain(cmd, parsed.negated_name);
-                if (neg.opt && neg.opt->is_negatable())
+                auto neg = detail::find_option_by_long_in_chain_with_depth(
+                    cmd, parsed.negated_name);
+                if (neg.option && neg.option->is_negatable())
                 {
                     if (parsed.has_equals)
                     {
@@ -193,7 +188,7 @@ namespace pjh::cli
                             std::format("--{}", parsed.name))};
                     }
                     detail::ParseContextWriter::set_value<bool>(
-                        owner_context(ctx, neg.depth), neg.opt->key_hash(), false);
+                        owner_context(ctx, neg.depth), neg.option->key_hash(), false);
                     return CliResult<void>::Ok();
                 }
             }
@@ -225,16 +220,7 @@ namespace pjh::cli
             if (r.is_err())
                 return r;
 
-            while (opt->is_repeatable() && i + 1 < args.size())
-            {
-                next = args[i + 1];
-                if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
-                    break;
-                r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
-                if (r.is_err())
-                    return r;
-            }
-            return CliResult<void>::Ok();
+            return consume_repeatable(cmd, owner, *opt, i, args);
         }
 
         if (parsed.has_equals)
@@ -266,8 +252,8 @@ namespace pjh::cli
         for (size_t j = 1; j < arg.size(); j++)
         {
             char c = arg[j];
-            auto match = find_option_short_in_chain(cmd, c);
-            auto *opt = match.opt;
+            auto match = detail::find_option_by_short_in_chain_with_depth(cmd, c);
+            auto *opt = match.option;
             if (!opt)
                 return CliFailure{ErrorFactory::unknown_option(std::format("-{}", c))};
             auto &owner = owner_context(ctx, match.depth);
@@ -289,16 +275,7 @@ namespace pjh::cli
                     if (r.is_err())
                         return r;
 
-                    while (opt->is_repeatable() && i + 1 < args.size())
-                    {
-                        auto nxt = args[i + 1];
-                        if (detail::is_option_flag(nxt) || is_subcommand_token(cmd, nxt))
-                            break;
-                        r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
-                        if (r.is_err())
-                            return r;
-                    }
-                    break;
+                    return consume_repeatable(cmd, owner, *opt, i, args);
                 }
 
                 if (i + 1 >= args.size())
@@ -312,15 +289,7 @@ namespace pjh::cli
                 if (r.is_err())
                     return r;
 
-                while (opt->is_repeatable() && i + 1 < args.size())
-                {
-                    next = args[i + 1];
-                    if (detail::is_option_flag(next) || is_subcommand_token(cmd, next))
-                        break;
-                    r = ValueWriter::apply_option_raw(owner, *opt, args[++i]);
-                    if (r.is_err())
-                        return r;
-                }
+                return consume_repeatable(cmd, owner, *opt, i, args);
             }
             else
             {
