@@ -39,22 +39,19 @@ namespace
     bool write_lines(
         const std::filesystem::path &path, const std::deque<std::string> &lines)
     {
-        std::ofstream out(path, std::ios::trunc | std::ios::binary);
-        if (!out)
-            return false;
-        for (const auto &line : lines) out << line << '\n';
-        out.flush();
-        return out.good();
+        std::string content;
+        for (const auto &line : lines)
+        {
+            content += line;
+            content.push_back('\n');
+        }
+        return pjh::platform::Fs::write_file(path, content).is_ok();
     }
 
     /// @brief Truncate to an empty file; false on failure.
     bool truncate_file(const std::filesystem::path &path)
     {
-        std::ofstream out(path, std::ios::trunc | std::ios::binary);
-        if (!out)
-            return false;
-        out.flush();
-        return out.good();
+        return pjh::platform::Fs::write_file(path, {}).is_ok();
     }
 
 }  // namespace
