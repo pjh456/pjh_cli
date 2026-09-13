@@ -303,7 +303,7 @@ appended (with a trailing space); zero or several candidates print the candidate
 list and a `HintBuilder` hint, then redraw the prompt.  Up/Down recall the
 previous/next line from the injected `IHistory` (`InMemoryHistory` by default,
 `RingBufferHistory` for bounded storage, `FileHistory` for history that survives
-restarts, `NoOpHistory`/`nullptr` to disable) and restore the draft typed before
+restarts, `NoOpHistory` to disable) and restore the draft typed before
 the first Up when Down passes the newest entry.
 Line editing supports cursor movement: Left/Right move one UTF-8 code point,
 Home/End jump to the start/end of the line, Delete removes the code point under

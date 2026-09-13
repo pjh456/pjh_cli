@@ -100,10 +100,10 @@ namespace pjh::cli
         ///                   formatter renders the `help` / `--help` / `-h`
         ///                   navigation path only; a `cmd --help` line uses the root
         ///                   command's help_formatter() (App::set_help_formatter).
-        /// @param history    Command history implementation (default:
-        ///                   InMemoryHistory).  Pass nullptr to disable history,
-        ///                   or a NoOpHistory / custom IHistory subclass to
-        ///                   override storage.
+        /// @param history    Command history backend (default: InMemoryHistory;
+        ///                   passing nullptr/{} selects the default).  Pass a
+        ///                   NoOpHistory to disable history recording, or a
+        ///                   custom IHistory subclass to override storage.
         /// @param error_fmt  Error formatter for failed lines (default: empty =
         ///                   CliError::what()).  Receives the CliError so it can
         ///                   branch on ErrorKind (Parse vs Runtime).  Trailing after
@@ -277,9 +277,10 @@ namespace pjh::cli
 
         /// @brief Command history storage.
         ///
-        /// Defaults to InMemoryHistory.  Use NoOpHistory or nullptr to
-        /// disable history injection, or inject a custom IHistory subclass
-        /// to override storage backend.
+        /// Never null: the constructor substitutes InMemoryHistory when its
+        /// history argument is nullptr.  Pass NoOpHistory to disable
+        /// recording, or inject a custom IHistory subclass to override the
+        /// storage backend.
         /// push() is called once at the top of process_line() for every non-empty
         /// line before dispatch, so `?`/`help` meta lines, `cmd --help`, parse
         /// failures and execution failures are all recorded.  Empty lines and the

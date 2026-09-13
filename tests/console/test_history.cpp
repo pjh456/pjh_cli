@@ -302,7 +302,7 @@ TEST_CASE("InteractiveConsole Up recalls a parse-failed line")
     CHECK(errors.find("unknown option", first + 1) != std::string::npos);
 }
 
-TEST_CASE("InteractiveConsole with nullptr history disables push")
+TEST_CASE("InteractiveConsole with nullptr history still processes lines")
 {
     App app("test", "1.0", "No history");
     int called = 0;
