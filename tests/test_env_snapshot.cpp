@@ -33,9 +33,18 @@ TEST_CASE("EnvSnapshot keeps a set-but-empty variable distinct from a missing on
     ScopedEnvVar missing{"PJH_CLI_TEST_ENV_MISSING", std::nullopt};
 
     detail::EnvSnapshot snap;
+
+    // On Windows, test_env::write maps both an empty value and std::nullopt to
+    // ::_putenv_s(name, ""), which removes the variable; a set-but-empty state
+    // is therefore unrepresentable there. Keep the full distinction coverage on
+    // POSIX and fall back to the removal-only assertion on Windows.
+#ifdef _WIN32
+    CHECK(snap.get(empty.name()) == nullptr);
+#else
     const auto *present = snap.get(empty.name());
     REQUIRE(present != nullptr);
     CHECK(present->empty());
+#endif
     CHECK(snap.get(missing.name()) == nullptr);
 
     App app("test", "1.0", "empty vs missing");
@@ -46,7 +55,11 @@ TEST_CASE("EnvSnapshot keeps a set-but-empty variable distinct from a missing on
     auto r = app.parse(argv.argc(), argv.argv());
     REQUIRE(r.is_ok());
     auto &ctx = r.unwrap();
+#ifdef _WIN32
+    CHECK_FALSE(ctx.has<fixed_string("empty")>());
+#else
     CHECK(ctx.has<fixed_string("empty")>());
     CHECK(ctx.get<std::string, fixed_string("empty")>().empty());
+#endif
     CHECK_FALSE(ctx.has<fixed_string("missing")>());
 }
