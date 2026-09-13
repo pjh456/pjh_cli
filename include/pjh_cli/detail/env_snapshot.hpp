@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_DETAIL_ENV_SNAPSHOT_HPP
 #define INCLUDE_PJH_CLI_DETAIL_ENV_SNAPSHOT_HPP
 
+#include <functional>
 #include <pjh_cli/detail/string_utils.hpp>
 #include <string>
 #include <string_view>

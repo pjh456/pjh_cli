@@ -10,6 +10,7 @@
 #include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/option/option_group_builder.hpp>
+#include <utility>
 
 namespace pjh::cli
 {

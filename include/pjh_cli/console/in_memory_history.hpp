@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_CONSOLE_IN_MEMORY_HISTORY_HPP
 #define INCLUDE_PJH_CLI_CONSOLE_IN_MEMORY_HISTORY_HPP
 
+#include <cstddef>
 #include <pjh_cli/console/detail/history_storage.hpp>
 #include <pjh_cli/console/history.hpp>
 #include <string>

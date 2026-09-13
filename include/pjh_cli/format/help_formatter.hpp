@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_HELP_FORMATTER_HPP
 #define INCLUDE_PJH_CLI_HELP_FORMATTER_HPP
 
+#include <cstddef>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <sstream>

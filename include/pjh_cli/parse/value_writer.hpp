@@ -2,6 +2,7 @@
 #define INCLUDE_PJH_CLI_PARSE_VALUE_WRITER_HPP
 
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <pjh_cli/core/converter.hpp>
 #include <pjh_cli/core/type.hpp>
@@ -10,6 +11,7 @@
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string_view>
 #include <tuple>
+#include <utility>
 
 namespace pjh::cli
 {

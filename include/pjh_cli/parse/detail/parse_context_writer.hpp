@@ -1,10 +1,12 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_DETAIL_PARSE_CONTEXT_WRITER_HPP
 #define INCLUDE_PJH_CLI_PARSE_DETAIL_PARSE_CONTEXT_WRITER_HPP
 
+#include <cstddef>
 #include <memory>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
 #include <string>
+#include <utility>
 
 namespace pjh::cli::detail
 {

@@ -1,6 +1,7 @@
 #ifndef INCLUDE_PJH_CLI_PARSE_OPTION_CONSUMER_HPP
 #define INCLUDE_PJH_CLI_PARSE_OPTION_CONSUMER_HPP
 
+#include <cstddef>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/core/type.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
