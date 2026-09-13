@@ -6,6 +6,7 @@
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/branch_command.hpp>
 #include <pjh_cli/command/matcher.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/info.hpp>
 #include <pjh_cli/format/matcher.hpp>
@@ -37,6 +38,26 @@ namespace
     std::vector<std::string> split_tokens(std::string_view text)
     {
         return pjh::cli::detail::Tokenizer::tokenize(text);
+    }
+
+    /// @brief Whether the token under the cursor is an option token to scan,
+    ///        rather than a (possibly pending) value.
+    ///
+    /// Mirrors the parser's negative-number rule (@ref
+    /// pjh::cli::detail::is_option_flag) so a token the parser would consume as
+    /// a value keeps any pending value_option: -5, -3.14, -.5, -10 and -1e3 are
+    /// values.  Long tokens always scan; a two-character short token (-v / -c /
+    /// -5) also keeps the pending-value behaviour documented for completion, so
+    /// only short tokens of length >= 3 that pass is_option_flag reach the
+    /// shared scanner.
+    ///
+    /// @param token  Token under the cursor.
+    /// @return true if @p token should be treated as an option token.
+    bool is_cursor_option_token(std::string_view token) noexcept
+    {
+        return token.size() >= 2 && token[0] == '-' &&
+               (token[1] == '-' ||
+                (token.size() >= 3 && pjh::cli::detail::is_option_flag(token)));
     }
 
     /// @brief Walk the tokens before @p cursor to find the command in scope and
@@ -91,12 +112,12 @@ namespace
         // Interpret the token under the cursor with the shared scanner, so the
         // attached-value grammar (including the short form's single '=' strip)
         // lives in exactly one place.  Long tokens and short tokens of length
-        // >= 3 reach it; a bare 2-character non-`--` dash token (e.g. `-v`,
-        // `-5`) takes the word path below so a pending value_option set by the
-        // preceding token is preserved (it may name a value such as a negative
-        // number, not a fresh option).
-        if (token.size() >= 2 && token[0] == '-' &&
-            (token[1] == '-' || token.size() >= 3))
+        // >= 3 that pass the shared negative-number rule reach it; a bare
+        // 2-character dash token (e.g. `-v`, `-5`) and any negative-number
+        // token (e.g. `-3.14`) take the word path below so a pending
+        // value_option set by the preceding token is preserved (it may name a
+        // value such as a negative number, not a fresh option).
+        if (is_cursor_option_token(token))
         {
             auto info = pjh::cli::detail::scan_option_token(*scan.command, token);
             if (info.option && info.has_attached)

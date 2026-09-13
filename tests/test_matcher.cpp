@@ -871,6 +871,54 @@ TEST_CASE("complete_line_result keeps pending value for two-char dash token")
     CHECK(negative.candidates[0].display == "-5C");
 }
 
+TEST_CASE("complete_line_result treats negative numbers as pending values")
+{
+    App app("test", "1.0", "Complete line");
+    app.option<fixed_string("temp")>("--temp", 't', "Temp")
+        .str()
+        .completer(
+            []() -> std::vector<std::string>
+            { return {"-5C", "-3.14C", "-.5C", "-10C", "-1e3C", "0C"}; });
+
+    // Every negative-number width is a value token by the shared
+    // is_option_flag rule, so the pending --temp value_option survives the
+    // cursor scan and value completion runs.  Before the fix only the
+    // two-character `-5` took the word path; the wider tokens hit the short
+    // option scanner, cleared value_option and produced no candidates.
+    for (const std::string &token : {"-5", "-3.14", "-.5", "-10", "-1e3"})
+    {
+        const std::string line = "-t " + token;
+        auto r = complete_line_result(app, line, line.size());
+        CHECK(r.prefix_len == token.size());
+        REQUIRE(r.candidates.size() == 1);
+        CHECK(r.candidates[0].display == token + "C");
+    }
+
+    // A negative token with no pending value yields no option-name candidates:
+    // its second character is a digit, never a short option name.
+    auto bare = complete_line_result(app, "-3.14", 5);
+    CHECK(bare.prefix_len == 5);
+    CHECK(bare.candidates.empty());
+}
+
+TEST_CASE("complete_line_result keeps negative values from numeric short options")
+{
+    // A numeric short name such as -1 must not hijack -10: the shared
+    // is_option_flag rule makes -10 a value, so the pending --temp
+    // value_option is preserved instead of being retargeted to -1 with "0"
+    // attached.
+    App app("test", "1.0", "Complete line");
+    app.option<fixed_string("one")>("--one", '1', "One").str();
+    app.option<fixed_string("temp")>("--temp", 't', "Temp")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"-10C"}; });
+
+    auto r = complete_line_result(app, "-t -10", 6);
+    CHECK(r.prefix_len == 3);
+    REQUIRE(r.candidates.size() == 1);
+    CHECK(r.candidates[0].display == "-10C");
+}
+
 TEST_CASE("scan_option_token exposes attached and next-token forms")
 {
     App app("test", "1.0", "Scan");
