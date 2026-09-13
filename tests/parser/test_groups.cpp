@@ -4,8 +4,10 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parser.hpp>
+#include <string>
 #include <string_view>
 
+#include "../option/test_helpers.hpp"
 #include "test_helpers.hpp"
 
 TEST_CASE("ExactlyOne group with none provided errors")
@@ -47,9 +49,9 @@ TEST_CASE("ExactlyOne group with both provided errors")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
     CHECK(
-        r.unwrap_err().what() == std::string_view(
-                                     "Parse Error: conflicting options: --port, --socket "
-                                     "cannot be used together"));
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: conflicting options: --port, --socket "
+                         "cannot be used together"));
 }
 
 TEST_CASE("AtMostOne group with none provided succeeds")
@@ -88,9 +90,9 @@ TEST_CASE("AtMostOne group with both provided errors")
     auto r = app.parse(argv.argc(), argv.argv());
     CHECK(r.is_err());
     CHECK(
-        r.unwrap_err().what() == std::string_view(
-                                     "Parse Error: conflicting options: --verbose, "
-                                     "--quiet cannot be used together"));
+        r.unwrap_err().what() ==
+        std::string_view("Parse Error: conflicting options: --verbose, "
+                         "--quiet cannot be used together"));
 }
 
 TEST_CASE("AtLeastOne group with none provided errors")
@@ -157,5 +159,83 @@ TEST_CASE("Group with three options exactly_one")
 
     Argv argv{"test", "--a", "x", "--b", "y"};
     auto r = app.parse(argv.argc(), argv.argv());
-    CHECK(r.is_err());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --a, --b "
+                                       "cannot be used together"));
+    CHECK(std::string_view(err.what()).find("--c") == std::string_view::npos);
+}
+
+TEST_CASE("AtMostOne group with three options lists only the provided pair")
+{
+    App app("test", "1.0", "Group three at-most test");
+    app.option<fixed_string("a")>("--a", "A").str();
+    app.option<fixed_string("b")>("--b", "B").str();
+    app.option<fixed_string("c")>("--c", "C").str();
+    app.group<fixed_string("a"), fixed_string("b"), fixed_string("c")>().at_most_one();
+
+    Argv argv{"test", "--a", "x", "--b", "y"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --a, --b "
+                                       "cannot be used together"));
+    CHECK(std::string_view(err.what()).find("--c") == std::string_view::npos);
+}
+
+TEST_CASE("Conflict message follows group declaration order")
+{
+    App app("test", "1.0", "Group declaration order test");
+    app.option<fixed_string("a")>("--a", "A").str();
+    app.option<fixed_string("b")>("--b", "B").str();
+    app.option<fixed_string("c")>("--c", "C").str();
+    app.group<fixed_string("a"), fixed_string("b"), fixed_string("c")>().at_most_one();
+
+    Argv argv{"test", "--c", "z", "--a", "x"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --a, --c "
+                                       "cannot be used together"));
+    CHECK(std::string_view(err.what()).find("--b") == std::string_view::npos);
+}
+
+TEST_CASE("Default-seeded member counts as a participant in conflict")
+{
+    App app("test", "1.0", "Group default conflict test");
+    app.option<fixed_string("a")>("--a", "A", 1);
+    app.option<fixed_string("b")>("--b", "B").str();
+    app.option<fixed_string("c")>("--c", "C").str();
+    app.group<fixed_string("a"), fixed_string("b"), fixed_string("c")>().at_most_one();
+
+    Argv argv{"test", "--b", "y"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --a, --b "
+                                       "cannot be used together"));
+    CHECK(std::string_view(err.what()).find("--c") == std::string_view::npos);
+}
+
+TEST_CASE("Env-seeded member counts as a participant in conflict")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_GROUP_ENV", std::string("from-env")};
+    App app("test", "1.0", "Group env conflict test");
+    app.option<fixed_string("a")>("--a", "A").str().env(env_guard.name());
+    app.option<fixed_string("b")>("--b", "B").str();
+    app.option<fixed_string("c")>("--c", "C").str();
+    app.group<fixed_string("a"), fixed_string("b"), fixed_string("c")>().at_most_one();
+
+    Argv argv{"test", "--b", "y"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --a, --b "
+                                       "cannot be used together"));
+    CHECK(std::string_view(err.what()).find("--c") == std::string_view::npos);
 }

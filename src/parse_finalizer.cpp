@@ -5,7 +5,9 @@
 #include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/parse_finalizer.hpp>
 #include <pjh_cli/parse/value_writer.hpp>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace pjh::cli
 {
@@ -106,10 +108,19 @@ namespace pjh::cli
         {
             for (auto &group : c->groups())
             {
+                // key_hashes and option_names are parallel arrays built in
+                // declaration order by OptionGroupBuilder::commit, so the
+                // index of a set member yields its display name.
+                std::vector<std::string> provided_names;
                 size_t count = 0;
-                for (auto h : group.key_hashes)
-                    if (detail::ParseContextWriter::has_value(ctx, h))
-                        count++;
+                for (size_t i = 0; i < group.key_hashes.size(); ++i)
+                {
+                    if (detail::ParseContextWriter::has_value(ctx, group.key_hashes[i]))
+                    {
+                        ++count;
+                        provided_names.push_back(group.option_names[i]);
+                    }
+                }
 
                 switch (group.mode)
                 {
@@ -119,12 +130,12 @@ namespace pjh::cli
                             group.option_names, true)};
                     if (count > 1)
                         return CliFailure{
-                            ErrorFactory::conflicting_options(group.option_names)};
+                            ErrorFactory::conflicting_options(provided_names)};
                     break;
                 case GroupMode::AtMostOne:
                     if (count > 1)
                         return CliFailure{
-                            ErrorFactory::conflicting_options(group.option_names)};
+                            ErrorFactory::conflicting_options(provided_names)};
                     break;
                 case GroupMode::AtLeastOne:
                     if (count == 0)
