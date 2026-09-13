@@ -4,6 +4,7 @@
 #include <iostream>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
+#include <pjh_cli/core/error.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/parse/parser.hpp>
 #include <string_view>
@@ -104,7 +105,12 @@ TEST_CASE("Parser extra positional args error policy")
     root.arg<std::string, 0>("file", "Input file");
     Argv argv{"test", "a.txt", "b.txt"};
     auto r = Parser::parse_command(root, argv.argc(), argv.argv());
-    CHECK(r.is_err());
+    REQUIRE(r.is_err());
+    const CliError &err = r.unwrap_err();
+    CHECK(
+        std::string_view(err.what()) ==
+        "Parse Error: unexpected argument 'b.txt' at position 1");
+    CHECK(err.tag() == ErrorTag::Parse);
 }
 
 TEST_CASE("Parser extra positional args store policy")

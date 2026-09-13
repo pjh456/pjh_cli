@@ -104,7 +104,7 @@ TEST_CASE("parse_error format")
     auto e = ErrorFactory::parse_error("--port", 5);
     CHECK(
         std::string_view(e.what()) ==
-        "Parse Error: parse error at argument '--port', position 5");
+        "Parse Error: unexpected argument '--port' at position 5");
 }
 
 TEST_CASE("parse_error negative position")
@@ -112,7 +112,19 @@ TEST_CASE("parse_error negative position")
     auto e = ErrorFactory::parse_error("arg", -1);
     CHECK(
         std::string_view(e.what()) ==
-        "Parse Error: parse error at argument 'arg', position -1");
+        "Parse Error: unexpected argument 'arg' at position -1");
+}
+
+TEST_CASE("parse error renders the prefix exactly once")
+{
+    auto e = ErrorFactory::parse_error("x", 1);
+    const std::string_view what = e.what();
+    CHECK(what == "Parse Error: unexpected argument 'x' at position 1");
+    CHECK(what.starts_with("Parse Error: "));
+    CHECK(what.find("parse error") == std::string_view::npos);
+    CHECK(e.kind() == ErrorKind::Parse);
+    CHECK(e.tag() == ErrorTag::Parse);
+    CHECK(format_error(e.info()) == "unexpected argument 'x' at position 1");
 }
 
 TEST_CASE("unknown_option format")

@@ -37,7 +37,7 @@ namespace pjh::cli
                 else if constexpr (std::same_as<T, ParseError>)
                 {
                     return std::format(
-                        "parse error at argument '{}', position {}", e.raw_input,
+                        "unexpected argument '{}' at position {}", e.raw_input,
                         e.position);
                 }
                 else if constexpr (std::same_as<T, UnknownOptionError>)
