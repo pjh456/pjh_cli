@@ -213,7 +213,8 @@ injected streams.
 ```cpp
 App app("hello", "1.0.0", "Minimal greeting example");
 auto result = app.run_fuzzy_quiet(argc, argv);
-if (result.kind == AppRunResult::Kind::Help)
+if (result.kind == AppRunResult::Kind::Help ||
+    result.kind == AppRunResult::Kind::Version)
 {
     std::cout << result.text;
     return 0;
@@ -328,8 +329,8 @@ InteractiveConsole console(app, "> ", std::cin, std::cout, std::cerr, {}, {},
                            std::make_unique<FileHistory>(".myapp_history"));
 ```
 Redirecting stdout (e.g. `./app > log`) disables raw mode and falls back to
-`std::getline`, so the prompt is not written into the file while keystrokes are
-consumed invisibly.
+`std::getline`: the prompt is still written to the redirected output stream once
+per line, while input is read line by line with no raw-mode per-key echo.
 Non-TTY input (pipes, files, injected test streams) keeps the line-based
 `std::getline` path unchanged — history is still recorded but arrow keys cannot
 navigate.  On both input paths the prompt string is written verbatim, so include

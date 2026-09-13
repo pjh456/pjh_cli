@@ -239,8 +239,8 @@ namespace pjh::cli
     /// std::cout and both descriptors are interactive terminals, so injected
     /// test streams and non-console embedders transparently fall back to
     /// line-based reading.  A redirected stdout (e.g. `app > log`) disables raw
-    /// mode and falls back to std::getline, so the prompt/echo cannot be
-    /// written into the file while keys are consumed invisibly.
+    /// mode and falls back to std::getline: the prompt is still written to that
+    /// output stream once per line, while keys are read without raw-mode echo.
     ///
     /// @param input   Input stream to probe (must be std::cin).
     /// @param output  Stream used for echo (must be std::cout).
