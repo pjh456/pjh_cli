@@ -84,17 +84,17 @@ TEST_CASE("Tokenizer empty quoted token alone")
 
 TEST_CASE("Tokenizer escapes a quote inside quotes")
 {
-    CHECK(dump(Tokenizer::tokenize(R"("a\"b")")) == "a\"b");
+    CHECK(dump(Tokenizer::tokenize("\"a\\\"b\"")) == "a\"b");
 }
 
 TEST_CASE("Tokenizer escapes a quote outside quotes")
 {
-    CHECK(dump(Tokenizer::tokenize(R"(a\"b)")) == "a\"b");
+    CHECK(dump(Tokenizer::tokenize("a\\\"b")) == "a\"b");
 }
 
 TEST_CASE("Tokenizer escapes a backslash")
 {
-    CHECK(dump(Tokenizer::tokenize(R"("a\\b")")) == "a\\b");
+    CHECK(dump(Tokenizer::tokenize("\"a\\\\b\"")) == "a\\b");
 }
 
 TEST_CASE("Tokenizer escapes a space outside quotes")
@@ -109,7 +109,7 @@ TEST_CASE("Tokenizer escapes a tab outside quotes")
 
 TEST_CASE("Tokenizer keeps Windows path backslashes")
 {
-    CHECK(dump(Tokenizer::tokenize(R"("C:\Users\name")")) == "C:\\Users\\name");
+    CHECK(dump(Tokenizer::tokenize("\"C:\\Users\\name\"")) == "C:\\Users\\name");
     CHECK(dump(Tokenizer::tokenize(R"(C:\temp)")) == "C:\\temp");
     CHECK(dump(Tokenizer::tokenize(R"(\d+)")) == "\\d+");
 }
