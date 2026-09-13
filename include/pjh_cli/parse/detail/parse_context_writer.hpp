@@ -55,6 +55,18 @@ namespace pjh::cli::detail
             return ctx.has_in_chain(hash);
         }
 
+        /// @brief Mark @p hash as explicitly provided on the command line.
+        ///
+        /// Idempotent; repeated or overwriting writes keep the mark.  Used by
+        /// ValueWriter/OptionConsumer for ValueOrigin::CommandLine writes only;
+        /// environment fallback and defaults never call it.
+        /// @param ctx  Context that owns the write.
+        /// @param hash Option/arg key hash.
+        static void mark_provided(ParseContext &ctx, size_t hash) noexcept
+        {
+            ctx.m_provided.insert(hash);
+        }
+
         /// @brief Read a typed value by runtime hash with a fallback.
         template <detail::BuiltinType T>
         static T get_value(const ParseContext &ctx, size_t hash, T default_val)

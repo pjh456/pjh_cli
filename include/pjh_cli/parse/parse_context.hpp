@@ -12,6 +12,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -24,6 +25,19 @@ namespace pjh::cli
         class ParseContextWriter;
     }  // namespace detail
 
+    /// @brief Origin of a value written into a ParseContext.
+    ///
+    /// ValueWriter uses it to decide whether a write counts as an explicit
+    /// command-line appearance: only ValueOrigin::CommandLine writes are
+    /// recorded by ParseContext::was_provided(); environment fallback and
+    /// .default_value() seeds are not.
+    enum class ValueOrigin : unsigned char
+    {
+        CommandLine,  ///< Command-line token (long/short, --no-xxx, positional).
+        Environment,  ///< Environment-variable fallback at finalization.
+        Default,      ///< .default_value() seed at finalization.
+    };
+
     /// @brief Container for parsed option and argument values.
     ///
     /// Values are indexed by compile-time key and retrieved via typed accessors.
@@ -34,6 +48,11 @@ namespace pjh::cli
     /// Presence is derived from the value maps: a key is present iff a value is
     /// stored for it in this context or an ancestor, so a stored value costs
     /// one map node and there is no separate presence index.
+    ///
+    /// Explicit command-line provenance is tracked separately from presence in a
+    /// per-context set of key hashes, populated only by ValueOrigin::CommandLine
+    /// writes.  was_provided<Key>() reports it and is therefore orthogonal to
+    /// has<Key>() (which is true for any source: CLI, environment, or default).
     ///
     /// Lookup follows the parent chain (for subcommand scoping): if a value is
     /// not found in the current context, the parent context is queried
@@ -120,6 +139,24 @@ namespace pjh::cli
         bool has() const noexcept
         {
             return has_in_chain(key_hash(Key));
+        }
+
+        /// @brief Check whether @p Key was explicitly provided on the command
+        ///        line during this parse.
+        ///
+        /// True when the key's value was written by a command-line appearance
+        /// (long/short option, `--opt=value`, separate or compact value,
+        /// repeatable/count occurrence, `--no-xxx` negation, grouped short
+        /// option, or positional argument) and is found in this context or any
+        /// ancestor.  Environment fallback and .default_value() seeds do NOT
+        /// count, so this is orthogonal to has<Key>().
+        /// @tparam Key fixed_string or size_t.
+        /// @return true if the key was provided on the command line.
+        template <auto Key>
+            requires detail::OptionKey<decltype(Key)>
+        bool was_provided() const noexcept
+        {
+            return was_provided_in_chain(key_hash(Key));
         }
 
         /// @brief Try to retrieve a value; returns None if absent (no throw).
@@ -336,6 +373,19 @@ namespace pjh::cli
             return false;
         }
 
+        /// @brief True when @p hash was explicitly provided on the command line
+        ///        in this context or an ancestor.
+        ///
+        /// Independent of the value maps: env/default writes populate values
+        /// without touching this set.
+        bool was_provided_in_chain(size_t hash) const noexcept
+        {
+            for (const auto *c = this; c != nullptr; c = c->m_parent.get())
+                if (c->m_provided.contains(hash))
+                    return true;
+            return false;
+        }
+
         /// @brief True when @p hash appears in one of this context's value maps.
         bool has_local_value(size_t hash) const noexcept
         {
@@ -369,6 +419,11 @@ namespace pjh::cli
 
         ScalarMaps m_scalars;
         VecMaps m_vectors;
+
+        /// Key hashes explicitly provided on the command line.  Empty unless a
+        /// CLI write happened (env/default never insert), so a context that is
+        /// only defaulted or env-filled allocates nothing here.
+        std::unordered_set<size_t> m_provided;
 
         std::shared_ptr<ParseContext> m_parent;
 

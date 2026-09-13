@@ -26,13 +26,20 @@ namespace pjh::cli
         auto idx = static_cast<size_t>(tag);
         if (idx >= table.size())
             throw LogicError("ValueWriter::apply_arg_value: unknown ValueTag");
-        return table[idx](ctx, hash, s, display);
+        auto r = table[idx](ctx, hash, s, display);
+        if (r.is_ok())
+            detail::ParseContextWriter::mark_provided(ctx, hash);
+        return r;
     }
 
     /// @brief Store an already-converted option value, appending when
     ///        repeatable.
     void ValueWriter::apply_option_value(
-        ParseContext &ctx, size_t hash, bool repeatable, OptionValue value)
+        ParseContext &ctx,
+        size_t hash,
+        bool repeatable,
+        OptionValue value,
+        ValueOrigin origin)
     {
         std::visit(
             [&](auto &&typed)
@@ -46,18 +53,20 @@ namespace pjh::cli
                         ctx, hash, std::forward<decltype(typed)>(typed));
             },
             std::move(value));
+        if (origin == ValueOrigin::CommandLine)
+            detail::ParseContextWriter::mark_provided(ctx, hash);
     }
 
     /// @brief Run @p opt's convert+validate pipeline on @p raw and store the
     ///        result.
     CliResult<void> ValueWriter::apply_option_raw(
-        ParseContext &ctx, const OptionDef &opt, std::string_view raw)
+        ParseContext &ctx, const OptionDef &opt, std::string_view raw, ValueOrigin origin)
     {
         auto r = opt.parse_value(raw);
         if (r.is_err())
             return CliResult<void>::Err(std::move(r).unwrap_err());
         apply_option_value(
-            ctx, opt.key_hash(), opt.is_repeatable(), std::move(r).unwrap());
+            ctx, opt.key_hash(), opt.is_repeatable(), std::move(r).unwrap(), origin);
         return CliResult<void>::Ok();
     }
 }  // namespace pjh::cli

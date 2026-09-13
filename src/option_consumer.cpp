@@ -154,6 +154,7 @@ namespace pjh::cli
         {
             detail::ParseContextWriter::set_value<bool>(ctx, opt->key_hash(), true);
         }
+        detail::ParseContextWriter::mark_provided(ctx, opt->key_hash());
     }
 
     /// @brief Consume a single long-option token (--opt or --opt=val).
@@ -187,8 +188,11 @@ namespace pjh::cli
                         return CliFailure{ErrorFactory::option_does_not_accept_value(
                             std::format("--{}", parsed.name))};
                     }
+                    auto &owner = owner_context(ctx, neg.depth);
                     detail::ParseContextWriter::set_value<bool>(
-                        owner_context(ctx, neg.depth), neg.option->key_hash(), false);
+                        owner, neg.option->key_hash(), false);
+                    detail::ParseContextWriter::mark_provided(
+                        owner, neg.option->key_hash());
                     return CliResult<void>::Ok();
                 }
             }

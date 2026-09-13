@@ -23,6 +23,14 @@ static_assert(
         bool (*)(const ParseContext &, size_t) noexcept>,
     "ParseContextWriter must live in pjh::cli::detail");
 
+// Provided-tracking pin: mark_provided is a non-template writer method with the
+// same (ParseContext&, size_t) noexcept shape as the presence helpers.
+static_assert(
+    std::is_same_v<
+        decltype(&detail::ParseContextWriter::mark_provided),
+        void (*)(ParseContext &, size_t) noexcept>,
+    "ParseContextWriter::mark_provided must stay in pjh::cli::detail");
+
 // Special-member pin: a user-declared destructor must not suppress the move
 // operations, or parsing (which moves ParseContext on every descent) would
 // silently deep-copy.  The destructor must stay non-trivial and non-throwing.
@@ -325,6 +333,44 @@ TEST_CASE("set_value overwrite keeps presence")
     detail::ParseContextWriter::set_value<int>(ctx, h, 2);
     CHECK(detail::ParseContextWriter::has_value(ctx, h));
     CHECK(ctx.get<int, fixed_string("port")>() == 2);
+}
+
+// ── Explicit-provided tracking (writer layer) ──
+
+TEST_CASE("mark_provided is visible down the parent chain")
+{
+    auto parent = std::make_shared<ParseContext>();
+    constexpr auto h = key_hash(fixed_string("verbose"));
+    detail::ParseContextWriter::mark_provided(*parent, h);
+
+    ParseContext child;
+    detail::ParseContextWriter::set_parent(child, parent);
+
+    CHECK(child.was_provided<fixed_string("verbose")>());
+    // Provided is independent of presence: no value was stored.
+    CHECK_FALSE(child.has<fixed_string("verbose")>());
+}
+
+TEST_CASE("mark_provided is idempotent and survives an overwrite")
+{
+    ParseContext ctx;
+    constexpr auto h = key_hash(fixed_string("port"));
+    detail::ParseContextWriter::mark_provided(ctx, h);
+    detail::ParseContextWriter::mark_provided(ctx, h);
+    detail::ParseContextWriter::set_value<int>(ctx, h, 1);
+    CHECK(ctx.was_provided<fixed_string("port")>());
+    detail::ParseContextWriter::set_value<int>(ctx, h, 2);
+    CHECK(ctx.was_provided<fixed_string("port")>());
+    CHECK(ctx.get<int, fixed_string("port")>() == 2);
+}
+
+TEST_CASE("set_value without mark_provided leaves was_provided false")
+{
+    ParseContext ctx;
+    constexpr auto h = key_hash(fixed_string("env_seed"));
+    detail::ParseContextWriter::set_value<int>(ctx, h, 1);
+    CHECK(ctx.has<fixed_string("env_seed")>());
+    CHECK_FALSE(ctx.was_provided<fixed_string("env_seed")>());
 }
 
 // ── Deep parent chain: lookup and teardown must not recurse ──

@@ -66,17 +66,29 @@ namespace pjh::cli
         /// @param hash       Option key hash (OptionDef::key_hash()).
         /// @param repeatable Whether to append (OptionDef::is_repeatable()).
         /// @param value      Converted value from OptionDef::parse_value().
+        /// @param origin     Where the value came from; only
+        ///        ValueOrigin::CommandLine records the key as explicitly
+        ///        provided for ParseContext::was_provided().
         static void apply_option_value(
-            ParseContext &ctx, size_t hash, bool repeatable, OptionValue value);
+            ParseContext &ctx,
+            size_t hash,
+            bool repeatable,
+            OptionValue value,
+            ValueOrigin origin = ValueOrigin::CommandLine);
 
         /// @brief Run @p opt's convert+validate pipeline on @p raw and store
         ///        the result.
         /// @param ctx Parse context to write into.
         /// @param opt Option whose pipeline to run.
         /// @param raw   Raw string value.
+        /// @param origin Where the value came from (forwarded to
+        ///        apply_option_value).
         /// @return Ok, or the conversion/validation error verbatim.
         static CliResult<void> apply_option_raw(
-            ParseContext &ctx, const OptionDef &opt, std::string_view raw);
+            ParseContext &ctx,
+            const OptionDef &opt,
+            std::string_view raw,
+            ValueOrigin origin = ValueOrigin::CommandLine);
 
     private:
         /// @brief Signature of one tag→converter dispatch entry.

@@ -28,7 +28,7 @@ namespace pjh::cli
             if (maybe.is_some())
                 ValueWriter::apply_option_value(
                     ctx, opt_ptr->key_hash(), opt_ptr->is_repeatable(),
-                    std::move(maybe).unwrap());
+                    std::move(maybe).unwrap(), ValueOrigin::Default);
         }
         return CliResult<void>::Ok();
     }
@@ -66,7 +66,8 @@ namespace pjh::cli
                     auto *env_val = chain[0]->env_value(opt_ptr->env_var());
                     if (env_val)
                     {
-                        auto r = ValueWriter::apply_option_raw(ctx, *opt_ptr, *env_val);
+                        auto r = ValueWriter::apply_option_raw(
+                            ctx, *opt_ptr, *env_val, ValueOrigin::Environment);
                         if (r.is_err())
                             return r;
                     }
