@@ -358,9 +358,14 @@ namespace pjh::cli
         ///         or the short name is 'h' — those tokens are reserved for the
         ///         built-in --help/-h/--version meta-flags and cannot be
         ///         registered on any command.
-        /// @note Strong exception guarantee: if indexing throws, the option is
-        ///       removed and the command is unchanged (no dangling lookup
-        ///       entry).
+        /// @throws LogicError if an option with the same normalized long name or
+        ///         the same non-zero short character is already registered on
+        ///         this command. The check is per command: an ancestor or
+        ///         descendant may reuse a name, and the nearest declaration wins
+        ///         at parse time.
+        /// @note Strong exception guarantee: on any throw the command is left
+        ///       unchanged (no ownership transfer, no dangling lookup entry);
+        ///       if indexing throws, the option is removed.
         void add_option(std::unique_ptr<OptionDef> opt)
         {
             if (detail::is_reserved_long_name(opt->long_name()))
@@ -378,6 +383,15 @@ namespace pjh::cli
                     "' is reserved for the built-in --help/-h/--version flags on command "
                     "'" +
                     m_name + "'");
+
+            if (m_option_by_long.contains(opt->long_name()))
+                throw LogicError(
+                    std::string("BaseCommand::add_option: duplicate long option '") +
+                    opt->display_name() + "' on command '" + m_name + "'");
+            if (opt->short_name() != 0 && m_option_by_short.contains(opt->short_name()))
+                throw LogicError(
+                    std::string("BaseCommand::add_option: duplicate short option '-") +
+                    std::string(1, opt->short_name()) + "' on command '" + m_name + "'");
 
             OptionDef *raw = opt.get();
             m_options.push_back(std::move(opt));  // 1) own first

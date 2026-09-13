@@ -68,8 +68,8 @@ app.option<fixed_string("port")>("--port", 'p', "Port number", 8080);
 // Required option
 app.option<fixed_string("token")>("--token", "API token").str().required();
 
-// Counting flag (-vvv → 3)
-app.option<fixed_string("verbose")>("--verbose", 'v', "Verbose").count();
+// Counting flag (-VVV → 3)
+app.option<fixed_string("verbosity")>("--verbosity", 'V', "Verbosity level").count();
 
 // Enum option with string mapping
 enum class Color { red, green, blue };
@@ -119,6 +119,11 @@ value on a flag or count option (`-v=1`) is rejected, mirroring the long
 Integer and floating-point values accept one optional leading `+`;
 floating-point values must be finite (`nan`/`inf`/`infinity` are rejected as
 invalid values).
+
+Registering a second option with the same normalized long name or the same
+non-zero short character on the same command throws `LogicError` at
+construction. Reusing a name on a different command in the tree is allowed:
+the nearest declaration wins at parse time.
 
 ### Help and version
 

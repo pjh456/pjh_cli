@@ -3,11 +3,13 @@
 #include <cstddef>
 #include <format>
 #include <iostream>
+#include <memory>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/option/option_def.hpp>
 #include <pjh_cli/parse/detail/parse_context_writer.hpp>
 #include <pjh_cli/parse/matched_path_resolver.hpp>
 #include <pjh_cli/parse/parse_context.hpp>
@@ -400,8 +402,9 @@ TEST_CASE("key_hash constexpr correctness")
 TEST_CASE("OptionDef completer callback stored and callable")
 {
     App app("test", "1.0", "Completer");
-    app.option<fixed_string("color")>("--color", "Color").str().completer(
-        []() -> std::vector<std::string> { return {"red", "green", "blue"}; });
+    app.option<fixed_string("color")>("--color", "Color")
+        .str()
+        .completer([]() -> std::vector<std::string> { return {"red", "green", "blue"}; });
 
     auto *def = app.find_option_by_long("color");
     REQUIRE(def != nullptr);
@@ -511,4 +514,119 @@ TEST_CASE("reserved-name rejection leaves indexes and ownership untouched")
     CHECK(app.find_option_by_long("host") == nullptr);
     CHECK(app.find_option_by_short('h') == nullptr);
     CHECK(app.find_option_by_short('o') != nullptr);
+}
+
+TEST_CASE("duplicate long option name on one command throws LogicError")
+{
+    App app("test", "1.0", "Dup long");
+    auto &first = app.option<fixed_string("foo1")>("--foo", 'z', "Foo").boolean();
+    CHECK_THROWS_WITH_AS(
+        app.option<fixed_string("foo2")>("--foo", "Foo2").boolean(),
+        "BaseCommand::add_option: duplicate long option '--foo' on command 'test'",
+        LogicError);
+    CHECK(app.options().size() == 1);
+    CHECK(app.find_option_by_long("foo") == &first);
+    CHECK(app.find_option_by_short('z') == &first);
+}
+
+TEST_CASE("duplicate short option name on one command throws LogicError")
+{
+    App app("test", "1.0", "Dup short");
+    auto &first = app.option<fixed_string("foo")>("--foo", 'f', "Foo").boolean();
+    CHECK_THROWS_WITH_AS(
+        app.option<fixed_string("bar")>("--bar", 'f', "Bar").boolean(),
+        "BaseCommand::add_option: duplicate short option '-f' on command 'test'",
+        LogicError);
+    CHECK(app.options().size() == 1);
+    CHECK(app.find_option_by_long("bar") == nullptr);
+    CHECK(app.find_option_by_short('f') == &first);
+}
+
+TEST_CASE("duplicate long option name is detected after -- normalization")
+{
+    App app("test", "1.0", "Normalized");
+    app.option<fixed_string("foo1")>("--foo", "Foo").boolean();
+    CHECK_THROWS_AS(
+        app.option<fixed_string("foo2")>("foo", "Foo2").boolean(), LogicError);
+    CHECK(app.options().size() == 1);
+}
+
+TEST_CASE("the same long option name is allowed on ancestor and child commands")
+{
+    App app("test", "1.0", "Cross long");
+    auto &root_opt = app.option<fixed_string("root_opt")>("--opt", "Root").boolean();
+    auto &son = app.add_leaf("son", "Son");
+    auto &child_opt = son.option<fixed_string("child_opt")>("--opt", "Child").boolean();
+    CHECK(app.options().size() == 1);
+    CHECK(son.options().size() == 1);
+    CHECK(app.find_option_by_long("opt") == &root_opt);
+    CHECK(son.find_option_by_long("opt") == &child_opt);
+}
+
+TEST_CASE("the same short option name is allowed on ancestor and child commands")
+{
+    App app("test", "1.0", "Cross short");
+    auto &root_opt =
+        app.option<fixed_string("root_opt")>("--root", 'r', "Root").boolean();
+    auto &son = app.add_leaf("son", "Son");
+    auto &child_opt =
+        son.option<fixed_string("child_opt")>("--child", 'r', "Child").boolean();
+    CHECK(app.find_option_by_short('r') == &root_opt);
+    CHECK(son.find_option_by_short('r') == &child_opt);
+}
+
+TEST_CASE("short-less options do not collide on the zero sentinel")
+{
+    App app("test", "1.0", "No short");
+    CHECK_NOTHROW(app.option<fixed_string("a")>("--alpha", "Alpha").boolean());
+    CHECK_NOTHROW(app.option<fixed_string("b")>("--beta", "Beta").boolean());
+    CHECK(app.options().size() == 2);
+    CHECK(app.find_option_by_short('\0') == nullptr);
+}
+
+TEST_CASE("duplicate option name checks are case-sensitive")
+{
+    App app("test", "1.0", "Case");
+    CHECK_NOTHROW(app.option<fixed_string("lower")>("--foo", 'f', "Lower").boolean());
+    CHECK_NOTHROW(app.option<fixed_string("upper")>("--Foo", 'F', "Upper").boolean());
+    CHECK(app.options().size() == 2);
+    CHECK(app.find_option_by_long("foo") != nullptr);
+    CHECK(app.find_option_by_long("Foo") != nullptr);
+}
+
+TEST_CASE("direct add_option rejects a duplicate long name")
+{
+    App app("test", "1.0", "Direct");
+    app.option<fixed_string("foo")>("--foo", 'f', "Foo").boolean();
+
+    auto second = std::make_unique<OptionDef>();
+    second->set_long_name("foo");
+    second->set_short_name('g');
+    CHECK_THROWS_AS(app.add_option(std::move(second)), LogicError);
+    CHECK(app.options().size() == 1);
+    CHECK(app.find_option_by_short('g') == nullptr);
+}
+
+TEST_CASE("an explicit --no- option is distinct from a negatable option")
+{
+    App app("test", "1.0", "Negation");
+    CHECK_NOTHROW(app.option<fixed_string("foo")>("--foo", "Foo").boolean().negatable());
+    CHECK_NOTHROW(
+        app.option<fixed_string("no_foo")>("--no-foo", 'n', "Explicit").boolean());
+    CHECK(app.options().size() == 2);
+    CHECK(app.find_option_by_long("no-foo") != nullptr);
+}
+
+TEST_CASE("a rejected duplicate leaves the command usable")
+{
+    App app("test", "1.0", "Recover");
+    app.option<fixed_string("foo")>("--foo", 'f', "Foo").boolean();
+    CHECK_THROWS_AS(
+        app.option<fixed_string("foo2")>("--foo", 'g', "Dup").boolean(), LogicError);
+
+    CHECK_NOTHROW(app.option<fixed_string("bar")>("--bar", 'b', "Bar").integer());
+    CHECK(app.options().size() == 2);
+    CHECK(app.find_option_by_long("bar") != nullptr);
+    CHECK(app.find_option_by_short('b') != nullptr);
+    CHECK(app.find_option_by_long("foo") != nullptr);
 }
