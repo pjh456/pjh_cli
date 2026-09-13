@@ -1,22 +1,18 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <pjh_cli/console/line_editor.hpp>
 #include <pjh_cli/detail/io_retry.hpp>
+#include <pjh_platform/console.hpp>
 #include <string_view>
+#include <utility>
 
 #if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #include <conio.h>
-#include <io.h>
-#include <windows.h>
-
-#include <cstdio>
 #else
 #include <poll.h>
-#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -37,33 +33,21 @@ namespace
         /// @param output  Stream used for echo.
         explicit WindowsTerminal(std::ostream &output) : m_output(output)
         {
-            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
-            if (input == INVALID_HANDLE_VALUE || input == nullptr)
-                return;
-            if (!::GetConsoleMode(input, &m_saved))
-                return;
-            m_saved_valid = true;
-            apply_raw();
+            auto r = pjh::platform::ConsoleMode::make_raw(0);
+            if (r.is_ok())
+                m_mode.emplace(std::move(r).unwrap());
         }
-
-        ~WindowsTerminal() override { suspend(); }
 
         void suspend() override
         {
-            if (!m_active)
-                return;
-            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
-            if (input == INVALID_HANDLE_VALUE || input == nullptr)
-                return;
-            if (::SetConsoleMode(input, m_saved))
-                m_active = false;
+            if (m_mode)
+                (void)m_mode->suspend();
         }
 
         void resume() override
         {
-            if (m_active || !m_saved_valid)
-                return;
-            apply_raw();
+            if (m_mode)
+                (void)m_mode->resume();
         }
 
         pjh::cli::KeyEvent read_key() override
@@ -104,28 +88,13 @@ namespace
         }
 
     private:
-        /// @brief Disable echo, line input, and processed input so _getch()
-        ///        sees every key, including Ctrl-C.
-        void apply_raw()
-        {
-            HANDLE input = ::GetStdHandle(STD_INPUT_HANDLE);
-            if (input == INVALID_HANDLE_VALUE || input == nullptr)
-                return;
-            DWORD raw = m_saved &
-                        ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT);
-            if (::SetConsoleMode(input, raw))
-                m_active = true;
-        }
-
         std::ostream &m_output;
-        DWORD m_saved = 0;
-        bool m_saved_valid = false;
-        bool m_active = false;
+        std::optional<pjh::platform::ConsoleMode> m_mode;
     };
 
 #else
 
-    /// @brief POSIX raw-mode backend built on termios + read().
+    /// @brief POSIX raw-mode backend built on read().
     ///
     /// Saves the terminal attributes on construction and restores them in the
     /// destructor, so every exit path (EOF, quit, exception) leaves the shell
@@ -142,27 +111,21 @@ namespace
         /// @param output  Stream used for echo.
         explicit PosixTerminal(std::ostream &output) : m_output(output)
         {
-            if (::tcgetattr(STDIN_FILENO, &m_saved) != 0)
-                return;
-            m_saved_valid = true;
-            apply_raw();
+            auto r = pjh::platform::ConsoleMode::make_raw(STDIN_FILENO);
+            if (r.is_ok())
+                m_mode.emplace(std::move(r).unwrap());
         }
-
-        ~PosixTerminal() override { suspend(); }
 
         void suspend() override
         {
-            if (!m_active)
-                return;
-            if (::tcsetattr(STDIN_FILENO, TCSANOW, &m_saved) == 0)
-                m_active = false;
+            if (m_mode)
+                (void)m_mode->suspend();
         }
 
         void resume() override
         {
-            if (m_active || !m_saved_valid)
-                return;
-            apply_raw();
+            if (m_mode)
+                (void)m_mode->resume();
         }
 
         PosixTerminal(const PosixTerminal &) = delete;
@@ -250,22 +213,8 @@ namespace
             return n == 1;
         }
 
-        /// @brief Disable canonical mode, echo, and signal generation so read()
-        ///        sees every key, including Ctrl-C.
-        void apply_raw()
-        {
-            termios raw = m_saved;
-            raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO | ISIG));
-            raw.c_cc[VMIN] = 1;
-            raw.c_cc[VTIME] = 0;
-            if (::tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)
-                m_active = true;
-        }
-
         std::ostream &m_output;
-        termios m_saved{};
-        bool m_saved_valid = false;
-        bool m_active = false;
+        std::optional<pjh::platform::ConsoleMode> m_mode;
     };
 
 #endif
@@ -276,13 +225,8 @@ namespace pjh::cli
     std::unique_ptr<ITerminal> make_tty_terminal(
         std::istream &input, std::ostream &output)
     {
-#if defined(_WIN32)
-        const bool stdin_tty = ::_isatty(::_fileno(stdin)) != 0;
-        const bool stdout_tty = ::_isatty(::_fileno(stdout)) != 0;
-#else
-        const bool stdin_tty = ::isatty(STDIN_FILENO) != 0;
-        const bool stdout_tty = ::isatty(STDOUT_FILENO) != 0;
-#endif
+        const bool stdin_tty = pjh::platform::Console::is_tty(0);
+        const bool stdout_tty = pjh::platform::Console::is_tty(1);
         if (!detail::raw_mode_available(
                 &input == &std::cin, &output == &std::cout, stdin_tty, stdout_tty))
             return nullptr;
