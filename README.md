@@ -172,8 +172,8 @@ app.set_help_formatter([](const BaseCommand &cmd) {
 same seam to direct `Parser` users. The REPL's `help` command keeps using its own
 injected navigation formatter.
 
-`format_help` annotates options with `(env: VAR)`, `(negatable)`, `(counting)`,
-and `(repeatable)` in the Options table.
+`format_help` annotates options with `(env: VAR)`, `(default: X)`, `(negatable)`,
+`(counting)`, and `(repeatable)` in the Options table.
 
 ### One-shot execution (run / run_fuzzy)
 
@@ -367,7 +367,7 @@ via that form.
 | `App(name, version, desc)` | Root command |
 | `cmd.option<Key>(long, short?)... .integer()/boolean()/str()` | Named option |
 | `cmd.option<Key>(long, short?, desc, default)` | Auto-dispatch option (T → type) |
-| `.count()` | Counting flag (-vvv) |
+| `.count()` | Counting flag (-vvv); supports `.env()`/`.default_value()` |
 | `.floating()` | Double-valued option |
 | `.path()` | Filesystem path option |
 | `.enum_type<E>().mapping({...})` | Enum option with string mapping |

@@ -1,14 +1,19 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 using namespace pjh::cli;
+
+static_assert(
+    std::is_same_v<CountOption::ValueType, int>,
+    "CountOption must derive its ValueType from WithDefault<int>");
 
 struct Argv
 {
@@ -87,13 +92,45 @@ TEST_CASE("CountOption rejects --opt=value")
         std::string_view("Parse Error: option '--verbose' does not accept a value"));
 }
 
-TEST_CASE("CountOption no default_value")
+TEST_CASE("CountOption default_value applied when absent")
 {
-    // Verify that CountOption doesn't expose default_value
-    // (compile test — uncommenting should fail)
-    // App app("test", "1.0", "No default");
-    // app.option<fixed_string("v")>("--verbose", 'v',
-    // "Verbosity").count().default_value(3); ^ expected: compile error (deleted function)
+    App app("test", "1.0", "Count default");
+    app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count().default_value(2);
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("v")>() == 2);
+}
+
+TEST_CASE("CountOption CLI occurrences override default")
+{
+    App app("test", "1.0", "Count default CLI");
+    app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count().default_value(5);
+    Argv argv{"test", "-vv"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    // CLI > default: occurrences are the value (2), not default + 2 (7).
+    CHECK(r.unwrap().get<int, fixed_string("v")>() == 2);
+}
+
+TEST_CASE("CountOption default_value_str and has_default")
+{
+    App app("test", "1.0", "Count default str");
+    app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count().default_value(3);
+    auto *def = app.find_option_by_long("verbose");
+    REQUIRE(def != nullptr);
+    CHECK(def->has_default());
+    CHECK(def->default_value_str() == "3");
+}
+
+TEST_CASE("CountOption no default keeps has_default false")
+{
+    App app("test", "1.0", "Count no default");
+    app.option<fixed_string("v")>("--verbose", 'v', "Verbosity").count();
+    auto *def = app.find_option_by_long("verbose");
+    REQUIRE(def != nullptr);
+    CHECK_FALSE(def->has_default());
+    CHECK(def->default_value_str().empty());
 }
 
 TEST_CASE("CountOption has_value false")

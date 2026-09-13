@@ -560,6 +560,17 @@ TEST_CASE("format_help shows counting metadata")
     CHECK(help.find("(counting)") != std::string::npos);
 }
 
+TEST_CASE("format_help annotates count env and default")
+{
+    LeafCommand cmd("test", "Test app");
+    cmd.option<fixed_string("verbose")>("--verbose", 'v', "Verbose")
+        .count()
+        .default_value(2)
+        .env("V");
+    auto help = HelpFormatter::format_help(cmd, "test");
+    CHECK(help.find(" (env: V) (default: 2) (counting)") != std::string::npos);
+}
+
 TEST_CASE("format_help shows repeatable metadata")
 {
     LeafCommand cmd("test", "Test app");

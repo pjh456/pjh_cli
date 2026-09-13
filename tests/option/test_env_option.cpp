@@ -279,6 +279,74 @@ TEST_CASE("EnvVar int option accepts leading plus from environment")
     CHECK(r.unwrap().get<int, fixed_string("port")>() == 8080);
 }
 
+TEST_CASE("EnvVar count option reads from environment")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSITY", "3"};
+    App app("test", "1.0", "Env count");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity")
+        .count()
+        .env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("verbose")>() == 3);
+}
+
+TEST_CASE("EnvVar count CLI occurrences override environment")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSITY", "1"};
+    App app("test", "1.0", "Env count CLI");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity")
+        .count()
+        .env(env_guard.name());
+    Argv argv{"test", "-vv"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("verbose")>() == 2);
+}
+
+TEST_CASE("EnvVar count env overrides default")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSITY", "3"};
+    App app("test", "1.0", "Env count over default");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity")
+        .count()
+        .default_value(5)
+        .env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK(r.unwrap().get<int, fixed_string("verbose")>() == 3);
+}
+
+TEST_CASE("EnvVar count invalid value errors")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSITY", "maybe"};
+    App app("test", "1.0", "Env count invalid");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity")
+        .count()
+        .env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    auto msg = std::string_view(r.unwrap_err().what());
+    CHECK(msg.find("invalid value 'maybe' for '--verbose'") != std::string_view::npos);
+    CHECK(msg.find("expected integer") != std::string_view::npos);
+}
+
+TEST_CASE("EnvVar count absent env and no default stays absent")
+{
+    ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_VERBOSITY", std::nullopt};
+    App app("test", "1.0", "Env count absent");
+    app.option<fixed_string("verbose")>("--verbose", 'v', "Verbosity")
+        .count()
+        .env(env_guard.name());
+    Argv argv{"test"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    CHECK_FALSE(r.unwrap().has<fixed_string("verbose")>());
+}
+
 TEST_CASE("EnvVar float option rejects nan from environment")
 {
     ScopedEnvVar env_guard{"PJH_CLI_TEST_ENV_NAN_RATE", "nan"};
