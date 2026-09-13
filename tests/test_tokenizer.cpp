@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <ostream>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <string>
 #include <vector>
