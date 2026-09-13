@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "argv.hpp"
+
 using namespace pjh::cli;
 
 // Contract pin: the writer is an implementation detail, not pjh::cli API.
@@ -29,18 +31,6 @@ static_assert(std::is_move_assignable_v<ParseContext>);
 static_assert(std::is_copy_constructible_v<ParseContext>);
 static_assert(!std::is_trivially_destructible_v<ParseContext>);
 static_assert(std::is_nothrow_destructible_v<ParseContext>);
-
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
 
 TEST_CASE("try_get returns Some when value present")
 {

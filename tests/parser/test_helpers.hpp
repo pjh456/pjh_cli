@@ -5,20 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "../argv.hpp"
+
 using namespace pjh::cli;
-
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
 
 #endif

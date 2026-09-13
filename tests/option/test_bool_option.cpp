@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/leaf_command.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
@@ -11,19 +11,9 @@
 #include <variant>
 #include <vector>
 
-using namespace pjh::cli;
+#include "../argv.hpp"
 
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
+using namespace pjh::cli;
 
 TEST_CASE("BoolOption flag sets true when present")
 {

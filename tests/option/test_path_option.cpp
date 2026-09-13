@@ -1,27 +1,17 @@
 #include <doctest/doctest.h>
 
-#include <iostream>
 #include <filesystem>
 #include <initializer_list>
+#include <iostream>
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
 
-using namespace pjh::cli;
+#include "../argv.hpp"
 
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
+using namespace pjh::cli;
 
 TEST_CASE("PathOption parse_value stores path")
 {

@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "../argv.hpp"
 #include "test_helpers.hpp"
 
 using namespace pjh::cli;
@@ -18,18 +19,6 @@ using namespace pjh::cli;
 static_assert(
     noexcept(std::declval<const detail::EnvSnapshot &>().get(std::string_view{})),
     "EnvSnapshot::get is an allocation-free heterogeneous lookup; must stay noexcept");
-
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
 
 TEST_CASE("EnvVar int option reads from environment")
 {

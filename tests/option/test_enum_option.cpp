@@ -6,11 +6,18 @@
 #include <string>
 #include <vector>
 
+#include "../argv.hpp"
+
 using namespace pjh::cli;
 
 namespace
 {
-    enum class Color { red, green, blue };
+    enum class Color
+    {
+        red,
+        green,
+        blue
+    };
 
     enum class WideEnum : long long
     {
@@ -25,18 +32,6 @@ namespace
 
 static_assert(detail::IntStorableEnum<Color>);
 static_assert(!detail::IntStorableEnum<WideEnum>);
-
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
 
 TEST_CASE("EnumOption basic mapping")
 {

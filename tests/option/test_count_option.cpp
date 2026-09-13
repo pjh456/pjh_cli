@@ -9,23 +9,13 @@
 #include <type_traits>
 #include <vector>
 
+#include "../argv.hpp"
+
 using namespace pjh::cli;
 
 static_assert(
     std::is_same_v<CountOption::ValueType, int>,
     "CountOption must derive its ValueType from WithDefault<int>");
-
-struct Argv
-{
-    std::vector<std::string> storage;
-    std::vector<char *> ptrs;
-    Argv(std::initializer_list<std::string> list) : storage(list)
-    {
-        for (auto &s : storage) ptrs.push_back(s.data());
-    }
-    int argc() const { return static_cast<int>(ptrs.size()); }
-    char **argv() { return ptrs.data(); }
-};
 
 TEST_CASE("CountOption short group increments")
 {
