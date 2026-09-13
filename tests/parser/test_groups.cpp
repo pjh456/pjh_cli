@@ -239,3 +239,88 @@ TEST_CASE("Env-seeded member counts as a participant in conflict")
                                        "cannot be used together"));
     CHECK(std::string_view(err.what()).find("--c") == std::string_view::npos);
 }
+
+TEST_CASE("Cross-command group conflict error names the ancestor option")
+{
+    App app("test", "1.0", "Cross-command group test");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    auto &deploy = app.add_leaf("deploy", "Deploy");
+    deploy.option<fixed_string("socket")>("--socket", "Socket").str();
+    deploy.group<fixed_string("port"), fixed_string("socket")>().exactly_one();
+
+    // Build-time resolution already stores the real names across the chain.
+    REQUIRE(deploy.groups().size() == 1u);
+    CHECK(deploy.groups().front().option_names.size() == 2u);
+    CHECK(deploy.groups().front().option_names[0] == "--port");
+    CHECK(deploy.groups().front().option_names[1] == "--socket");
+
+    Argv argv{"test", "deploy", "--port", "8080", "--socket", "/tmp/s"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --port, "
+                                       "--socket cannot be used together"));
+    CHECK(std::string_view(err.what()).find("?") == std::string_view::npos);
+}
+
+TEST_CASE("Cross-command ExactlyOne required error names the ancestor option")
+{
+    App app("test", "1.0", "Cross-command group test");
+    app.option<fixed_string("port")>("--port", "Port").integer();
+    auto &deploy = app.add_leaf("deploy", "Deploy");
+    deploy.option<fixed_string("socket")>("--socket", "Socket").str();
+    deploy.group<fixed_string("port"), fixed_string("socket")>().exactly_one();
+
+    Argv argv{"test", "deploy"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() ==
+        std::string_view("Parse Error: exactly one of --port, --socket is required"));
+    CHECK(std::string_view(err.what()).find("?") == std::string_view::npos);
+}
+
+TEST_CASE("Cross-command AtLeastOne required error names the ancestor option")
+{
+    App app("test", "1.0", "Cross-command group test");
+    app.option<fixed_string("token_file")>("--token-file", "Token file").str();
+    auto &deploy = app.add_leaf("deploy", "Deploy");
+    deploy.option<fixed_string("token_env")>("--token-env", "Token env").str();
+    deploy.group<fixed_string("token_file"), fixed_string("token_env")>().at_least_one();
+
+    Argv argv{"test", "deploy"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() ==
+        std::string_view(
+            "Parse Error: at least one of --token-file, --token-env is required"));
+    CHECK(std::string_view(err.what()).find("?") == std::string_view::npos);
+}
+
+TEST_CASE("Cross-command group resolves each member nearest-declaration-first")
+{
+    App app("test", "1.0", "Group nearest test");
+    app.option<fixed_string("port")>("--root-port", "Root port").str();
+    auto &mid = app.add_branch("admin", "Admin");
+    mid.option<fixed_string("port")>("--mid-port", "Mid port").str();
+    auto &deploy = mid.add_leaf("deploy", "Deploy");
+    deploy.option<fixed_string("socket")>("--socket", "Socket").str();
+    deploy.group<fixed_string("port"), fixed_string("socket")>().at_most_one();
+
+    // The key is declared on both the root and the middle branch; the group is
+    // built on the leaf, so the nearest ancestor (--mid-port) wins.
+    REQUIRE(deploy.groups().front().option_names[0] == "--mid-port");
+
+    Argv argv{"test", "admin", "deploy", "--mid-port", "/x", "--socket", "/tmp/s"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_err());
+    const auto &err = r.unwrap_err();
+    CHECK(
+        err.what() == std::string_view("Parse Error: conflicting options: --mid-port, "
+                                       "--socket cannot be used together"));
+    CHECK(std::string_view(err.what()).find("?") == std::string_view::npos);
+}

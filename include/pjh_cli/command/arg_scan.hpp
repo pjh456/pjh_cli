@@ -78,6 +78,30 @@ namespace pjh::cli::detail
         return find_option_by_short_in_chain_with_depth(cmd, c).option;
     }
 
+    /// @brief Find the option with @p hash on @p cmd or its nearest ancestor.
+    /// @param cmd   Command to start from.
+    /// @param hash  Compile-time key hash of the option.
+    /// @return Matching option plus its declaring depth (null option if none).
+    inline ChainOptionMatch find_option_by_hash_in_chain_with_depth(
+        const BaseCommand &cmd, std::size_t hash) noexcept
+    {
+        std::size_t depth = 0;
+        for (const auto *cur = &cmd; cur != nullptr; cur = cur->parent(), ++depth)
+            if (const auto *opt = cur->find_option_by_hash(hash))
+                return {opt, depth};
+        return {};
+    }
+
+    /// @brief Find the option with @p hash on @p cmd or its nearest ancestor.
+    /// @param cmd   Command to start from.
+    /// @param hash  Compile-time key hash of the option.
+    /// @return Matching option, or nullptr.
+    inline const OptionDef *find_option_by_hash_in_chain(
+        const BaseCommand &cmd, std::size_t hash) noexcept
+    {
+        return find_option_by_hash_in_chain_with_depth(cmd, hash).option;
+    }
+
     /// @brief Interpret one dash-prefixed token against @p command's option chain.
     ///
     /// Mirrors OptionConsumer's token grammar for scanning (not parsing):

@@ -7,6 +7,7 @@
 #ifndef INCLUDE_PJH_CLI_OPTION_GROUP_BUILDER_IMPL_HPP
 #define INCLUDE_PJH_CLI_OPTION_GROUP_BUILDER_IMPL_HPP
 
+#include <pjh_cli/command/arg_scan.hpp>
 #include <pjh_cli/core/fixed_string.hpp>
 #include <pjh_cli/option/option_group_builder.hpp>
 
@@ -23,7 +24,7 @@ namespace pjh::cli
         g.option_names.reserve(g.key_hashes.size());
         for (auto h : g.key_hashes)
         {
-            auto *opt = m_cmd.find_option_by_hash(h);
+            auto *opt = detail::find_option_by_hash_in_chain(m_cmd, h);
             g.option_names.push_back(opt ? opt->display_name() : "?");
         }
         m_cmd.register_group(std::move(g));
