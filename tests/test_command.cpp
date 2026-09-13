@@ -214,6 +214,64 @@ TEST_CASE("find_subcommand")
     CHECK(inner->name() == "start");
 }
 
+TEST_CASE("find_subcommand resolves an alias through the name index")
+{
+    App app("test", "1.0", "Alias index");
+    auto &serve = app.add_leaf("serve", "Serve");
+    serve.alias("run");
+
+    CHECK(app.find_subcommand("run") == &serve);
+    CHECK(app.find_subcommand("run") == app.find_subcommand("serve"));
+    CHECK(app.find_subcommand("nope") == nullptr);
+
+    const App &view = app;
+    CHECK(view.find_subcommand("run") == &serve);
+    CHECK(view.find_subcommand("nope") == nullptr);
+}
+
+TEST_CASE("find_subcommand exact name wins over a colliding alias")
+{
+    // (a) canonical name registered first, another child aliases it.
+    App named_first("test", "1.0", "Named first");
+    auto &shared = named_first.add_leaf("shared", "Shared");
+    auto &other = named_first.add_leaf("other", "Other");
+    other.alias("shared");
+    CHECK(named_first.find_subcommand("shared") == &shared);
+    CHECK(named_first.find_subcommand("other") == &other);
+
+    // (b) alias registered first, then a child with that canonical name.
+    App alias_first("test", "1.0", "Alias first");
+    auto &aliased = alias_first.add_leaf("aliased", "Aliased");
+    aliased.alias("shared");
+    auto &canonical = alias_first.add_leaf("shared", "Shared");
+    CHECK(alias_first.find_subcommand("shared") == &canonical);
+    CHECK(alias_first.find_subcommand("aliased") == &aliased);
+}
+
+TEST_CASE("find_subcommand duplicate aliases resolve to the first declared")
+{
+    App app("test", "1.0", "Duplicate alias");
+    auto &first = app.add_leaf("first", "First");
+    auto &second = app.add_leaf("second", "Second");
+    first.alias("dup");
+    second.alias("dup");
+
+    CHECK(app.find_subcommand("dup") == &first);
+    CHECK(app.find_subcommand("first") == &first);
+    CHECK(app.find_subcommand("second") == &second);
+}
+
+TEST_CASE("find_subcommand indexes a nested child alias on its own parent")
+{
+    App app("test", "1.0", "Nested alias");
+    auto &db = app.add_branch("database", "Database");
+    auto &migrate = db.add_leaf("migrate", "Migrate");
+    migrate.alias("m");
+
+    CHECK(db.find_subcommand("m") == &migrate);
+    CHECK(app.find_subcommand("m") == nullptr);  // not indexed on the root
+}
+
 TEST_CASE("subcommand visibility")
 {
     App app("test", "1.0", "Test");

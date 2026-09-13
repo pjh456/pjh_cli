@@ -413,6 +413,22 @@ TEST_CASE("Repeatable greedy stops at subcommand name")
     CHECK(all[0] == "P0");
 }
 
+TEST_CASE("Repeatable greedy stops at subcommand alias")
+{
+    App app("test", "1.0", "Greedy sub alias");
+    app.option<fixed_string("human")>("--human", "Human seat").str().repeatable();
+    auto &n = app.add_leaf("new", "New");
+    n.alias("n");
+    Argv argv{"test", "--human", "P0", "n"};
+    auto r = app.parse(argv.argc(), argv.argv());
+    REQUIRE(r.is_ok());
+    auto &ctx = r.unwrap();
+    CHECK(MatchedPathResolver::to_path_string(ctx.matched_command()) == "new");
+    auto all = ctx.get_all<std::string, fixed_string("human")>();
+    REQUIRE(all.size() == 1);
+    CHECK(all[0] == "P0");
+}
+
 TEST_CASE("Repeatable greedy short option stops at subcommand name")
 {
     App app("test", "1.0", "Greedy sub short");

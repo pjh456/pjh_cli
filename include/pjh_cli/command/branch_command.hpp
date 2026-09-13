@@ -52,7 +52,11 @@ namespace pjh::cli
         /// @return Reference to the newly created LeafCommand.
         LeafCommand &add_leaf(std::string name, std::string description);
 
-        /// @brief Find a direct child subcommand by exact name match.
+        /// @brief Find a direct child subcommand by exact name or indexed alias.
+        ///
+        /// A single map lookup covers both child names and aliases.  A child's
+        /// canonical name takes precedence over any colliding alias; among
+        /// duplicate aliases the first declared wins.
         BaseCommand *find_subcommand(std::string_view name) noexcept;
 
         /// @brief Const overload.
@@ -77,6 +81,18 @@ namespace pjh::cli
         }
 
     private:
+        friend class BaseCommand;
+
+        /// @brief Index @p alias for @p child in the direct-children name map.
+        ///
+        /// Called by BaseCommand::alias() after the alias is appended to the
+        /// child.  The key is a copy, so growing the child's alias vector cannot
+        /// dangle it.  First declaration wins when the key already exists (a
+        /// canonical name or an earlier alias), keeping name-over-alias
+        /// precedence.
+        /// @internal
+        void index_alias(BaseCommand &child, std::string_view alias);
+
         std::deque<std::unique_ptr<BaseCommand>> m_subcommands;
         std::unordered_map<
             std::string,

@@ -154,6 +154,38 @@ TEST_CASE("add_branch leaves the branch unchanged when name-index allocation fai
     CHECK(app.find_subcommand("zzz") == nullptr);
 }
 
+TEST_CASE("alias() rolls back its append when parent indexing allocation fails")
+{
+    App app("test", "1.0", "OOM");
+    auto &child = app.add_leaf("child", "Child");
+
+    // Calibrate on a warm tree: a first alias() appends to the child's alias
+    // vector and then inserts into the parent's name map.  The index insert is
+    // the last allocation, so failing it exercises the rollback path.
+    auto total = [&]
+    {
+        App cal("cal", "1.0", "Cal");
+        auto &warm = cal.add_leaf("warm", "Warm");
+        return measure_allocations([&] { warm.alias("cali"); });
+    }();
+
+    bool threw = false;
+    g_fail_after.store(total - 1, std::memory_order_relaxed);
+    try
+    {
+        child.alias("zzz");
+    }
+    catch (const std::bad_alloc &)
+    {
+        threw = true;
+    }
+    g_fail_after.store(-1, std::memory_order_relaxed);
+
+    CHECK(threw);
+    CHECK(child.aliases().empty());
+    CHECK(app.find_subcommand("zzz") == nullptr);
+}
+
 TEST_CASE("every owned option is reachable through both indexes")
 {
     App app("test", "1.0", "Consistency");

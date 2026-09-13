@@ -73,7 +73,20 @@ namespace pjh::cli
 
     BaseCommand &BaseCommand::alias(std::string name)
     {
-        m_aliases.push_back(std::move(name));
+        m_aliases.push_back(std::move(name));  // 1) own first
+        if (m_parent != nullptr)
+        {
+            try
+            {
+                if (auto *branch = m_parent->as_branch())
+                    branch->index_alias(*this, m_aliases.back());  // 2) index on parent
+            }
+            catch (...)
+            {
+                m_aliases.pop_back();  // 3) roll back
+                throw;
+            }
+        }
         return *this;
     }
 
@@ -127,6 +140,11 @@ namespace pjh::cli
         return ref;
     }
 
+    void BranchCommand::index_alias(BaseCommand &child, std::string_view alias)
+    {
+        m_subcommand_by_name.try_emplace(std::string(alias), &child);
+    }
+
     BranchCommand::~BranchCommand()
     {
         // Iterative post-order teardown with O(1) extra space.  A node's
@@ -164,26 +182,14 @@ namespace pjh::cli
     BaseCommand *BranchCommand::find_subcommand(std::string_view name) noexcept
     {
         auto it = m_subcommand_by_name.find(name);
-        if (it != m_subcommand_by_name.end())
-            return it->second;
-        for (auto &sub : m_subcommands)
-            for (auto &a : sub->aliases())
-                if (a == name)
-                    return sub.get();
-        return nullptr;
+        return it == m_subcommand_by_name.end() ? nullptr : it->second;
     }
 
     const BaseCommand *BranchCommand::find_subcommand(
         std::string_view name) const noexcept
     {
         auto it = m_subcommand_by_name.find(name);
-        if (it != m_subcommand_by_name.end())
-            return it->second;
-        for (const auto &sub : m_subcommands)
-            for (const auto &a : sub->aliases())
-                if (a == name)
-                    return sub.get();
-        return nullptr;
+        return it == m_subcommand_by_name.end() ? nullptr : it->second;
     }
 
 }  // namespace pjh::cli
