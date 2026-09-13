@@ -32,9 +32,6 @@ namespace pjh::cli
     public:
         HintBuilder() = delete;
 
-        /// @brief Human-readable type name for an option (e.g. "INT", "STR").
-        static std::string option_type_name(const OptionDef &opt);
-
         /// @brief Walk a partial input string to determine the current command position.
         ///
         /// Tokens are scanned as string views (quoted tokens take one owned

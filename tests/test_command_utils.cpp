@@ -4,7 +4,6 @@
 #include <pjh_cli/app.hpp>
 #include <pjh_cli/command/base_command.hpp>
 #include <pjh_cli/command/matcher.hpp>
-#include <pjh_cli/format/command_utils.hpp>
 #include <pjh_cli/option/option_def.hpp>
 #include <string>
 #include <string_view>
@@ -60,71 +59,6 @@ TEST_CASE("is_visible_and_enabled disabled")
     CHECK(is_visible_and_enabled(cmd, Visibility::Both) == false);
     CHECK(is_visible_and_enabled(cmd, Visibility::Repl) == false);
     CHECK(is_visible_and_enabled(cmd, Visibility::Cli) == false);
-}
-
-TEST_CASE("option_left_label long only no value")
-{
-    OptionDef opt;
-    opt.set_long_name("verbose");
-    opt.set_has_value(false);
-    CHECK(option_left_label(opt) == "--verbose");
-}
-
-TEST_CASE("option_left_label long only with value")
-{
-    OptionDef opt;
-    opt.set_long_name("port");
-    opt.set_has_value(true);
-    CHECK(option_left_label(opt) == "--port PORT");
-}
-
-TEST_CASE("option_left_label short only no value")
-{
-    OptionDef opt;
-    opt.set_short_name('v');
-    opt.set_has_value(false);
-    CHECK(option_left_label(opt) == "-v");
-}
-
-TEST_CASE("option_left_label short only with value")
-{
-    OptionDef opt;
-    opt.set_short_name('p');
-    opt.set_has_value(true);
-    CHECK(option_left_label(opt) == "-p P");
-}
-
-TEST_CASE("option_left_label both no value")
-{
-    OptionDef opt;
-    opt.set_long_name("verbose");
-    opt.set_short_name('v');
-    opt.set_has_value(false);
-    CHECK(option_left_label(opt) == "-v, --verbose");
-}
-
-TEST_CASE("option_left_label both with value")
-{
-    OptionDef opt;
-    opt.set_long_name("port");
-    opt.set_short_name('p');
-    opt.set_has_value(true);
-    CHECK(option_left_label(opt) == "-p, --port PORT");
-}
-
-TEST_CASE("option_left_label both with custom separator")
-{
-    OptionDef opt;
-    opt.set_long_name("verbose");
-    opt.set_short_name('v');
-    opt.set_has_value(false);
-    CHECK(option_left_label(opt, "|") == "-v|--verbose");
-}
-
-TEST_CASE("option_left_label empty")
-{
-    OptionDef opt;
-    CHECK(option_left_label(opt).empty());
 }
 
 TEST_CASE("collect_options_in_chain returns current then ancestors")

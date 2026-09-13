@@ -122,11 +122,6 @@ namespace pjh::cli
         }
     }
 
-    std::string HintBuilder::option_type_name(const OptionDef &opt)
-    {
-        return std::string(type_name(opt.value_tag(), opt.is_counting()));
-    }
-
     // ── Data collection ──
 
     HintContext HintBuilder::build_context(
