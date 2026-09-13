@@ -390,8 +390,8 @@ TEST_CASE("InteractiveConsole with NoOpHistory")
         });
 
     std::stringstream input, output, error;
-    InteractiveConsole console(app, "> ", input, output, error, {}, {},
-                               std::make_unique<NoOpHistory>());
+    InteractiveConsole console(
+        app, "> ", input, output, error, {}, {}, std::make_unique<NoOpHistory>());
 
     auto r = console.process_line("cmd");
     CHECK(r.is_ok());
@@ -549,8 +549,7 @@ TEST_CASE("InteractiveConsole with RingBufferHistory")
     std::stringstream input, output, error;
     auto hist = std::make_unique<RingBufferHistory>(3);
     auto *raw = hist.get();
-    InteractiveConsole console(app, "> ", input, output, error, {}, {},
-                               std::move(hist));
+    InteractiveConsole console(app, "> ", input, output, error, {}, {}, std::move(hist));
 
     CHECK(console.process_line("a").is_ok());
     CHECK(console.process_line("b").is_ok());

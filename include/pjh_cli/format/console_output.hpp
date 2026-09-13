@@ -35,8 +35,7 @@ namespace pjh::cli
         /// @brief Render the full subcommand list.
         /// @param names  Sorted subcommand names.
         /// @return E.g. `"Subcommands: foo bar"`.
-        static std::string format_subcommand_list(
-            const std::vector<std::string> &names);
+        static std::string format_subcommand_list(const std::vector<std::string> &names);
 
         /// @brief Render substring-matched subcommands.
         /// @param names  Matching subcommand names.

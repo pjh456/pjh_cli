@@ -10,10 +10,10 @@ namespace pjh::cli
 
     enum class QueryKind
     {
-        Listing,       ///< Empty query — show all subcommands
-        Matched,       ///< Substring match found — show matched names
-        Fuzzy,         ///< No substring match, fuzzy suggestions available
-        NoMatch,       ///< No substring or fuzzy match
+        Listing,  ///< Empty query — show all subcommands
+        Matched,  ///< Substring match found — show matched names
+        Fuzzy,    ///< No substring match, fuzzy suggestions available
+        NoMatch,  ///< No substring or fuzzy match
     };
 
     struct QueryResult

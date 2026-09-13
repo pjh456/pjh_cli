@@ -228,8 +228,7 @@ namespace pjh::cli
         switch (config.option_mode)
         {
         case HintOptionMode::All:
-            for (const auto &opt : ctx.options)
-                add_option(opt);
+            for (const auto &opt : ctx.options) add_option(opt);
             break;
         case HintOptionMode::Required:
             for (const auto &opt : ctx.options)

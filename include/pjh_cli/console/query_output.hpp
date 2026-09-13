@@ -15,9 +15,7 @@ namespace pjh::cli
 
         static std::string format(const QueryResult &result);
 
-        static std::string format(
-            const BranchCommand &root,
-            std::string_view query);
+        static std::string format(const BranchCommand &root, std::string_view query);
     };
 
 }  // namespace pjh::cli

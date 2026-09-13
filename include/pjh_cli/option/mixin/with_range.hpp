@@ -92,8 +92,9 @@ namespace pjh::cli
             if (this->m_min.is_some() && v < this->m_min.unwrap())
                 return CliFailure{ErrorFactory::value_out_of_range(
                     this->display_name(), raw, this->m_min.unwrap(),
-                    this->m_max.is_some() ? this->m_max.unwrap()
-                                          : detail::range_upper<T>(this->m_min.unwrap()))};
+                    this->m_max.is_some()
+                        ? this->m_max.unwrap()
+                        : detail::range_upper<T>(this->m_min.unwrap()))};
             if (this->m_max.is_some() && v > this->m_max.unwrap())
                 return CliFailure{ErrorFactory::value_out_of_range(
                     this->display_name(), raw,

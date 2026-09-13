@@ -185,9 +185,9 @@ TEST_CASE("InteractiveConsole with custom help formatter")
         return "[custom help]";
     };
 
-    InteractiveConsole console(app, "> ", input, output, error,
-        std::function<std::string(const QueryResult &)>{},
-        custom);
+    InteractiveConsole console(
+        app, "> ", input, output, error,
+        std::function<std::string(const QueryResult &)>{}, custom);
     auto r = console.process_line("help");
     CHECK(r.is_ok());
     CHECK(called == 1);
@@ -208,9 +208,9 @@ TEST_CASE("InteractiveConsole with custom help formatter for unknown command")
         return "[unknown:" + r.failed_token + "]";
     };
 
-    InteractiveConsole console(app, "> ", input, output, error,
-        std::function<std::string(const QueryResult &)>{},
-        custom);
+    InteractiveConsole console(
+        app, "> ", input, output, error,
+        std::function<std::string(const QueryResult &)>{}, custom);
     auto r = console.process_line("help nope");
     CHECK(r.is_ok());
     CHECK(called == 1);

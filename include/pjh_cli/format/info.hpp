@@ -198,8 +198,8 @@ namespace pjh::cli
     /// @brief A single fuzzy match suggestion with distance score.
     struct FuzzySuggestion
     {
-        std::string name;       ///< Matched command name.
-        int distance = 0;       ///< Levenshtein distance.
+        std::string name;  ///< Matched command name.
+        int distance = 0;  ///< Levenshtein distance.
     };
 
     /// @brief Bundle of fuzzy match suggestions.

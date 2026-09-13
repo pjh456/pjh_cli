@@ -72,8 +72,7 @@ namespace pjh::cli
         ///                      ctx.matched_command()).  May be nullptr.
         /// @return Space-separated path, or empty string if no subcommand
         ///         was matched.
-        static std::string to_path_string(
-            const BaseCommand *matched_cmd);
+        static std::string to_path_string(const BaseCommand *matched_cmd);
 
         /// @brief Produce a structured MatchedPath from the matched command.
         ///
@@ -84,8 +83,7 @@ namespace pjh::cli
         ///                      ctx.matched_command()).  May be nullptr.
         /// @return MatchedPath with command names in top-down order
         ///         (empty commands list when no subcommand matched).
-        static MatchedPath to_path_info(
-            const BaseCommand *matched_cmd);
+        static MatchedPath to_path_info(const BaseCommand *matched_cmd);
     };
 
 }  // namespace pjh::cli

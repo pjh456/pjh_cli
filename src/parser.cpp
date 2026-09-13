@@ -142,11 +142,9 @@ namespace pjh::cli
 
             if (!double_dash && detail::is_option_flag(a))
             {
-                CliResult<void> r = (a[1] == '-')
-                                        ? OptionConsumer::consume_long(
-                                              *cmd, ctx, a, i, args)
-                                        : OptionConsumer::consume_short(
-                                              *cmd, ctx, a, i, args);
+                CliResult<void> r =
+                    (a[1] == '-') ? OptionConsumer::consume_long(*cmd, ctx, a, i, args)
+                                  : OptionConsumer::consume_short(*cmd, ctx, a, i, args);
                 if (r.is_err())
                     return CliResult<ParseContext>::Err(std::move(r).unwrap_err());
                 continue;
@@ -169,8 +167,7 @@ namespace pjh::cli
                 suggestions_known_empty = r.suggestions_known_empty;
             }
 
-            if (auto *leaf = cmd->as_leaf();
-                leaf && arg_pos < leaf->args().size())
+            if (auto *leaf = cmd->as_leaf(); leaf && arg_pos < leaf->args().size())
             {
                 auto &arg = leaf->args()[arg_pos];
                 auto r = ValueWriter::apply_arg_value(

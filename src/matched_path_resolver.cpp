@@ -25,30 +25,26 @@ namespace pjh::cli
 
     /// @brief Build a MatchedPath struct by resolving the chain and
     ///        collecting name() from each command.
-    MatchedPath MatchedPathResolver::to_path_info(
-        const BaseCommand *matched_cmd)
+    MatchedPath MatchedPathResolver::to_path_info(const BaseCommand *matched_cmd)
     {
         auto cmds = resolve_chain(matched_cmd);
         MatchedPath out;
         out.commands.reserve(cmds.size());
-        for (auto *c : cmds)
-            out.commands.push_back(c->name());
+        for (auto *c : cmds) out.commands.push_back(c->name());
         return out;
     }
 
     /// @brief Format the matched path as a space-separated string.
     ///
     /// Delegates to to_path_info() and joins the command names.
-    std::string MatchedPathResolver::to_path_string(
-        const BaseCommand *matched_cmd)
+    std::string MatchedPathResolver::to_path_string(const BaseCommand *matched_cmd)
     {
         auto info = to_path_info(matched_cmd);
         if (info.commands.empty())
             return {};
         std::ostringstream os;
         os << info.commands[0];
-        for (size_t i = 1; i < info.commands.size(); ++i)
-            os << ' ' << info.commands[i];
+        for (size_t i = 1; i < info.commands.size(); ++i) os << ' ' << info.commands[i];
         return os.str();
     }
 }  // namespace pjh::cli

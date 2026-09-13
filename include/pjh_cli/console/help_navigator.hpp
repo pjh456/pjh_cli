@@ -13,10 +13,10 @@ namespace pjh::cli
 
     enum class HelpNavigationKind
     {
-        RootHelp,         ///< Show root help (tokens.size() == 1)
-        SubcommandHelp,   ///< Navigated to a resolved subcommand
-        NonBranch,        ///< Descended into a leaf — no subcommands
-        UnknownCommand,   ///< Subcommand not found at current level
+        RootHelp,        ///< Show root help (tokens.size() == 1)
+        SubcommandHelp,  ///< Navigated to a resolved subcommand
+        NonBranch,       ///< Descended into a leaf — no subcommands
+        UnknownCommand,  ///< Subcommand not found at current level
     };
 
     struct HelpNavigationResult
@@ -42,8 +42,7 @@ namespace pjh::cli
         HelpNavigator() = delete;
 
         static HelpNavigationResult navigate(
-            const BranchCommand &root,
-            const std::vector<std::string> &tokens);
+            const BranchCommand &root, const std::vector<std::string> &tokens);
     };
 
     class HelpNavigationOutput
@@ -54,10 +53,9 @@ namespace pjh::cli
         static std::string format(const HelpNavigationResult &result);
 
         static std::string format(
-            const BranchCommand &root,
-            const std::vector<std::string> &tokens);
+            const BranchCommand &root, const std::vector<std::string> &tokens);
     };
 
-} // namespace pjh::cli
+}  // namespace pjh::cli
 
 #endif

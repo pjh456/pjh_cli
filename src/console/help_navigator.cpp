@@ -13,8 +13,7 @@ namespace pjh::cli
     // ── HelpNavigator ──
 
     HelpNavigationResult HelpNavigator::navigate(
-        const BranchCommand &root,
-        const std::vector<std::string> &tokens)
+        const BranchCommand &root, const std::vector<std::string> &tokens)
     {
         HelpNavigationResult result;
 
@@ -46,8 +45,7 @@ namespace pjh::cli
                     fuzzy_find_subcommands(*branch, tokens[i], 3, Visibility::Repl);
                 result.suggestions.matches.reserve(fuzzy.size());
                 for (auto &f : fuzzy)
-                    result.suggestions.matches.push_back(
-                        {f.command->name(), f.distance});
+                    result.suggestions.matches.push_back({f.command->name(), f.distance});
                 return result;
             }
             target = sub;
@@ -69,16 +67,14 @@ namespace pjh::cli
             return HelpFormatter::format_help(*result.resolved);
 
         case HelpNavigationKind::NonBranch:
-            return ConsoleOutput::format_has_no_subcommands(
-                       result.failed_command_name)
-                   + "\n";
+            return ConsoleOutput::format_has_no_subcommands(result.failed_command_name) +
+                   "\n";
 
         case HelpNavigationKind::UnknownCommand:
         {
             auto sug = ConsoleOutput::format_suggestions(result.suggestions);
-            return ConsoleOutput::format_unknown_subcommand(
-                       result.failed_token, sug)
-                   + "\n";
+            return ConsoleOutput::format_unknown_subcommand(result.failed_token, sug) +
+                   "\n";
         }
         }
 
@@ -86,10 +82,9 @@ namespace pjh::cli
     }
 
     std::string HelpNavigationOutput::format(
-        const BranchCommand &root,
-        const std::vector<std::string> &tokens)
+        const BranchCommand &root, const std::vector<std::string> &tokens)
     {
         return format(HelpNavigator::navigate(root, tokens));
     }
 
-} // namespace pjh::cli
+}  // namespace pjh::cli

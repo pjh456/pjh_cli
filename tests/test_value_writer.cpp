@@ -18,26 +18,21 @@ TEST_CASE("ValueWriter stores every real ValueTag")
 {
     ParseContext ctx;
 
-    REQUIRE(
-        ValueWriter::apply_arg_value(
-            ctx, key_hash(fixed_string("b")), ValueTag::Bool, "true")
-            .is_ok());
-    REQUIRE(
-        ValueWriter::apply_arg_value(
-            ctx, key_hash(fixed_string("i")), ValueTag::Int, "42")
-            .is_ok());
-    REQUIRE(
-        ValueWriter::apply_arg_value(
-            ctx, key_hash(fixed_string("d")), ValueTag::Double, "2.5")
-            .is_ok());
-    REQUIRE(
-        ValueWriter::apply_arg_value(
-            ctx, key_hash(fixed_string("s")), ValueTag::String, "hi")
-            .is_ok());
-    REQUIRE(
-        ValueWriter::apply_arg_value(
-            ctx, key_hash(fixed_string("p")), ValueTag::Path, "/tmp/x")
-            .is_ok());
+    REQUIRE(ValueWriter::apply_arg_value(
+                ctx, key_hash(fixed_string("b")), ValueTag::Bool, "true")
+                .is_ok());
+    REQUIRE(ValueWriter::apply_arg_value(
+                ctx, key_hash(fixed_string("i")), ValueTag::Int, "42")
+                .is_ok());
+    REQUIRE(ValueWriter::apply_arg_value(
+                ctx, key_hash(fixed_string("d")), ValueTag::Double, "2.5")
+                .is_ok());
+    REQUIRE(ValueWriter::apply_arg_value(
+                ctx, key_hash(fixed_string("s")), ValueTag::String, "hi")
+                .is_ok());
+    REQUIRE(ValueWriter::apply_arg_value(
+                ctx, key_hash(fixed_string("p")), ValueTag::Path, "/tmp/x")
+                .is_ok());
 
     CHECK(ctx.get<bool, fixed_string("b")>() == true);
     CHECK(ctx.get<int, fixed_string("i")>() == 42);

@@ -14,8 +14,7 @@ namespace pjh::cli
     std::string ConsoleOutput::format_suggestions(const SuggestionInfo &info)
     {
         std::string out;
-        for (auto &m : info.matches)
-            out += " " + m.name;
+        for (auto &m : info.matches) out += " " + m.name;
         return out;
     }
 
@@ -38,8 +37,7 @@ namespace pjh::cli
         if (names.empty())
             return format_no_subcommands();
         std::string out = "Subcommands:";
-        for (auto &n : names)
-            out += " " + n;
+        for (auto &n : names) out += " " + n;
         return out;
     }
 
@@ -50,8 +48,7 @@ namespace pjh::cli
         const std::vector<std::string> &names)
     {
         std::string out = "Matching subcommands:";
-        for (auto &n : names)
-            out += " " + n;
+        for (auto &n : names) out += " " + n;
         return out;
     }
 
@@ -66,8 +63,7 @@ namespace pjh::cli
     /// @brief Renders the "has no subcommands" error for a non-branch command.
     /// @param name  The command name that was descended into.
     /// @return `"'serve' has no subcommands."`.
-    std::string ConsoleOutput::format_has_no_subcommands(
-        const std::string &name)
+    std::string ConsoleOutput::format_has_no_subcommands(const std::string &name)
     {
         return std::format("'{}' has no subcommands.", name);
     }
@@ -85,8 +81,7 @@ namespace pjh::cli
     {
         if (suggestions.empty())
             return std::format("Unknown subcommand '{}'.", name);
-        return std::format(
-            "Unknown subcommand '{}'. Did you mean:{}", name, suggestions);
+        return std::format("Unknown subcommand '{}'. Did you mean:{}", name, suggestions);
     }
 
 }  // namespace pjh::cli
