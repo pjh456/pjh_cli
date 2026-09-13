@@ -541,6 +541,10 @@ TEST_CASE("set_terminal(nullptr) during run resumes the getline fallback")
     InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
 
     bool after_ran = false;
+    // Snapshot the read count while the terminal is still owned: once the
+    // action drops it, the loop-local pin in run() is the last owner and the
+    // raw `p` below would dangle after run() returns.
+    std::size_t reads_before_drop = 0;
     auto term = std::make_unique<ScriptedTerminal>();
     ScriptedTerminal *p = term.get();
 
@@ -548,6 +552,7 @@ TEST_CASE("set_terminal(nullptr) during run resumes the getline fallback")
         .action(
             [&](ParseContext &) -> CliResult<void>
             {
+                reads_before_drop = p->read_calls;
                 console.set_terminal(nullptr);
                 return CliResult<void>::Ok();
             });
@@ -568,5 +573,5 @@ TEST_CASE("set_terminal(nullptr) during run resumes the getline fallback")
     console.run();
 
     CHECK(after_ran);
-    CHECK(p->read_calls >= 1u);
+    CHECK(reads_before_drop >= 1u);  // terminal was actually read before the switch
 }
