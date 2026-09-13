@@ -876,3 +876,94 @@ TEST_CASE("LineEditor Ctrl-C resets the cursor for the next line")
     CHECK(line == "new");
     CHECK(term.written.find("^C\n") != std::string::npos);
 }
+
+// ──────────────────────────────────────────
+//  Empty candidates + empty hint must not redraw (task 91.1)
+// ──────────────────────────────────────────
+
+TEST_CASE("LineEditor Tab with no candidates and no hint writes nothing extra")
+{
+    ScriptedTerminal term;
+    chars(term, "zzz");
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "zzz");
+    CHECK(term.written == "> zzz\n");
+    CHECK(term.written.find("> zzz> zzz") == std::string::npos);
+}
+
+TEST_CASE("LineEditor Tab on an empty line with no candidates and no hint writes nothing")
+{
+    ScriptedTerminal term;
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line.empty());
+    CHECK(term.written == "> \n");
+}
+
+TEST_CASE("LineEditor Tab with candidates and no hint still redraws the input line")
+{
+    ScriptedTerminal term;
+    chars(term, "ser");
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    CompletionFn complete = [](std::string_view, std::size_t)
+    {
+        CompletionResult out;
+        out.candidates = {{"serve"}, {"server"}};
+        out.prefix_len = 3;
+        return out;
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, complete, no_hint));
+    CHECK(line == "ser");
+    CHECK(term.written.find("\nserve  server\n> ser") != std::string::npos);
+}
+
+TEST_CASE("LineEditor Tab evaluates the hint callback once")
+{
+    ScriptedTerminal term;
+    chars(term, "zzz");
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    int calls = 0;
+    HintFn hint = [&calls](std::string_view, std::size_t)
+    {
+        ++calls;
+        return std::string();
+    };
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, hint));
+    CHECK(line == "zzz");
+    CHECK(calls == 1);
+}
+
+TEST_CASE("LineEditor Tab with no candidates and no hint is a no-op mid-line")
+{
+    ScriptedTerminal term;
+    chars(term, "ac");
+    press(term, KeyEvent::Code::Left);
+    press(term, KeyEvent::Code::Tab);
+    press(term, KeyEvent::Code::Enter);
+
+    LineEditor editor(term, "> ");
+    std::string line;
+    CHECK(editor.read_line(line, no_candidates, no_hint));
+    CHECK(line == "ac");
+    CHECK(term.written == "> ac\b\bac\b\n");
+    CHECK(term.written.find("> ac> ac") == std::string::npos);
+}

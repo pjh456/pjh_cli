@@ -280,7 +280,14 @@ namespace pjh::cli
         }
 
         show_candidates(candidates, buffer);
-        show_hint(hint, buffer);
+        const std::string hint_text = hint(buffer, m_cursor);
+        if (candidates.empty() && hint_text.empty())
+            return;
+        const HintFn cached_hint = [&hint_text](std::string_view, std::size_t)
+        {
+            return hint_text;
+        };
+        show_hint(cached_hint, buffer);
     }
 
     void LineEditor::show_hint(const HintFn &hint, std::string_view buffer)
