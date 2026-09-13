@@ -854,3 +854,123 @@ TEST_CASE("sequential positional arg indices map to registration order")
     CHECK(cmd.args()[1].m_value_tag == ValueTag::Int);
     CHECK(cmd.args()[2].m_value_tag == ValueTag::String);
 }
+
+TEST_CASE("duplicate leaf subcommand name on one branch throws LogicError")
+{
+    App app("test", "1.0", "Dup leaf");
+    auto &first = app.add_leaf("serve", "First");
+
+    CHECK_THROWS_WITH_AS(
+        app.add_leaf("serve", "Second"),
+        "BranchCommand::add_leaf: duplicate subcommand name 'serve' on command 'test'",
+        LogicError);
+
+    // Strong guarantee: the rejected registration mutates nothing.
+    CHECK(app.subcommands().size() == 1);
+    CHECK(app.find_subcommand("serve") == &first);
+    CHECK(first.name() == "serve");
+    CHECK(first.description() == "First");
+}
+
+TEST_CASE("duplicate branch subcommand name on one branch throws LogicError")
+{
+    App app("test", "1.0", "Dup branch");
+    auto &db = app.add_branch("db", "DB");
+
+    CHECK_THROWS_WITH_AS(
+        app.add_branch("db", "DB2"),
+        "BranchCommand::add_branch: duplicate subcommand name 'db' on command 'test'",
+        LogicError);
+    CHECK_THROWS_WITH_AS(
+        app.add_leaf("db", "DB3"),
+        "BranchCommand::add_leaf: duplicate subcommand name 'db' on command 'test'",
+        LogicError);
+
+    // Cross kind, leaf registered first: add_branch repeats the canonical name.
+    app.add_leaf("run", "Run");
+    CHECK_THROWS_WITH_AS(
+        app.add_branch("run", "Run2"),
+        "BranchCommand::add_branch: duplicate subcommand name 'run' on command 'test'",
+        LogicError);
+
+    CHECK(app.subcommands().size() == 2);
+    CHECK(app.find_subcommand("db") == &db);
+}
+
+TEST_CASE("duplicate subcommand name is allowed on ancestor and child commands")
+{
+    App app("test", "1.0", "Node local");
+    auto &root_run = app.add_leaf("run", "Root run");
+    auto &sub = app.add_branch("sub", "Sub");
+
+    CHECK_NOTHROW(sub.add_leaf("run", "Sub run"));
+
+    CHECK(app.subcommands().size() == 2);
+    CHECK(sub.subcommands().size() == 1);
+    CHECK(app.find_subcommand("run") == &root_run);
+    CHECK(sub.find_subcommand("run") != &root_run);
+    CHECK(sub.find_subcommand("run") != nullptr);
+}
+
+TEST_CASE("duplicate subcommand name check is case-sensitive")
+{
+    App app("test", "1.0", "Case");
+
+    CHECK_NOTHROW(app.add_leaf("run", "lower"));
+    CHECK_NOTHROW(app.add_leaf("Run", "upper"));
+
+    CHECK(app.subcommands().size() == 2);
+    CHECK(app.find_subcommand("run") != nullptr);
+    CHECK(app.find_subcommand("Run") != nullptr);
+}
+
+TEST_CASE("a rejected duplicate subcommand name leaves the branch usable")
+{
+    App app("test", "1.0", "Recover");
+    app.add_leaf("serve", "Serve");
+
+    CHECK_THROWS_AS(app.add_leaf("serve", "Dup"), LogicError);
+
+    CHECK_NOTHROW(app.add_leaf("other", "Other"));
+    CHECK(app.subcommands().size() == 2);
+    CHECK(app.find_subcommand("other") != nullptr);
+    CHECK(app.find_subcommand("serve") != nullptr);
+}
+
+TEST_CASE("duplicate canonical name rejection leaves alias collisions alone")
+{
+    // Name vs alias, both insertion orders: the canonical name wins (task 26).
+    App name_first("test", "1.0", "Name first");
+    auto &list = name_first.add_leaf("list", "List");
+    auto &other = name_first.add_leaf("other", "Other");
+    other.alias("list");
+    CHECK(name_first.find_subcommand("list") == &list);
+
+    App alias_first("test", "1.0", "Alias first");
+    auto &aliased = alias_first.add_leaf("aliased", "Aliased");
+    aliased.alias("ls");
+    auto &ls = alias_first.add_leaf("ls", "LS");
+    CHECK(alias_first.find_subcommand("ls") == &ls);
+    CHECK(alias_first.find_subcommand("aliased") == &aliased);
+
+    // Alias vs alias: allowed, the first declared wins.
+    auto &first = alias_first.add_leaf("first", "First");
+    auto &second = alias_first.add_leaf("second", "Second");
+    first.alias("dup");
+    CHECK_NOTHROW(second.alias("dup"));
+    CHECK(alias_first.find_subcommand("dup") == &first);
+    CHECK(alias_first.find_subcommand("first") == &first);
+    CHECK(alias_first.find_subcommand("second") == &second);
+}
+
+TEST_CASE("empty subcommand name is still checked for duplicates")
+{
+    App app("test", "1.0", "Empty");
+    CHECK_NOTHROW(app.add_leaf("", "First"));
+
+    CHECK_THROWS_WITH_AS(
+        app.add_leaf("", "Second"),
+        "BranchCommand::add_leaf: duplicate subcommand name '' on command 'test'",
+        LogicError);
+    CHECK(app.subcommands().size() == 1);
+}

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <pjh_cli/command/base_command.hpp>
@@ -14,6 +15,24 @@
 
 namespace pjh::cli
 {
+
+    namespace
+    {
+        /// @brief Whether a direct child with the canonical name @p name exists.
+        ///
+        /// Scans the owned children rather than the merged name/alias index so
+        /// the check is independent of the index's token semantics: aliases
+        /// never count as canonical-name collisions.
+        bool has_direct_child_named(
+            const std::deque<std::unique_ptr<BaseCommand>> &subcommands,
+            std::string_view name) noexcept
+        {
+            for (const auto &sub : subcommands)
+                if (sub->name() == name)
+                    return true;
+            return false;
+        }
+    }  // namespace
 
     // ── BaseCommand ──
 
@@ -94,6 +113,10 @@ namespace pjh::cli
 
     BranchCommand &BranchCommand::add_branch(std::string name, std::string description)
     {
+        if (has_direct_child_named(m_subcommands, name))
+            throw LogicError(
+                std::string("BranchCommand::add_branch: duplicate subcommand name '") +
+                name + "' on command '" + m_name + "'");
         auto child =
             std::make_unique<BranchCommand>(std::move(name), std::move(description));
         child->set_parent(this);
@@ -118,6 +141,10 @@ namespace pjh::cli
 
     LeafCommand &BranchCommand::add_leaf(std::string name, std::string description)
     {
+        if (has_direct_child_named(m_subcommands, name))
+            throw LogicError(
+                std::string("BranchCommand::add_leaf: duplicate subcommand name '") +
+                name + "' on command '" + m_name + "'");
         auto child =
             std::make_unique<LeafCommand>(std::move(name), std::move(description));
         child->set_parent(this);
