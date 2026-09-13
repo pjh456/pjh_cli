@@ -10,6 +10,7 @@
 #include <pjh_cli/console/query_explorer.hpp>
 #include <pjh_cli/console/query_output.hpp>
 #include <pjh_cli/core/type.hpp>
+#include <pjh_cli/detail/string_utils.hpp>
 #include <pjh_cli/detail/tokenizer.hpp>
 #include <pjh_cli/format/help_formatter.hpp>
 #include <pjh_cli/format/hint.hpp>
@@ -175,7 +176,9 @@ namespace pjh::cli
             if (rest.empty())
                 continue;
             std::string keyword = trim_repl_view(rest);
-            if (keyword == "quit" || keyword == "exit" || keyword == "q")
+            if (detail::StringUtils::case_insensitive_equal(keyword, "quit") ||
+                detail::StringUtils::case_insensitive_equal(keyword, "exit") ||
+                detail::StringUtils::case_insensitive_equal(keyword, "q"))
                 return;
             auto r = process_line(line);
             if (r.is_err())

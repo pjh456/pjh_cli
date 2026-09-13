@@ -301,7 +301,7 @@ Submitted lines share one tokenizer with Tab completion and hints: separators ar
 spaces and tabs, `"..."` groups a span, a backslash escapes only `\"`, `\\`, a
 space, or a tab, and `""` is a valid empty argument.
 On the raw-mode path Ctrl-C cancels the current line and prints a fresh prompt;
-Ctrl-D (or `quit`/`exit`/`q`) ends the REPL.
+Ctrl-D (or `quit`/`exit`/`q`, matched case-insensitively) ends the REPL.
 
 `run()` is re-entrant on the same console: an action may call `run()` again and
 the outer loop resumes when the nested loop exits; `stop()` stops the innermost

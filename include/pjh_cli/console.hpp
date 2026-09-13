@@ -121,7 +121,8 @@ namespace pjh::cli
             ErrorFormatterFn error_fmt = {});
 
         /// @brief Run the REPL loop.  Blocks until EOF, "quit", "exit",
-        ///        "q", or stop() is called from a callback.
+        ///        "q" (matched case-insensitively), or stop() is called from a
+        ///        callback.
         ///
         /// Re-entrant on the same console: an action may call run() again, and
         /// the outer invocation's running state is restored when the nested loop
@@ -138,13 +139,13 @@ namespace pjh::cli
         /// line finishes on the input source it was read on and the replacement
         /// takes effect on the next line.  On the LineEditor path Ctrl-C cancels
         /// the current line (buffer discarded, `^C` echoed, fresh prompt) and the
-        /// REPL keeps running; Ctrl-D or `quit`/`exit`/`q` end it.  Otherwise
-        /// each iteration:
+        /// REPL keeps running; Ctrl-D or `quit`/`exit`/`q` (case-insensitive)
+        /// end it.  Otherwise each iteration:
         ///   1. Prints @p m_prompt to m_output.
         ///   2. Reads a line from m_input with std::getline (arrow keys are
         ///      consumed by the terminal line discipline and cannot navigate).
         ///   3. Skips empty lines.
-        ///   4. Exits on "quit" / "exit" / "q".
+        ///   4. Exits on "quit" / "exit" / "q" (case-insensitive).
         ///   5. Calls process_line() and prints errors to m_error.
         void run();
 

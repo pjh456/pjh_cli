@@ -348,6 +348,77 @@ TEST_CASE("run quit with trailing blanks terminates without dispatching")
     CHECK(calls == 0);
 }
 
+TEST_CASE("run quit keyword is case-insensitive")
+{
+    App app("test", "1.0", "Mixed-case quit");
+    int calls = 0;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            ++calls;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    // A mixed-case quit must end the loop: the line after it stays unread.
+    sf.input << "Quit\ngo\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(calls == 0);
+}
+
+TEST_CASE("run exit keyword is case-insensitive")
+{
+    App app("test", "1.0", "Mixed-case exit");
+    int calls = 0;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            ++calls;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    sf.input << "EXIT\ngo\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(calls == 0);
+}
+
+TEST_CASE("run q keyword is case-insensitive")
+{
+    App app("test", "1.0", "Mixed-case q");
+    int calls = 0;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            ++calls;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    sf.input << "Q\ngo\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(calls == 0);
+}
+
+TEST_CASE("run padded mixed-case quit terminates")
+{
+    App app("test", "1.0", "Padded mixed-case quit");
+    int calls = 0;
+    app.action(
+        [&calls](ParseContext &) -> CliResult<void>
+        {
+            ++calls;
+            return CliResult<void>::Ok();
+        });
+    StreamFixture sf;
+    // Leading/trailing padding and casing compose: the keyword still exits
+    // and the next line stays unread.
+    sf.input << "  Quit \n go\n";
+    InteractiveConsole console(app, "> ", sf.input, sf.output, sf.error);
+    console.run();
+    CHECK(calls == 0);
+}
+
 TEST_CASE("run custom error formatter receives runtime kind")
 {
     App app("test", "1.0", "Runtime err fmt");
